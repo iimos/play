@@ -1,0 +1,746 @@
+90883 1670772779.691268 execve("./concurrency", ["./concurrency"], 0xffffc7ab12a0 /* 15 vars */)    = 0 <0.002875>
+90883 1670772779.697661 sched_getaffinity(0, 8192, [0 1 2 3])                                       = 8 <0.000094>
+90883 1670772779.699380 openat(AT_FDCWD</go/src/github.com/iimos/play/concurrency>, "/sys/kernel/mm/transparent_hugepage/hpage_pmd_size", O_RDONLY) = 3</sys/kernel/mm/transparent_hugepage/hpage_pmd_size> <0.000118>
+90883 1670772779.701268 read(3</sys/kernel/mm/transparent_hugepage/hpage_pmd_size>, "2097152\n", 20) = 8 <0.000112>
+90883 1670772779.703063 close(3</sys/kernel/mm/transparent_hugepage/hpage_pmd_size>)                = 0 <0.000113>
+90883 1670772779.704776 mmap(NULL, 262144, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)  = 0xffffbf209000 <0.000082>
+90883 1670772779.706300 mmap(NULL, 131072, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)             = 0xffffbf1e9000 <0.000077>
+90883 1670772779.707901 mmap(NULL, 1048576, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)            = 0xffffbf0e9000 <0.000084>
+90883 1670772779.709540 mmap(NULL, 8388608, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)            = 0xffffbe8e9000 <0.000067>
+90883 1670772779.711103 mmap(NULL, 67108864, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)           = 0xffffba8e9000 <0.000160>
+90883 1670772779.712687 mmap(NULL, 536870912, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)          = 0xffff9a8e9000 <0.000069>
+90883 1670772779.714193 mmap(NULL, 8388608, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)            = 0xffff9a0e9000 <0.000081>
+90883 1670772779.715852 mmap(0x4000000000, 67108864, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)   = 0x4000000000 <0.000082>
+90883 1670772779.717536 mmap(NULL, 33554432, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xffff980e9000 <0.000105>
+90883 1670772779.719341 mmap(NULL, 2165776, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xffff97ed8000 <0.000088>
+90883 1670772779.721112 mmap(0x4000000000, 4194304, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x4000000000 <0.000209>
+90883 1670772779.722784 mmap(0xffffbf1e9000, 131072, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xffffbf1e9000 <0.000089>
+90883 1670772779.724482 mmap(0xffffbf0e9000, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xffffbf0e9000 <0.000086>
+90883 1670772779.726194 mmap(0xffffbe8eb000, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xffffbe8eb000 <0.000177>
+90883 1670772779.727784 mmap(0xffffba8f9000, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xffffba8f9000 <0.000095>
+90883 1670772779.729209 mmap(0xffff9a969000, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xffff9a969000 <0.000072>
+90883 1670772779.730542 mmap(0xffff9a0e9000, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xffff9a0e9000 <0.000070>
+90883 1670772779.731799 mmap(NULL, 1048576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xffff97dd8000 <0.000071>
+90883 1670772779.733296 mmap(NULL, 65536, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)   = 0xffff97dc8000 <0.000062>
+90883 1670772779.734740 mmap(NULL, 65536, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)   = 0xffff97db8000 <0.000066>
+90883 1670772779.736221 rt_sigprocmask(SIG_SETMASK, NULL, [], 8)                                    = 0 <0.000058>
+90883 1670772779.737674 sigaltstack(NULL, {ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})             = 0 <0.000061>
+90883 1670772779.739068 sigaltstack({ss_sp=0x4000004000, ss_flags=0, ss_size=32768}, NULL)          = 0 <0.000037>
+90883 1670772779.740352 rt_sigprocmask(SIG_SETMASK, [], NULL, 8)                                    = 0 <0.000064>
+90883 1670772779.741709 gettid()                                                                    = 90883 <0.000067>
+90883 1670772779.743140 rt_sigaction(SIGHUP, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000087>
+90883 1670772779.744396 rt_sigaction(SIGHUP, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000134>
+90883 1670772779.746523 rt_sigaction(SIGINT, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000060>
+90883 1670772779.747833 rt_sigaction(SIGINT, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000057>
+90883 1670772779.749172 rt_sigaction(SIGQUIT, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000072>
+90883 1670772779.750452 rt_sigaction(SIGQUIT, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000050>
+90883 1670772779.751879 rt_sigaction(SIGILL, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000075>
+90883 1670772779.753166 rt_sigaction(SIGILL, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000081>
+90883 1670772779.754300 rt_sigaction(SIGTRAP, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000061>
+90883 1670772779.755203 rt_sigaction(SIGTRAP, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000037>
+90883 1670772779.755958 rt_sigaction(SIGABRT, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000036>
+90883 1670772779.756671 rt_sigaction(SIGABRT, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000038>
+90883 1670772779.757434 rt_sigaction(SIGBUS, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000034>
+90883 1670772779.758137 rt_sigaction(SIGBUS, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000055>
+90883 1670772779.758906 rt_sigaction(SIGFPE, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000038>
+90883 1670772779.759608 rt_sigaction(SIGFPE, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000036>
+90883 1670772779.760370 rt_sigaction(SIGUSR1, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000035>
+90883 1670772779.761062 rt_sigaction(SIGUSR1, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000044>
+90883 1670772779.761770 rt_sigaction(SIGSEGV, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000035>
+90883 1670772779.762437 rt_sigaction(SIGSEGV, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000033>
+90883 1670772779.763089 rt_sigaction(SIGUSR2, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000035>
+90883 1670772779.763773 rt_sigaction(SIGUSR2, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000034>
+90883 1670772779.764475 rt_sigaction(SIGPIPE, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000034>
+90883 1670772779.765132 rt_sigaction(SIGPIPE, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000034>
+90883 1670772779.765799 rt_sigaction(SIGALRM, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000041>
+90883 1670772779.766439 rt_sigaction(SIGALRM, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000045>
+90883 1670772779.767148 rt_sigaction(SIGTERM, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000033>
+90883 1670772779.767840 rt_sigaction(SIGTERM, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000043>
+90883 1670772779.768579 rt_sigaction(SIGSTKFLT, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000038>
+90883 1670772779.769290 rt_sigaction(SIGSTKFLT, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000046>
+90883 1670772779.769965 rt_sigaction(SIGCHLD, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000035>
+90883 1670772779.770617 rt_sigaction(SIGCHLD, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000039>
+90883 1670772779.771308 rt_sigaction(SIGURG, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000047>
+90883 1670772779.772306 rt_sigaction(SIGURG, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000053>
+90883 1670772779.772995 rt_sigaction(SIGXCPU, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000045>
+90883 1670772779.773671 rt_sigaction(SIGXCPU, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000031>
+90883 1670772779.774300 rt_sigaction(SIGXFSZ, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000046>
+90883 1670772779.774926 rt_sigaction(SIGXFSZ, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000036>
+90883 1670772779.775601 rt_sigaction(SIGVTALRM, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000033>
+90883 1670772779.776308 rt_sigaction(SIGVTALRM, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000043>
+90883 1670772779.776983 rt_sigaction(SIGPROF, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000032>
+90883 1670772779.777680 rt_sigaction(SIGPROF, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000051>
+90883 1670772779.778280 rt_sigaction(SIGWINCH, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000062>
+90883 1670772779.779022 rt_sigaction(SIGWINCH, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000036>
+90883 1670772779.779743 rt_sigaction(SIGIO, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)  = 0 <0.000036>
+90883 1670772779.780435 rt_sigaction(SIGIO, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000046>
+90883 1670772779.781084 rt_sigaction(SIGPWR, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000063>
+90883 1670772779.781752 rt_sigaction(SIGPWR, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000047>
+90883 1670772779.782469 rt_sigaction(SIGSYS, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000034>
+90883 1670772779.783085 rt_sigaction(SIGSYS, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000058>
+90883 1670772779.783748 rt_sigaction(SIGRTMIN, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000029>
+90883 1670772779.784400 rt_sigaction(SIGRT_1, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000042>
+90883 1670772779.785045 rt_sigaction(SIGRT_1, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000027>
+90883 1670772779.785663 rt_sigaction(SIGRT_2, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000036>
+90883 1670772779.786341 rt_sigaction(SIGRT_3, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000046>
+90883 1670772779.787010 rt_sigaction(SIGRT_3, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000049>
+90883 1670772779.787682 rt_sigaction(SIGRT_4, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000034>
+90883 1670772779.788342 rt_sigaction(SIGRT_4, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000032>
+90883 1670772779.788956 rt_sigaction(SIGRT_5, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000037>
+90883 1670772779.789590 rt_sigaction(SIGRT_5, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000030>
+90883 1670772779.790243 rt_sigaction(SIGRT_6, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000058>
+90883 1670772779.790891 rt_sigaction(SIGRT_6, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000045>
+90883 1670772779.791554 rt_sigaction(SIGRT_7, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000035>
+90883 1670772779.792214 rt_sigaction(SIGRT_7, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000048>
+90883 1670772779.793091 rt_sigaction(SIGRT_8, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000047>
+90883 1670772779.793818 rt_sigaction(SIGRT_8, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000033>
+90883 1670772779.794498 rt_sigaction(SIGRT_9, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000033>
+90883 1670772779.795153 rt_sigaction(SIGRT_9, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000033>
+90883 1670772779.795767 rt_sigaction(SIGRT_10, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000032>
+90883 1670772779.796390 rt_sigaction(SIGRT_10, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000034>
+90883 1670772779.797033 rt_sigaction(SIGRT_11, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000051>
+90883 1670772779.797675 rt_sigaction(SIGRT_11, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000028>
+90883 1670772779.798280 rt_sigaction(SIGRT_12, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000032>
+90883 1670772779.798906 rt_sigaction(SIGRT_12, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000033>
+90883 1670772779.799555 rt_sigaction(SIGRT_13, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000033>
+90883 1670772779.800176 rt_sigaction(SIGRT_13, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000020>
+90883 1670772779.800822 rt_sigaction(SIGRT_14, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000042>
+90883 1670772779.801480 rt_sigaction(SIGRT_14, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000047>
+90883 1670772779.802133 rt_sigaction(SIGRT_15, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000055>
+90883 1670772779.802803 rt_sigaction(SIGRT_15, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000034>
+90883 1670772779.803449 rt_sigaction(SIGRT_16, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000031>
+90883 1670772779.804142 rt_sigaction(SIGRT_16, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000044>
+90883 1670772779.804842 rt_sigaction(SIGRT_17, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000034>
+90883 1670772779.805494 rt_sigaction(SIGRT_17, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000034>
+90883 1670772779.806144 rt_sigaction(SIGRT_18, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000031>
+90883 1670772779.806805 rt_sigaction(SIGRT_18, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000048>
+90883 1670772779.807457 rt_sigaction(SIGRT_19, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000047>
+90883 1670772779.808135 rt_sigaction(SIGRT_19, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000034>
+90883 1670772779.808786 rt_sigaction(SIGRT_20, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000043>
+90883 1670772779.809443 rt_sigaction(SIGRT_20, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000033>
+90883 1670772779.810089 rt_sigaction(SIGRT_21, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000034>
+90883 1670772779.810702 rt_sigaction(SIGRT_21, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000033>
+90883 1670772779.811350 rt_sigaction(SIGRT_22, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000046>
+90883 1670772779.812028 rt_sigaction(SIGRT_22, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000034>
+90883 1670772779.812678 rt_sigaction(SIGRT_23, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000050>
+90883 1670772779.813576 rt_sigaction(SIGRT_23, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000043>
+90883 1670772779.814224 rt_sigaction(SIGRT_24, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000033>
+90883 1670772779.814894 rt_sigaction(SIGRT_24, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000045>
+90883 1670772779.815519 rt_sigaction(SIGRT_25, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000034>
+90883 1670772779.816206 rt_sigaction(SIGRT_25, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000043>
+90883 1670772779.816848 rt_sigaction(SIGRT_26, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000033>
+90883 1670772779.817478 rt_sigaction(SIGRT_26, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000047>
+90883 1670772779.818079 rt_sigaction(SIGRT_27, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000043>
+90883 1670772779.818724 rt_sigaction(SIGRT_27, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000033>
+90883 1670772779.819395 rt_sigaction(SIGRT_28, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000035>
+90883 1670772779.820062 rt_sigaction(SIGRT_28, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000034>
+90883 1670772779.820704 rt_sigaction(SIGRT_29, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000034>
+90883 1670772779.821338 rt_sigaction(SIGRT_29, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000032>
+90883 1670772779.821970 rt_sigaction(SIGRT_30, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000050>
+90883 1670772779.822611 rt_sigaction(SIGRT_30, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000053>
+90883 1670772779.823268 rt_sigaction(SIGRT_31, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000053>
+90883 1670772779.823945 rt_sigaction(SIGRT_31, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000033>
+90883 1670772779.824556 rt_sigaction(SIGRT_32, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000053>
+90883 1670772779.825229 rt_sigaction(SIGRT_32, {sa_handler=0x6f000, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000029>
+90883 1670772779.825912 rt_sigprocmask(SIG_SETMASK, ~[], [], 8)                                     = 0 <0.000028>
+90883 1670772779.826530 clone(child_stack=0x4000048000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM) = 90884 <0.000134>
+90884 1670772779.827259 gettid( <unfinished ...>
+90883 1670772779.827580 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+90884 1670772779.827842 <... gettid resumed>)                                                       = 90884 <0.000269>
+90883 1670772779.828111 <... rt_sigprocmask resumed>NULL, 8)                                        = 0 <0.000274>
+90884 1670772779.828460 sigaltstack(NULL,  <unfinished ...>
+90883 1670772779.828735 rt_sigprocmask(SIG_SETMASK, ~[],  <unfinished ...>
+90884 1670772779.829022 <... sigaltstack resumed>{ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})      = 0 <0.000295>
+90883 1670772779.829277 <... rt_sigprocmask resumed>[], 8)                                          = 0 <0.000261>
+90884 1670772779.829619 sigaltstack({ss_sp=0x400003a000, ss_flags=0, ss_size=32768},  <unfinished ...>
+90883 1670772779.829905 clone(child_stack=0x400004a000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM <unfinished ...>
+90884 1670772779.830236 <... sigaltstack resumed>NULL)                                              = 0 <0.000337>
+90884 1670772779.830499 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+90883 1670772779.830782 <... clone resumed>)                                                        = 90885 <0.000554>
+90885 1670772779.831296 gettid( <unfinished ...>
+90883 1670772779.831599 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+90884 1670772779.831875 <... rt_sigprocmask resumed>NULL, 8)                                        = 0 <0.001100>
+90883 1670772779.832123 <... rt_sigprocmask resumed>NULL, 8)                                        = 0 <0.000252>
+90885 1670772779.832417 <... gettid resumed>)                                                       = 90885 <0.000824>
+90883 1670772779.832692 rt_sigprocmask(SIG_SETMASK, ~[],  <unfinished ...>
+90884 1670772779.832978 gettid( <unfinished ...>
+90883 1670772779.833218 <... rt_sigprocmask resumed>[], 8)                                          = 0 <0.000249>
+90885 1670772779.833480 sigaltstack(NULL,  <unfinished ...>
+90883 1670772779.833793 clone(child_stack=0x4000044000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM <unfinished ...>
+90884 1670772779.834075 <... gettid resumed>)                                                       = 90884 <0.000862>
+90885 1670772779.834402 <... sigaltstack resumed>{ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})      = 0 <0.000616>
+90883 1670772779.834702 <... clone resumed>)                                                        = 90886 <0.000632>
+90886 1670772779.834962 gettid( <unfinished ...>
+90884 1670772779.835198 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772779.835538 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+90886 1670772779.835777 <... gettid resumed>)                                                       = 90886 <0.000585>
+90885 1670772779.836017 sigaltstack({ss_sp=0x400004a000, ss_flags=0, ss_size=32768},  <unfinished ...>
+90883 1670772779.836280 <... rt_sigprocmask resumed>NULL, 8)                                        = 0 <0.000509>
+90886 1670772779.836529 sigaltstack(NULL,  <unfinished ...>
+90884 1670772779.836834 <... nanosleep resumed>NULL)                                                = 0 <0.001304>
+90883 1670772779.837053 futex(0x148c48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90886 1670772779.837308 <... sigaltstack resumed>{ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})      = 0 <0.000479>
+90885 1670772779.837569 <... sigaltstack resumed>NULL)                                              = 0 <0.001297>
+90886 1670772779.837808 sigaltstack({ss_sp=0x400005c000, ss_flags=0, ss_size=32768},  <unfinished ...>
+90884 1670772779.838081 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90886 1670772779.838379 <... sigaltstack resumed>NULL)                                              = 0 <0.000304>
+90885 1670772779.838694 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+90886 1670772779.838950 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+90884 1670772779.839202 <... nanosleep resumed>NULL)                                                = 0 <0.000831>
+90886 1670772779.839472 <... rt_sigprocmask resumed>NULL, 8)                                        = 0 <0.000275>
+90885 1670772779.839764 <... rt_sigprocmask resumed>NULL, 8)                                        = 0 <0.000821>
+90886 1670772779.840079 gettid( <unfinished ...>
+90884 1670772779.840343 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90886 1670772779.840565 <... gettid resumed>)                                                       = 90886 <0.000228>
+90885 1670772779.840829 gettid( <unfinished ...>
+90886 1670772779.841083 futex(0x148c48, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772779.841362 <... nanosleep resumed>NULL)                                                = 0 <0.000804>
+90883 1670772779.841598 <... futex resumed>)                                                        = 0 <0.004295>
+90886 1670772779.841840 <... futex resumed>)                                                        = 1 <0.000479>
+90885 1670772779.842157 <... gettid resumed>)                                                       = 90885 <0.001082>
+90883 1670772779.842415 rt_sigprocmask(SIG_SETMASK, ~[],  <unfinished ...>
+90886 1670772779.842675 futex(0x4000038948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772779.843205 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772779.843482 <... rt_sigprocmask resumed>[], 8)                                          = 0 <0.000812>
+90886 1670772779.843758 <... futex resumed>)                                                        = -1 EAGAIN (Resource temporarily unavailable) <0.000558>
+90885 1670772779.844125 futex(0x4000038948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90883 1670772779.844439 clone(child_stack=0x4000046000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM <unfinished ...>
+90886 1670772779.844712 mmap(NULL, 262144, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0 <unfinished ...>
+90884 1670772779.844983 <... nanosleep resumed>NULL)                                                = 0 <0.001509>
+90886 1670772779.845242 <... mmap resumed>)                                                         = 0xffff97d78000 <0.000264>
+90885 1670772779.845531 <... futex resumed>)                                                        = 0 <0.001103>
+90883 1670772779.845870 <... clone resumed>)                                                        = 90887 <0.001163>
+90887 1670772779.846158 gettid( <unfinished ...>
+90886 1670772779.846452 rt_sigprocmask(SIG_SETMASK, ~[],  <unfinished ...>
+90884 1670772779.846737 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772779.847088 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+90887 1670772779.847382 <... gettid resumed>)                                                       = 90887 <0.000935>
+90886 1670772779.847643 <... rt_sigprocmask resumed>[], 8)                                          = 0 <0.000911>
+90885 1670772779.847920 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90883 1670772779.848179 <... rt_sigprocmask resumed>NULL, 8)                                        = 0 <0.000802>
+90887 1670772779.848516 sigaltstack(NULL,  <unfinished ...>
+90886 1670772779.848767 clone(child_stack=0x4000092000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM <unfinished ...>
+90884 1670772779.848990 <... nanosleep resumed>NULL)                                                = 0 <0.001910>
+90883 1670772779.849214 futex(0x148c48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90887 1670772779.849463 <... sigaltstack resumed>{ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})      = 0 <0.000702>
+90888 1670772779.849745 gettid( <unfinished ...>
+90884 1670772779.850044 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90888 1670772779.850311 <... gettid resumed>)                                                       = 90888 <0.000273>
+90887 1670772779.850612 sigaltstack({ss_sp=0x4000066000, ss_flags=0, ss_size=32768},  <unfinished ...>
+90886 1670772779.850899 <... clone resumed>)                                                        = 90888 <0.001915>
+90888 1670772779.851191 sigaltstack(NULL,  <unfinished ...>
+90887 1670772779.851505 <... sigaltstack resumed>NULL)                                              = 0 <0.000610>
+90884 1670772779.851750 <... nanosleep resumed>NULL)                                                = 0 <0.001446>
+90888 1670772779.852058 <... sigaltstack resumed>{ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})      = 0 <0.000559>
+90887 1670772779.852339 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+90886 1670772779.852601 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+90888 1670772779.852844 sigaltstack({ss_sp=0x4000084000, ss_flags=0, ss_size=32768},  <unfinished ...>
+90887 1670772779.853158 <... rt_sigprocmask resumed>NULL, 8)                                        = 0 <0.000562>
+90884 1670772779.853420 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90888 1670772779.853708 <... sigaltstack resumed>NULL)                                              = 0 <0.000555>
+90887 1670772779.853937 gettid( <unfinished ...>
+90886 1670772779.854193 <... rt_sigprocmask resumed>NULL, 8)                                        = 0 <0.001356>
+90888 1670772779.854477 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+90887 1670772779.854961 <... gettid resumed>)                                                       = 90887 <0.000773>
+90884 1670772779.855234 <... nanosleep resumed>NULL)                                                = 0 <0.001534>
+90888 1670772779.855569 <... rt_sigprocmask resumed>NULL, 8)                                        = 0 <0.000610>
+90887 1670772779.855853 futex(0x4000038d48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90886 1670772779.856091 futex(0x148c48, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90888 1670772779.856376 gettid( <unfinished ...>
+90884 1670772779.856660 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772779.856944 <... futex resumed>)                                                        = 0 <0.007484>
+90888 1670772779.857196 <... gettid resumed>)                                                       = 90888 <0.000541>
+90886 1670772779.857452 <... futex resumed>)                                                        = 1 <0.001083>
+90883 1670772779.857736 fcntl(0</dev/pts/1<char 136:1>>, F_GETFL <unfinished ...>
+90888 1670772779.858059 futex(0x4000080148, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772779.858363 <... nanosleep resumed>NULL)                                                = 0 <0.001426>
+90883 1670772779.858700 <... fcntl resumed>)                                                        = 0x20402 (flags O_RDWR|O_APPEND|O_LARGEFILE) <0.000647>
+90886 1670772779.858933 futex(0x4000038948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90883 1670772779.859200 futex(0x4000080148, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772779.859431 futex(0x4000038948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90883 1670772779.859674 <... futex resumed>)                                                        = 1 <0.000248>
+90888 1670772779.859919 <... futex resumed>)                                                        = 0 <0.001562>
+90886 1670772779.860192 <... futex resumed>)                                                        = -1 EAGAIN (Resource temporarily unavailable) <0.000999>
+90883 1670772779.860443 mmap(NULL, 262144, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0 <unfinished ...>
+90888 1670772779.860682 nanosleep({tv_sec=0, tv_nsec=3000},  <unfinished ...>
+90884 1670772779.860972 <... futex resumed>)                                                        = 0 <0.001306>
+90883 1670772779.861219 <... mmap resumed>)                                                         = 0xffff97d38000 <0.000542>
+90888 1670772779.861452 <... nanosleep resumed>NULL)                                                = 0 <0.000485>
+90886 1670772779.861656 nanosleep({tv_sec=0, tv_nsec=3000},  <unfinished ...>
+90883 1670772779.861910 futex(0x4000038d48, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90888 1670772779.862196 futex(0x148c48, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772779.862438 getpid( <unfinished ...>
+90883 1670772779.862730 <... futex resumed>)                                                        = 1 <0.000539>
+90888 1670772779.863028 <... futex resumed>)                                                        = 0 <0.000595>
+90887 1670772779.863271 <... futex resumed>)                                                        = 0 <0.007185>
+90886 1670772779.863518 <... nanosleep resumed>NULL)                                                = 0 <0.001616>
+90883 1670772779.863846 fcntl(1</dev/pts/1<char 136:1>>, F_GETFL <unfinished ...>
+90888 1670772779.864170 futex(0x4000080148, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90887 1670772779.864432 futex(0x4000038d48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772779.864760 <... getpid resumed>)                                                       = 90883 <0.002038>
+90883 1670772779.865030 <... fcntl resumed>)                                                        = 0x20402 (flags O_RDWR|O_APPEND|O_LARGEFILE) <0.000865>
+90886 1670772779.865311 futex(0x4000038948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90883 1670772779.865567 fcntl(2</dev/pts/1<char 136:1>>, F_GETFL <unfinished ...>
+90884 1670772779.866045 tgkill(90883, 90883, SIGURG <unfinished ...>
+90883 1670772779.866339 <... fcntl resumed>)                                                        = 0x20402 (flags O_RDWR|O_APPEND|O_LARGEFILE) <0.000300>
+90884 1670772779.866617 <... tgkill resumed>)                                                       = 0 <0.000284>
+90883 1670772779.866880 --- SIGURG {si_signo=SIGURG, si_code=SI_TKILL, si_pid=90883, si_uid=0} ---
+90884 1670772779.867184 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772779.867488 rt_sigreturn({mask=[]} <unfinished ...>
+90884 1670772779.867788 <... nanosleep resumed>NULL)                                                = 0 <0.000306>
+90883 1670772779.868121 <... rt_sigreturn resumed>)                                                 = 132098 <0.000339>
+90884 1670772779.868374 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772779.868658 prlimit64(0, RLIMIT_NOFILE, NULL,  <unfinished ...>
+90884 1670772779.868949 <... nanosleep resumed>NULL)                                                = 0 <0.000297>
+90883 1670772779.869253 <... prlimit64 resumed>{rlim_cur=1024, rlim_max=1024*1024})                 = 0 <0.000310>
+90884 1670772779.869530 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772779.869831 prlimit64(0, RLIMIT_NOFILE, {rlim_cur=1024*1024, rlim_max=1024*1024},  <unfinished ...>
+90884 1670772779.870130 <... nanosleep resumed>NULL)                                                = 0 <0.000306>
+90883 1670772779.870354 <... prlimit64 resumed>NULL)                                                = 0 <0.000230>
+90884 1670772779.870623 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772779.870902 futex(0x4000038948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772779.871197 <... nanosleep resumed>NULL)                                                = 0 <0.000302>
+90883 1670772779.871503 <... futex resumed>)                                                        = 1 <0.000313>
+90886 1670772779.871802 <... futex resumed>)                                                        = 0 <0.006241>
+90884 1670772779.872093 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772779.872358 epoll_create1(EPOLL_CLOEXEC <unfinished ...>
+90886 1670772779.872672 futex(0x4000038d48, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90883 1670772779.872922 <... epoll_create1 resumed>)                                                = 3<anon_inode:[eventpoll]> <0.000255>
+90884 1670772779.873234 <... nanosleep resumed>NULL)                                                = 0 <0.000884>
+90883 1670772779.873480 pipe2( <unfinished ...>
+90887 1670772779.873748 <... futex resumed>)                                                        = 0 <0.008994>
+90886 1670772779.873997 <... futex resumed>)                                                        = 1 <0.001082>
+90883 1670772779.874306 <... pipe2 resumed>[4<pipe:[228505]>, 5<pipe:[228505]>], O_NONBLOCK|O_CLOEXEC) = 0 <0.000563>
+90887 1670772779.874672 nanosleep({tv_sec=0, tv_nsec=3000},  <unfinished ...>
+90884 1670772779.874980 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772779.875289 epoll_ctl(3<anon_inode:[eventpoll]>, EPOLL_CTL_ADD, 4<pipe:[228505]>, {events=EPOLLIN, data={u32=1536360, u64=1536360}} <unfinished ...>
+90887 1670772779.875576 <... nanosleep resumed>NULL)                                                = 0 <0.000601>
+90886 1670772779.875846 rt_sigprocmask(SIG_SETMASK, ~[],  <unfinished ...>
+90883 1670772779.876148 <... epoll_ctl resumed>)                                                    = 0 <0.000585>
+90887 1670772779.876516 futex(0x4000080148, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772779.876882 <... nanosleep resumed>NULL)                                                = 0 <0.001600>
+90883 1670772779.877282 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90888 1670772779.877603 <... futex resumed>)                                                        = 0 <0.013177>
+90887 1670772779.877879 <... futex resumed>)                                                        = 1 <0.001003>
+90886 1670772779.878440 <... rt_sigprocmask resumed>[], 8)                                          = 0 <0.002299>
+90888 1670772779.878736 futex(0x4000080148, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90887 1670772779.878980 write(1</dev/pts/1<char 136:1>>, "thread 1: start\n", 16 <unfinished ...>
+90884 1670772779.879324 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90887 1670772779.879622 <... write resumed>)                                                        = 16 <0.000313>
+90886 1670772779.879913 clone(child_stack=0x4000094000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM <unfinished ...>
+90884 1670772779.880246 <... nanosleep resumed>NULL)                                                = 0 <0.000632>
+90889 1670772779.880663 gettid( <unfinished ...>
+90886 1670772779.880929 <... clone resumed>)                                                        = 90889 <0.000689>
+90884 1670772779.881216 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90889 1670772779.881485 <... gettid resumed>)                                                       = 90889 <0.000558>
+90886 1670772779.881721 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+90889 1670772779.881999 sigaltstack(NULL,  <unfinished ...>
+90884 1670772779.882242 <... nanosleep resumed>NULL)                                                = 0 <0.000760>
+90889 1670772779.882549 <... sigaltstack resumed>{ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})      = 0 <0.000310>
+90886 1670772779.882828 <... rt_sigprocmask resumed>NULL, 8)                                        = 0 <0.000836>
+90889 1670772779.883103 sigaltstack({ss_sp=0x40000b4000, ss_flags=0, ss_size=32768},  <unfinished ...>
+90884 1670772779.883422 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90889 1670772779.883680 <... sigaltstack resumed>NULL)                                              = 0 <0.000261>
+90886 1670772779.883935 write(1</dev/pts/1<char 136:1>>, "thread 2: start\n", 16 <unfinished ...>
+90889 1670772779.884196 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+90886 1670772779.884550 <... write resumed>)                                                        = 16 <0.000367>
+90884 1670772779.884840 <... nanosleep resumed>NULL)                                                = 0 <0.001164>
+90889 1670772779.888163 <... rt_sigprocmask resumed>NULL, 8)                                        = 0 <0.003619>
+90887 1670772779.888472 write(1</dev/pts/1<char 136:1>>, "thread 1: fin\n", 14 <unfinished ...>
+90884 1670772779.888741 getpid( <unfinished ...>
+90887 1670772779.889126 <... write resumed>)                                                        = 14 <0.000393>
+90884 1670772779.889441 <... getpid resumed>)                                                       = 90883 <0.000326>
+90887 1670772779.889702 futex(0x4000038d48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772779.889951 tgkill(90883, 90886, SIGURG <unfinished ...>
+90889 1670772779.890244 gettid( <unfinished ...>
+90886 1670772779.890539 --- SIGURG {si_signo=SIGURG, si_code=SI_TKILL, si_pid=90883, si_uid=0} ---
+90884 1670772779.891028 <... tgkill resumed>)                                                       = 0 <0.000822>
+90889 1670772779.891464 <... gettid resumed>)                                                       = 90889 <0.000928>
+90886 1670772779.891802 rt_sigreturn({mask=[]} <unfinished ...>
+90889 1670772779.892200 futex(0x177358, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772779.892546 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90886 1670772779.892961 <... rt_sigreturn resumed>)                                                 = 7938652 <0.000769>
+90884 1670772779.893392 <... nanosleep resumed>NULL)                                                = 0 <0.000441>
+90886 1670772779.893720 futex(0x4000080148, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772779.894063 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90888 1670772779.894473 <... futex resumed>)                                                        = 0 <0.015497>
+90886 1670772779.895300 <... futex resumed>)                                                        = 1 <0.001250>
+90888 1670772779.895653 futex(0x4000038948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772779.896056 <... nanosleep resumed>NULL)                                                = 0 <0.001592>
+90888 1670772779.896355 <... futex resumed>)                                                        = 0 <0.000307>
+90884 1670772779.896637 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90888 1670772779.896987 futex(0x4000080148, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90886 1670772779.897391 write(1</dev/pts/1<char 136:1>>, "thread 2: fin\n", 14 <unfinished ...>
+90884 1670772779.897767 <... nanosleep resumed>NULL)                                                = 0 <0.000790>
+90886 1670772779.898127 <... write resumed>)                                                        = 14 <0.000367>
+90884 1670772779.898509 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90886 1670772779.898904 futex(0x4000038948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772779.899252 <... nanosleep resumed>NULL)                                                = 0 <0.000360>
+90884 1670772779.899597 futex(0x148ff8, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=972271000})       = -1 ETIMEDOUT (Connection timed out) <0.972869>
+90883 1670772780.876327 <... epoll_pwait resumed>[], 128, 995, NULL, 414685831)                     = 0 <0.998722>
+90884 1670772780.878354 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772780.880325 futex(0x4000080148, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772780.881835 <... nanosleep resumed>NULL)                                                = 0 <0.001550>
+90883 1670772780.883665 <... futex resumed>)                                                        = 1 <0.001853>
+90888 1670772780.885198 <... futex resumed>)                                                        = 0 <0.987811>
+90883 1670772780.886408 write(1</dev/pts/1<char 136:1>>, "sum1=18803317, sum2=18803203\n", 29 <unfinished ...>
+90884 1670772780.887813 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90883 1670772780.889858 <... write resumed>)                                                        = 29 <0.002052>
+90888 1670772780.898224 futex(0x4000080148, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90883 1670772780.899273 futex(0x4000080148, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772780.900461 <... epoll_pwait resumed>[], 128, 0, NULL, 421820832)                       = 0 <0.010622>
+90883 1670772780.901556 <... futex resumed>)                                                        = 0 <0.001139>
+90888 1670772780.902347 <... futex resumed>)                                                        = -1 EAGAIN (Resource temporarily unavailable) <0.003088>
+90883 1670772780.903196 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90884 1670772780.904242 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90888 1670772780.905330 futex(0x4000080148, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772780.906420 <... nanosleep resumed>NULL)                                                = 0 <0.001111>
+90884 1670772780.907704 futex(0x148ff8, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=990702625} <unfinished ...>
+90883 1670772781.900682 <... epoll_pwait resumed>[], 128, 995, NULL, 440500832)                     = 0 <0.996394>
+90884 1670772781.904490 <... futex resumed>)                                                        = -1 ETIMEDOUT (Connection timed out) <0.995796>
+90883 1670772781.906581 futex(0x4000080148, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772781.908737 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90883 1670772781.910485 <... futex resumed>)                                                        = 1 <0.001766>
+90888 1670772781.912096 <... futex resumed>)                                                        = 0 <1.005694>
+90883 1670772781.913568 write(1</dev/pts/1<char 136:1>>, "sum1=18803317, sum2=18803203\n", 29 <unfinished ...>
+90884 1670772781.916544 <... epoll_pwait resumed>[], 128, 0, NULL, 444842582)                       = 0 <0.006088>
+90883 1670772781.918129 <... write resumed>)                                                        = 29 <0.001606>
+90888 1670772781.925396 futex(0x4000080148, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772781.928262 futex(0x4000080148, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90883 1670772781.929294 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90888 1670772781.930141 <... futex resumed>)                                                        = -1 EAGAIN (Resource temporarily unavailable) <0.001897>
+90883 1670772781.930968 <... futex resumed>)                                                        = 1 <0.000843>
+90885 1670772781.931790 <... futex resumed>)                                                        = 0 <2.083601>
+90884 1670772781.932800 <... futex resumed>)                                                        = 0 <0.003544>
+90883 1670772781.933755 futex(0x148c48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90888 1670772781.934636 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90885 1670772781.935640 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772781.936637 nanosleep({tv_sec=0, tv_nsec=20000}, NULL)                                  = 0 <0.000245>
+90884 1670772781.938802 futex(0x148ff8, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=987649291})       = -1 ETIMEDOUT (Connection timed out) <0.990582>
+90888 1670772782.934756 <... epoll_pwait resumed>[], 128, 995, NULL, 469215499)                     = 0 <0.999121>
+90884 1670772782.937168 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90888 1670772782.939922 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772782.941162 <... nanosleep resumed>NULL)                                                = 0 <0.001297>
+90888 1670772782.942535 <... futex resumed>)                                                        = 1 <0.001398>
+90885 1670772782.943844 <... futex resumed>)                                                        = 0 <1.007228>
+90888 1670772782.945511 mmap(NULL, 262144, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0 <unfinished ...>
+90884 1670772782.946895 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90888 1670772782.948153 <... mmap resumed>)                                                         = 0xffff97cf8000 <0.001292>
+90885 1670772782.949203 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90888 1670772782.950268 write(1</dev/pts/1<char 136:1>>, "sum1=18803317, sum2=18803203\n", 29 <unfinished ...>
+90884 1670772782.951309 <... epoll_pwait resumed>[], 128, 0, NULL, 480721583)                       = 0 <0.003178>
+90888 1670772782.952492 <... write resumed>)                                                        = 29 <0.001198>
+90884 1670772782.954297 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90888 1670772782.955183 futex(0x148c48, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90885 1670772782.956417 <... futex resumed>)                                                        = 0 <0.006170>
+90884 1670772782.957535 <... futex resumed>)                                                        = 1 <0.002380>
+90883 1670772782.958700 <... futex resumed>)                                                        = 0 <1.024077>
+90888 1670772782.959712 <... futex resumed>)                                                        = 1 <0.003353>
+90885 1670772782.960754 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90883 1670772782.962014 futex(0x148c48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90888 1670772782.963041 futex(0x4000080148, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772782.963935 nanosleep({tv_sec=0, tv_nsec=20000}, NULL)                                  = 0 <0.000226>
+90884 1670772782.966085 futex(0x148ff8, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=988365042})       = -1 ETIMEDOUT (Connection timed out) <0.989259>
+90885 1670772783.964987 <... epoll_pwait resumed>[], 128, 996, NULL, 495725458)                     = 0 <1.002989>
+90884 1670772783.966182 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90885 1670772783.967583 futex(0x4000080148, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772783.968829 <... nanosleep resumed>NULL)                                                = 0 <0.001267>
+90888 1670772783.969853 <... futex resumed>)                                                        = 0 <1.005930>
+90885 1670772783.970715 <... futex resumed>)                                                        = 1 <0.001908>
+90888 1670772783.971552 futex(0x4000080148, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772783.972315 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90885 1670772783.973050 write(1</dev/pts/1<char 136:1>>, "sum1=18803317, sum2=18803203\n", 29 <unfinished ...>
+90884 1670772783.973950 <... epoll_pwait resumed>[], 128, 0, NULL, 508044292)                       = 0 <0.000917>
+90885 1670772783.978302 <... write resumed>)                                                        = 29 <0.004360>
+90885 1670772783.979387 futex(0x148c48, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772783.980374 futex(0x4000080148, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90883 1670772783.981217 <... futex resumed>)                                                        = 0 <1.018194>
+90888 1670772783.982091 <... futex resumed>)                                                        = 0 <0.009788>
+90885 1670772783.982852 <... futex resumed>)                                                        = 1 <0.002500>
+90884 1670772783.983619 <... futex resumed>)                                                        = 1 <0.002425>
+90883 1670772783.984530 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90888 1670772783.985382 futex(0x4000080148, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90885 1670772783.986225 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772783.987070 nanosleep({tv_sec=0, tv_nsec=20000}, NULL)                                  = 0 <0.000314>
+90884 1670772783.989771 futex(0x148ff8, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=989688000} <unfinished ...>
+90883 1670772784.982850 <... epoll_pwait resumed>[], 128, 997, NULL, 520328625)                     = 0 <0.997456>
+90884 1670772784.984277 <... futex resumed>)                                                        = -1 ETIMEDOUT (Connection timed out) <0.993480>
+90883 1670772784.985200 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772784.985967 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90883 1670772784.987750 <... futex resumed>)                                                        = 1 <0.001798>
+90885 1670772784.989442 <... futex resumed>)                                                        = 0 <1.002377>
+90883 1670772784.991232 write(1</dev/pts/1<char 136:1>>, "sum1=18803317, sum2=18803203\n", 29 <unfinished ...>
+90884 1670772784.992339 <... epoll_pwait resumed>[], 128, 0, NULL, 523368501)                       = 0 <0.004621>
+90883 1670772784.993911 <... write resumed>)                                                        = 29 <0.001590>
+90885 1670772784.997450 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90883 1670772784.998613 futex(0x4000080148, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772784.999346 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90883 1670772785.000100 <... futex resumed>)                                                        = 1 <0.000765>
+90888 1670772785.001062 <... futex resumed>)                                                        = 0 <1.014848>
+90885 1670772785.002353 <... futex resumed>)                                                        = -1 EAGAIN (Resource temporarily unavailable) <0.003777>
+90883 1670772785.003431 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90888 1670772785.004325 futex(0x4000080148, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772785.005051 <... futex resumed>)                                                        = 0 <0.004968>
+90885 1670772785.007374 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772785.008404 nanosleep({tv_sec=0, tv_nsec=20000}, NULL)                                  = 0 <0.000235>
+90884 1670772785.010601 futex(0x148ff8, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=986939125})       = -1 ETIMEDOUT (Connection timed out) <0.990033>
+90883 1670772786.005150 <... epoll_pwait resumed>[], 128, 996, NULL, 539329292)                     = 0 <1.000832>
+90884 1670772786.007436 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772786.009401 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772786.011038 <... nanosleep resumed>NULL)                                                = 0 <0.001666>
+90883 1670772786.012653 <... futex resumed>)                                                        = 1 <0.001634>
+90885 1670772786.013818 <... futex resumed>)                                                        = 0 <1.005432>
+90883 1670772786.015088 write(1</dev/pts/1<char 136:1>>, "sum1=18803317, sum2=18803203\n", 29 <unfinished ...>
+90884 1670772786.016513 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90883 1670772786.022612 <... write resumed>)                                                        = 29 <0.006101>
+90885 1670772786.024406 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772786.025339 <... epoll_pwait resumed>[], 128, 0, NULL, 550934001)                       = 0 <0.002789>
+90883 1670772786.026887 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90885 1670772786.028578 <... futex resumed>)                                                        = -1 EAGAIN (Resource temporarily unavailable) <0.003246>
+90883 1670772786.029783 <... futex resumed>)                                                        = 0 <0.001224>
+90884 1670772786.031092 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772786.032314 futex(0x148c48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90885 1670772786.033464 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90884 1670772786.034570 <... nanosleep resumed>NULL)                                                = 0 <0.002282>
+90884 1670772786.035739 futex(0x148ff8, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=988765458})       = -1 ETIMEDOUT (Connection timed out) <0.990353>
+90885 1670772787.031250 <... epoll_pwait resumed>[], 128, 994, NULL, 567962959)                     = 0 <0.996690>
+90884 1670772787.033413 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90885 1670772787.035308 futex(0x148c48, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772787.036686 <... nanosleep resumed>NULL)                                                = 0 <0.001407>
+90883 1670772787.038599 <... futex resumed>)                                                        = 0 <1.005149>
+90885 1670772787.039906 <... futex resumed>)                                                        = 1 <0.003233>
+90883 1670772787.041101 futex(0x148c48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772787.042684 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90885 1670772787.043727 write(1</dev/pts/1<char 136:1>>, "sum1=18803317, sum2=18803203\n", 29 <unfinished ...>
+90884 1670772787.045086 <... epoll_pwait resumed>[], 128, 0, NULL, 576886710)                       = 0 <0.001380>
+90885 1670772787.046996 <... write resumed>)                                                        = 29 <0.001922>
+90884 1670772787.048433 futex(0x148c48, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90885 1670772787.049813 futex(0x4000080148, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90883 1670772787.051278 <... futex resumed>)                                                        = 0 <0.008604>
+90885 1670772787.052555 <... futex resumed>)                                                        = 1 <0.001310>
+90884 1670772787.053703 <... futex resumed>)                                                        = 1 <0.003922>
+90883 1670772787.054766 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90888 1670772787.056921 <... futex resumed>)                                                        = 0 <2.051876>
+90885 1670772787.057835 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772787.058622 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90888 1670772787.059517 futex(0x4000080148, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772787.060405 <... nanosleep resumed>NULL)                                                = 0 <0.000905>
+90884 1670772787.061374 futex(0x148ff8, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=987166542})       = -1 ETIMEDOUT (Connection timed out) <0.988441>
+90883 1670772788.053329 <... epoll_pwait resumed>[], 128, 995, NULL, 590752543)                     = 0 <0.996421>
+90884 1670772788.054838 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772788.056570 futex(0x4000080148, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772788.058773 <... nanosleep resumed>NULL)                                                = 0 <0.002226>
+90883 1670772788.059964 <... futex resumed>)                                                        = 1 <0.001221>
+90888 1670772788.061196 <... futex resumed>)                                                        = 0 <1.000806>
+90884 1670772788.062355 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90883 1670772788.063390 write(1</dev/pts/1<char 136:1>>, "sum1=18803317, sum2=18803203\n", 29 <unfinished ...>
+90888 1670772788.064556 futex(0x4000080148, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90883 1670772788.065715 <... write resumed>)                                                        = 29 <0.001181>
+90884 1670772788.066706 <... epoll_pwait resumed>[], 128, 0, NULL, 598084669)                       = 0 <0.003347>
+90883 1670772788.067803 futex(0x4000080148, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772788.068836 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772788.069860 <... futex resumed>)                                                        = 1 <0.001047>
+90888 1670772788.071105 <... futex resumed>)                                                        = 0 <0.005412>
+90883 1670772788.072066 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90884 1670772788.073073 <... nanosleep resumed>NULL)                                                = 0 <0.003237>
+90888 1670772788.073954 futex(0x4000080148, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772788.074894 futex(0x148ff8, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=992749000} <unfinished ...>
+90883 1670772789.070349 <... epoll_pwait resumed>[], 128, 995, NULL, 609264710)                     = 0 <0.997252>
+90884 1670772789.075165 <... futex resumed>)                                                        = -1 ETIMEDOUT (Connection timed out) <0.999384>
+90883 1670772789.077683 futex(0x4000080148, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772789.079555 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90883 1670772789.081344 <... futex resumed>)                                                        = 1 <0.001806>
+90888 1670772789.082832 <... futex resumed>)                                                        = 0 <1.007982>
+90883 1670772789.084850 write(1</dev/pts/1<char 136:1>>, "sum1=18803317, sum2=18803203\n", 29 <unfinished ...>
+90884 1670772789.086503 <... epoll_pwait resumed>[], 128, 0, NULL, 615785878)                       = 0 <0.005186>
+90883 1670772789.087851 <... write resumed>)                                                        = 29 <0.001417>
+90888 1670772789.093842 futex(0x4000080148, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90883 1670772789.095162 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772789.096167 futex(0x4000080148, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90883 1670772789.097044 <... futex resumed>)                                                        = 1 <0.000892>
+90888 1670772789.098133 <... futex resumed>)                                                        = -1 EAGAIN (Resource temporarily unavailable) <0.002997>
+90885 1670772789.100155 <... futex resumed>)                                                        = 0 <2.041543>
+90883 1670772789.101117 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90888 1670772789.102196 futex(0x4000080148, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772789.103084 <... futex resumed>)                                                        = 0 <0.006060>
+90885 1670772789.104156 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772789.105239 nanosleep({tv_sec=0, tv_nsec=20000}, NULL)                                  = 0 <0.000272>
+90884 1670772789.107386 futex(0x148ff8, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=986716375})       = -1 ETIMEDOUT (Connection timed out) <0.987317>
+90883 1670772790.097405 <... epoll_pwait resumed>[], 128, 995, NULL, 636316669)                     = 0 <0.995225>
+90884 1670772790.098472 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772790.099322 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772790.100257 <... nanosleep resumed>NULL)                                                = 0 <0.000952>
+90883 1670772790.101012 <... futex resumed>)                                                        = 1 <0.000769>
+90885 1670772790.101914 <... futex resumed>)                                                        = 0 <0.996697>
+90883 1670772790.102682 write(1</dev/pts/1<char 136:1>>, "sum1=18803317, sum2=18803203\n", 29 <unfinished ...>
+90884 1670772790.103701 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90883 1670772790.104885 <... write resumed>)                                                        = 29 <0.001171>
+90885 1670772790.109518 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772790.110729 <... epoll_pwait resumed>[], 128, 0, NULL, 639160836)                       = 0 <0.005889>
+90883 1670772790.111885 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90885 1670772790.112742 <... futex resumed>)                                                        = -1 EAGAIN (Resource temporarily unavailable) <0.002033>
+90883 1670772790.113636 <... futex resumed>)                                                        = 0 <0.000905>
+90884 1670772790.114509 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772790.115363 futex(0x148c48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90885 1670772790.116363 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90884 1670772790.117238 <... nanosleep resumed>NULL)                                                = 0 <0.001897>
+90884 1670772790.118315 futex(0x148ff8, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=991476334})       = -1 ETIMEDOUT (Connection timed out) <0.992671>
+90885 1670772791.115800 <... epoll_pwait resumed>[], 128, 995, NULL, 651859670)                     = 0 <0.998576>
+90884 1670772791.118520 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90885 1670772791.121324 futex(0x148c48, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772791.123304 <... nanosleep resumed>NULL)                                                = 0 <0.002020>
+90883 1670772791.124644 <... futex resumed>)                                                        = 0 <1.008290>
+90885 1670772791.126211 <... futex resumed>)                                                        = 1 <0.002925>
+90883 1670772791.127707 futex(0x148c48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772791.129070 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90885 1670772791.130228 write(1</dev/pts/1<char 136:1>>, "sum1=18803317, sum2=18803203\n", 29 <unfinished ...>
+90884 1670772791.131199 <... epoll_pwait resumed>[], 128, 0, NULL, 662879504)                       = 0 <0.000992>
+90885 1670772791.132540 <... write resumed>)                                                        = 29 <0.001352>
+90884 1670772791.139430 futex(0x148c48, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90885 1670772791.140645 futex(0x4000080148, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90883 1670772791.141799 <... futex resumed>)                                                        = 0 <0.012748>
+90884 1670772791.143261 <... futex resumed>)                                                        = 1 <0.002634>
+90883 1670772791.144258 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90888 1670772791.145259 <... futex resumed>)                                                        = 0 <2.042192>
+90885 1670772791.146454 <... futex resumed>)                                                        = 1 <0.004679>
+90888 1670772791.147423 futex(0x4000080148, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772791.148501 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90885 1670772791.149580 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772791.150564 <... nanosleep resumed>NULL)                                                = 0 <0.001009>
+90884 1670772791.151625 futex(0x148ff8, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=988000166})       = -1 ETIMEDOUT (Connection timed out) <0.988305>
+90883 1670772792.145187 <... epoll_pwait resumed>[], 128, 996, NULL, 681439379)                     = 0 <0.999938>
+90884 1670772792.147817 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772792.150083 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772792.151652 <... nanosleep resumed>NULL)                                                = 0 <0.001599>
+90883 1670772792.153366 <... futex resumed>)                                                        = 1 <0.001730>
+90885 1670772792.154655 <... futex resumed>)                                                        = 0 <1.004108>
+90883 1670772792.155930 write(1</dev/pts/1<char 136:1>>, "sum1=18803317, sum2=18803203\n", 29 <unfinished ...>
+90884 1670772792.157355 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90883 1670772792.159388 <... write resumed>)                                                        = 29 <0.002044>
+90885 1670772792.166728 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90883 1670772792.168512 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772792.170641 <... epoll_pwait resumed>[], 128, 0, NULL, 691594171)                       = 0 <0.011371>
+90883 1670772792.171812 <... futex resumed>)                                                        = 0 <0.001199>
+90885 1670772792.172633 <... futex resumed>)                                                        = -1 EAGAIN (Resource temporarily unavailable) <0.004153>
+90883 1670772792.174036 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90884 1670772792.175484 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90885 1670772792.176745 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772792.178044 <... nanosleep resumed>NULL)                                                = 0 <0.001329>
+90884 1670772792.179047 futex(0x148ff8, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=987824125})       = -1 ETIMEDOUT (Connection timed out) <0.988340>
+90883 1670772793.172663 <... epoll_pwait resumed>[], 128, 994, NULL, 710872462)                     = 0 <0.997192>
+90884 1670772793.175117 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772793.177687 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772793.179977 <... nanosleep resumed>NULL)                                                = 0 <0.002339>
+90883 1670772793.181186 <... futex resumed>)                                                        = 1 <0.001240>
+90885 1670772793.182897 <... futex resumed>)                                                        = 0 <1.004820>
+90883 1670772793.184462 write(1</dev/pts/1<char 136:1>>, "sum1=18803317, sum2=18803203\n", 29 <unfinished ...>
+90884 1670772793.186116 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90883 1670772793.188081 <... write resumed>)                                                        = 29 <0.001981>
+90885 1670772793.196534 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772793.197736 <... epoll_pwait resumed>[], 128, 0, NULL, 719516171)                       = 0 <0.009683>
+90883 1670772793.199836 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90885 1670772793.201017 <... futex resumed>)                                                        = -1 EAGAIN (Resource temporarily unavailable) <0.003300>
+90883 1670772793.205175 <... futex resumed>)                                                        = 0 <0.004164>
+90884 1670772793.206220 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772793.207424 futex(0x148c48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90885 1670772793.208446 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90884 1670772793.209436 <... nanosleep resumed>NULL)                                                = 0 <0.002036>
+90884 1670772793.210383 futex(0x148ff8, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=986284041})       = -1 ETIMEDOUT (Connection timed out) <0.987052>
+90885 1670772794.201804 <... epoll_pwait resumed>[], 128, 991, NULL, 743359213)                     = 0 <0.992379>
+90884 1670772794.204017 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90885 1670772794.205530 futex(0x148c48, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772794.207599 <... nanosleep resumed>NULL)                                                = 0 <0.002095>
+90883 1670772794.209398 <... futex resumed>)                                                        = 0 <1.000964>
+90885 1670772794.211106 <... futex resumed>)                                                        = 1 <0.003539>
+90883 1670772794.212458 futex(0x148c48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772794.213611 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90885 1670772794.214968 write(1</dev/pts/1<char 136:1>>, "sum1=18803317, sum2=18803203\n", 29)      = 29 <0.000052>
+90884 1670772794.217415 <... epoll_pwait resumed>[], 128, 0, NULL, 747637713)                       = 0 <0.002466>
+90885 1670772794.224985 futex(0x148c48, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772794.226106 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772794.227017 <... futex resumed>)                                                        = 0 <0.013423>
+90885 1670772794.227785 <... futex resumed>)                                                        = 1 <0.001708>
+90883 1670772794.228682 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90884 1670772794.229771 <... nanosleep resumed>NULL)                                                = 0 <0.002763>
+90885 1670772794.230843 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772794.231594 futex(0x148ff8, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=986906792})       = -1 ETIMEDOUT (Connection timed out) <0.987460>
+90883 1670772795.223685 <... epoll_pwait resumed>[], 128, 989, NULL, 765916463)                     = 0 <0.993913>
+90884 1670772795.226007 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772795.227846 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772795.229370 <... nanosleep resumed>NULL)                                                = 0 <0.001558>
+90883 1670772795.231142 <... futex resumed>)                                                        = 1 <0.001794>
+90885 1670772795.232458 <... futex resumed>)                                                        = 0 <1.000877>
+90884 1670772795.233996 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90883 1670772795.235407 write(1</dev/pts/1<char 136:1>>, "sum1=18803317, sum2=18803203\n", 29 <unfinished ...>
+90885 1670772795.236969 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90883 1670772795.238576 <... write resumed>)                                                        = 29 <0.001615>
+90884 1670772795.245692 <... epoll_pwait resumed>[], 128, 0, NULL, 769254755)                       = 0 <0.010299>
+90883 1670772795.247285 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772795.248590 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772795.249815 <... futex resumed>)                                                        = 1 <0.001252>
+90885 1670772795.251534 <... futex resumed>)                                                        = 0 <0.012997>
+90883 1670772795.252390 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90884 1670772795.253285 <... nanosleep resumed>NULL)                                                = 0 <0.003501>
+90885 1670772795.254173 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772795.254984 futex(0x148ff8, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=991591917})       = -1 ETIMEDOUT (Connection timed out) <0.992699>
+90883 1670772796.251545 <... epoll_pwait resumed>[], 128, 994, NULL, 789718714)                     = 0 <0.998272>
+90884 1670772796.253270 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772796.254509 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1)                                  = 1 <0.000046>
+90885 1670772796.258298 <... futex resumed>)                                                        = 0 <1.003334>
+90884 1670772796.259837 <... nanosleep resumed>NULL)                                                = 0 <0.005345>
+90883 1670772796.261063 write(1</dev/pts/1<char 136:1>>, "sum1=18803317, sum2=18803203\n", 29 <unfinished ...>
+90885 1670772796.262415 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772796.271625 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90883 1670772796.273162 <... write resumed>)                                                        = 29 <0.010763>
+90884 1670772796.273986 <... epoll_pwait resumed>[], 128, 0, NULL, 799175256)                       = 0 <0.000857>
+90883 1670772796.274751 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90884 1670772796.276045 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772796.277118 <... futex resumed>)                                                        = 1 <0.001102>
+90885 1670772796.278086 <... futex resumed>)                                                        = 0 <0.006500>
+90883 1670772796.279063 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90884 1670772796.280285 <... nanosleep resumed>NULL)                                                = 0 <0.003201>
+90885 1670772796.281453 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772796.282618 futex(0x148ff8, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=992643292} <unfinished ...>
+90883 1670772797.277022 <... epoll_pwait resumed>[], 128, 995, NULL, 816234839)                     = 0 <0.996690>
+90884 1670772797.281085 <... futex resumed>)                                                        = -1 ETIMEDOUT (Connection timed out) <0.997368>
+90883 1670772797.283694 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1)                                  = 1 <0.000057>
+90884 1670772797.287582 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90883 1670772797.289734 write(1</dev/pts/1<char 136:1>>, "sum1=18803317, sum2=18803203\n", 29 <unfinished ...>
+90885 1670772797.291603 <... futex resumed>)                                                        = 0 <1.009007>
+90883 1670772797.293753 <... write resumed>)                                                        = 29 <0.002160>
+90884 1670772797.301004 <... epoll_pwait resumed>[], 128, 0, NULL, 822304965)                       = 0 <0.011296>
+90883 1670772797.302729 futex(0x4000038548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+90885 1670772797.304577 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772797.305631 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+90883 1670772797.306942 <... futex resumed>)                                                        = 0 <0.002400>
+90885 1670772797.307978 <... futex resumed>)                                                        = -1 EAGAIN (Resource temporarily unavailable) <0.002359>
+90883 1670772797.309097 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+90885 1670772797.310514 futex(0x4000038548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+90884 1670772797.311594 <... nanosleep resumed>NULL)                                                = 0 <0.004678>
+90884 1670772797.313274 futex(0x148ff8, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=988240084} <unfinished ...>
+90883 1670772797.779889 <... epoll_pwait resumed>0xfffffeedd088, 128, 993, NULL, 846134423)         = -1 EINTR (Interrupted system call) <0.469370>
+90883 1670772797.782955 --- SIGINT {si_signo=SIGINT, si_code=SI_KERNEL} ---
+90883 1670772797.786658 rt_sigprocmask(SIG_UNBLOCK, [INT], NULL, 8)                                 = 0 <0.000129>
+90883 1670772797.790193 getpid()                                                                    = 90883 <0.000113>
+90883 1670772797.793500 gettid()                                                                    = 90883 <0.000367>
+90883 1670772797.797539 tgkill(90883, 90883, SIGINT)                                                = 0 <0.000110>
+90883 1670772797.799746 --- SIGINT {si_signo=SIGINT, si_code=SI_TKILL, si_pid=90883, si_uid=0} ---
+90883 1670772797.800660 rt_sigaction(SIGINT, {sa_handler=SIG_DFL, sa_mask=~[], sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO}, NULL, 8) = 0 <0.000178>
+90883 1670772797.803073 rt_sigprocmask(SIG_UNBLOCK, [INT], NULL, 8)                                 = 0 <0.000108>
+90883 1670772797.805290 getpid()                                                                    = 90883 <0.000142>
+90883 1670772797.807295 gettid()                                                                    = 90883 <0.000130>
+90883 1670772797.809379 tgkill(90883, 90883, SIGINT)                                                = 0 <0.000089>
+90883 1670772797.811133 --- SIGINT {si_signo=SIGINT, si_code=SI_TKILL, si_pid=90883, si_uid=0} ---
+90889 1670772797.812034 <... futex resumed>)                                                        = ?
+90888 1670772797.812787 <... futex resumed>)                                                        = ?
+90887 1670772797.813621 <... futex resumed>)                                                        = ?
+90886 1670772797.814442 <... futex resumed>)                                                        = ?
+90885 1670772797.815206 <... futex resumed>)                                                        = ?
+90884 1670772797.815888 <... futex resumed>)                                                        = ?
+90889 1670772797.816530 +++ killed by SIGINT +++
+90888 1670772797.817244 +++ killed by SIGINT +++
+90887 1670772797.817942 +++ killed by SIGINT +++
+90886 1670772797.818566 +++ killed by SIGINT +++
+90885 1670772797.819180 +++ killed by SIGINT +++
+90884 1670772797.819792 +++ killed by SIGINT +++
+90883 1670772797.820429 +++ killed by SIGINT +++

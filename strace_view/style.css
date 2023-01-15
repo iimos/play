@@ -1,0 +1,57 @@
+h1 {
+    padding: 18px 18px 0;
+    margin-bottom: 15px;
+}
+#strace-data {
+    font-family: monospace;
+    white-space: pre-line;
+}
+
+.timeline {
+    display: table;
+}
+.timeline_head {
+    display: table-row;
+    position: sticky;
+    top: 0;
+    background: #ccc;
+    font-weight: bold;
+}
+.timeline_row {
+    display: table-row;
+}
+.timeline_cell,
+.timeline_head_cell {
+    display: table-cell;
+    border-top: 1px solid #e3e3e3;
+    height: 6px;
+    padding: 0 18px;
+}
+
+.strace_item {
+    white-space: nowrap;
+}
+.strace_syscall_name {
+    color: #0066bb;
+    font-weight: bold;
+    text-decoration: none;
+}
+.strace_syscall_args {
+    display: inline-block;
+    max-width: 400px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    vertical-align: top;
+}
+
+.strace_item_shadow {
+    position: absolute;
+    display: none;
+    background: #fff1df;
+}
+.strace_item_shadow .strace_syscall_args {
+    max-width: fit-content;
+}
+.strace_item:hover .strace_item_shadow {
+    display: block;
+}

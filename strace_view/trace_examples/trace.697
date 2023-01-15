@@ -1,0 +1,50 @@
+gettid()                                = 697
+sigaltstack(NULL, {ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0}) = 0
+sigaltstack({ss_sp=0xc000100000, ss_flags=0, ss_size=32768}, NULL) = 0
+rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+gettid()                                = 697
+futex(0xc00003ad48, FUTEX_WAIT_PRIVATE, 0, NULL) = 0
+futex(0xc00003ad48, FUTEX_WAIT_PRIVATE, 0, NULL) = 0
+epoll_pwait(3, [], 128, 993, NULL, 85790226332049) = 0
+futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1) = 1
+write(1, "sum1=20000000, sum2=20000000\n", 29) = 29
+futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1) = 1
+epoll_pwait(3, [], 128, 994, NULL, 1)   = 0
+futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1) = 1
+write(1, "sum1=20000000, sum2=20000000\n", 29) = 29
+futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1) = 1
+epoll_pwait(3, [], 128, 993, NULL, 2)   = 0
+futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1) = 1
+write(1, "sum1=20000000, sum2=20000000\n", 29) = 29
+futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1) = 1
+epoll_pwait(3, [], 128, 989, NULL, 1)   = 0
+futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1) = 1
+write(1, "sum1=20000000, sum2=20000000\n", 29) = 29
+futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1) = 1
+epoll_pwait(3, [], 128, 993, NULL, 2)   = 0
+futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1) = 1
+write(1, "sum1=20000000, sum2=20000000\n", 29) = 29
+epoll_pwait(3, [], 128, 999, NULL, 85795356280020) = 0
+futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1) = 1
+write(1, "sum1=20000000, sum2=20000000\n", 29) = 29
+futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1) = 1
+epoll_pwait(3, [], 128, 991, NULL, 1)   = 0
+futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1) = 1
+write(1, "sum1=20000000, sum2=20000000\n", 29) = 29
+futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1) = 0
+futex(0xc00003ad48, FUTEX_WAIT_PRIVATE, 0, NULL) = 0
+futex(0xc00003ad48, FUTEX_WAIT_PRIVATE, 0, NULL) = 0
+futex(0xc00003ad48, FUTEX_WAIT_PRIVATE, 0, NULL) = 0
+futex(0xc00003ad48, FUTEX_WAIT_PRIVATE, 0, NULL) = 0
+epoll_pwait(3, [], 128, 988, NULL, 85799456525235) = 0
+futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1) = 1
+write(1, "sum1=20000000, sum2=20000000\n", 29) = 29
+epoll_pwait(3, [], 128, 999, NULL, 85800486585537) = 0
+futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1) = 1
+write(1, "sum1=20000000, sum2=20000000\n", 29) = 29
+epoll_pwait(3, [], 128, 999, NULL, 85801516011175) = 0
+futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1) = 1
+write(1, "sum1=20000000, sum2=20000000\n", 29) = 29
+futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1) = 1
+epoll_pwait(3,  <unfinished ...>)       = ?
++++ killed by SIGINT +++

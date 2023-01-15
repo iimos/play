@@ -1,0 +1,12 @@
+version: '3'
+services:
+  playgo:
+    build: .
+    command: tail -f /dev/null
+    volumes:
+    - .:/go/src/github.com/iimos/play
+    working_dir: /go/src/github.com/iimos/play
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - "seccomp:unconfined"

@@ -1,0 +1,613 @@
+2270  1669729913.698444 execve("./concurrency/concurrency", ["./concurrency/concurrency"], 0x7ffeb48e4f18 /* 13 vars */) = 0
+2270  1669729913.705328 arch_prctl(ARCH_SET_FS, 0x52fbf0)                                           = 0
+2270  1669729913.709139 sched_getaffinity(0, 8192, [0, 1])                                          = 16
+2270  1669729913.712874 openat(AT_FDCWD</go/src/github.com/iimos/play>, "/sys/kernel/mm/transparent_hugepage/hpage_pmd_size", O_RDONLY) = 3</sys/kernel/mm/transparent_hugepage/hpage_pmd_size>
+2270  1669729913.718523 read(3</sys/kernel/mm/transparent_hugepage/hpage_pmd_size>, "2097152\n", 20) = 8
+2270  1669729913.723634 close(3</sys/kernel/mm/transparent_hugepage/hpage_pmd_size>)                = 0
+2270  1669729913.728180 mmap(NULL, 262144, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)  = 0x7f9abb7e9000
+2270  1669729913.731714 mmap(NULL, 131072, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)             = 0x7f9abb7c9000
+2270  1669729913.736202 mmap(NULL, 1048576, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)            = 0x7f9abb6c9000
+2270  1669729913.739868 mmap(NULL, 8388608, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)            = 0x7f9abaec9000
+2270  1669729913.743475 mmap(NULL, 67108864, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)           = 0x7f9ab6ec9000
+2270  1669729913.747012 mmap(NULL, 536870912, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)          = 0x7f9a96ec9000
+2270  1669729913.750199 mmap(NULL, 8388608, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)            = 0x7f9a966c9000
+2270  1669729913.754143 mmap(0xc000000000, 67108864, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)   = 0xc000000000
+2270  1669729913.757588 mmap(NULL, 33554432, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9a946c9000
+2270  1669729913.760632 mmap(NULL, 2165776, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9a944b8000
+2270  1669729913.764588 mmap(0xc000000000, 4194304, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xc000000000
+2270  1669729913.767939 mmap(0x7f9abb7c9000, 131072, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9abb7c9000
+2270  1669729913.771144 mmap(0x7f9abb749000, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9abb749000
+2270  1669729913.774609 mmap(0x7f9abb2cf000, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9abb2cf000
+2270  1669729913.778367 mmap(0x7f9ab8ef9000, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9ab8ef9000
+2270  1669729913.782356 mmap(0x7f9aa7049000, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9aa7049000
+2270  1669729913.786424 mmap(0x7f9a966c9000, 4222976, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9a966c9000
+2270  1669729913.790735 madvise(0x7f9a96800000, 2097152, MADV_HUGEPAGE)                             = 0
+2270  1669729913.794810 mmap(NULL, 1048576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9a943b8000
+2270  1669729913.799989 mmap(NULL, 65536, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)   = 0x7f9a943a8000
+2270  1669729913.804388 mmap(NULL, 65536, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)   = 0x7f9a94398000
+2270  1669729913.808187 rt_sigprocmask(SIG_SETMASK, NULL, [], 8)                                    = 0
+2270  1669729913.812297 sigaltstack(NULL, {ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})             = 0
+2270  1669729913.815942 sigaltstack({ss_sp=0xc000008000, ss_flags=0, ss_size=32768}, NULL)          = 0
+2270  1669729913.820214 rt_sigprocmask(SIG_SETMASK, [], NULL, 8)                                    = 0
+2270  1669729913.823888 gettid()                                                                    = 2270
+2270  1669729913.826957 rt_sigaction(SIGHUP, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.830644 rt_sigaction(SIGHUP, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.835062 rt_sigaction(SIGINT, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.838327 rt_sigaction(SIGINT, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.841844 rt_sigaction(SIGQUIT, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.845144 rt_sigaction(SIGQUIT, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.849188 rt_sigaction(SIGILL, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.852594 rt_sigaction(SIGILL, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.855893 rt_sigaction(SIGTRAP, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.859413 rt_sigaction(SIGTRAP, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.862607 rt_sigaction(SIGABRT, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.866142 rt_sigaction(SIGABRT, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.869959 rt_sigaction(SIGBUS, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.873333 rt_sigaction(SIGBUS, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.876493 rt_sigaction(SIGFPE, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.879941 rt_sigaction(SIGFPE, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.883222 rt_sigaction(SIGUSR1, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.886069 rt_sigaction(SIGUSR1, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.889094 rt_sigaction(SIGSEGV, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.892520 rt_sigaction(SIGSEGV, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.896421 rt_sigaction(SIGUSR2, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.900851 rt_sigaction(SIGUSR2, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.903868 rt_sigaction(SIGPIPE, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.908079 rt_sigaction(SIGPIPE, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.911399 rt_sigaction(SIGALRM, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.914557 rt_sigaction(SIGALRM, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.918158 rt_sigaction(SIGTERM, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.921550 rt_sigaction(SIGTERM, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.925006 rt_sigaction(SIGSTKFLT, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.928275 rt_sigaction(SIGSTKFLT, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.932158 rt_sigaction(SIGCHLD, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.935812 rt_sigaction(SIGCHLD, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.940946 rt_sigaction(SIGURG, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.945000 rt_sigaction(SIGURG, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.948320 rt_sigaction(SIGXCPU, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.952036 rt_sigaction(SIGXCPU, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.955687 rt_sigaction(SIGXFSZ, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.958870 rt_sigaction(SIGXFSZ, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.962953 rt_sigaction(SIGVTALRM, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.966147 rt_sigaction(SIGVTALRM, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.970468 rt_sigaction(SIGPROF, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.973896 rt_sigaction(SIGPROF, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.977850 rt_sigaction(SIGWINCH, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.981129 rt_sigaction(SIGWINCH, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.984885 rt_sigaction(SIGIO, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)  = 0
+2270  1669729913.989207 rt_sigaction(SIGIO, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.992666 rt_sigaction(SIGPWR, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729913.995991 rt_sigaction(SIGPWR, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729913.999941 rt_sigaction(SIGSYS, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.003148 rt_sigaction(SIGSYS, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.006873 rt_sigaction(SIGRTMIN, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.010617 rt_sigaction(SIGRT_1, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.014524 rt_sigaction(SIGRT_1, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.018359 rt_sigaction(SIGRT_2, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.022121 rt_sigaction(SIGRT_3, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.026126 rt_sigaction(SIGRT_3, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.029513 rt_sigaction(SIGRT_4, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.033373 rt_sigaction(SIGRT_4, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.036723 rt_sigaction(SIGRT_5, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.040335 rt_sigaction(SIGRT_5, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.043734 rt_sigaction(SIGRT_6, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.047222 rt_sigaction(SIGRT_6, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.051689 rt_sigaction(SIGRT_7, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.054963 rt_sigaction(SIGRT_7, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.059503 rt_sigaction(SIGRT_8, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.063078 rt_sigaction(SIGRT_8, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.067057 rt_sigaction(SIGRT_9, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.070512 rt_sigaction(SIGRT_9, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.073952 rt_sigaction(SIGRT_10, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.077427 rt_sigaction(SIGRT_10, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.080101 rt_sigaction(SIGRT_11, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.083493 rt_sigaction(SIGRT_11, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.086822 rt_sigaction(SIGRT_12, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.090252 rt_sigaction(SIGRT_12, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.093356 rt_sigaction(SIGRT_13, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.096088 rt_sigaction(SIGRT_13, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.099742 rt_sigaction(SIGRT_14, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.104195 rt_sigaction(SIGRT_14, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.108269 rt_sigaction(SIGRT_15, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.111802 rt_sigaction(SIGRT_15, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.115278 rt_sigaction(SIGRT_16, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.118009 rt_sigaction(SIGRT_16, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.121112 rt_sigaction(SIGRT_17, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.123864 rt_sigaction(SIGRT_17, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.127265 rt_sigaction(SIGRT_18, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.130826 rt_sigaction(SIGRT_18, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.133551 rt_sigaction(SIGRT_19, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.136875 rt_sigaction(SIGRT_19, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.140561 rt_sigaction(SIGRT_20, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.144550 rt_sigaction(SIGRT_20, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.148013 rt_sigaction(SIGRT_21, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.150858 rt_sigaction(SIGRT_21, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.155745 rt_sigaction(SIGRT_22, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.159420 rt_sigaction(SIGRT_22, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.162768 rt_sigaction(SIGRT_23, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.166993 rt_sigaction(SIGRT_23, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.171414 rt_sigaction(SIGRT_24, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.174546 rt_sigaction(SIGRT_24, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.177642 rt_sigaction(SIGRT_25, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.180916 rt_sigaction(SIGRT_25, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.184810 rt_sigaction(SIGRT_26, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.188422 rt_sigaction(SIGRT_26, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.192160 rt_sigaction(SIGRT_27, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.195931 rt_sigaction(SIGRT_27, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.199191 rt_sigaction(SIGRT_28, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.202578 rt_sigaction(SIGRT_28, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.205671 rt_sigaction(SIGRT_29, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.208632 rt_sigaction(SIGRT_29, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.211633 rt_sigaction(SIGRT_30, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.214844 rt_sigaction(SIGRT_30, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.217948 rt_sigaction(SIGRT_31, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.221351 rt_sigaction(SIGRT_31, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.225123 rt_sigaction(SIGRT_32, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+2270  1669729914.228547 rt_sigaction(SIGRT_32, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729914.232639 rt_sigprocmask(SIG_SETMASK, ~[], [], 8)                                     = 0
+2270  1669729914.235805 clone(child_stack=0xc00004a000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS, tls=0xc00003a090) = 2271
+2270  1669729914.238249 rt_sigprocmask(SIG_SETMASK, [], NULL, 8)                                    = 0
+2271  1669729914.241117 gettid( <unfinished ...>
+2270  1669729914.242387 rt_sigprocmask(SIG_SETMASK, ~[],  <unfinished ...>
+2271  1669729914.243850 <... gettid resumed>)                                                       = 2271
+2270  1669729914.245395 <... rt_sigprocmask resumed>[], 8)                                          = 0
+2271  1669729914.246780 sigaltstack(NULL,  <unfinished ...>
+2270  1669729914.248228 clone(child_stack=0xc00004c000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS <unfinished ...>
+2271  1669729914.251422 <... sigaltstack resumed>{ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})      = 0
+2270  1669729914.253372 <... clone resumed>, tls=0xc00003a490)                                      = 2272
+2271  1669729914.255515 sigaltstack({ss_sp=0xc00003c000, ss_flags=0, ss_size=32768},  <unfinished ...>
+2270  1669729914.257072 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+2272  1669729914.258644 gettid( <unfinished ...>
+2270  1669729914.260222 <... rt_sigprocmask resumed>NULL, 8)                                        = 0
+2271  1669729914.261387 <... sigaltstack resumed>NULL)                                              = 0
+2270  1669729914.263277 rt_sigprocmask(SIG_SETMASK, ~[],  <unfinished ...>
+2272  1669729914.264473 <... gettid resumed>)                                                       = 2272
+2270  1669729914.266194 <... rt_sigprocmask resumed>[], 8)                                          = 0
+2271  1669729914.267753 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+2270  1669729914.269395 clone(child_stack=0xc000046000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS <unfinished ...>
+2272  1669729914.270932 sigaltstack(NULL,  <unfinished ...>
+2271  1669729914.272760 <... rt_sigprocmask resumed>NULL, 8)                                        = 0
+2270  1669729914.274283 <... clone resumed>, tls=0xc00003a890)                                      = 2273
+2273  1669729914.275750 gettid( <unfinished ...>
+2272  1669729914.277289 <... sigaltstack resumed>{ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})      = 0
+2270  1669729914.279048 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+2273  1669729914.280855 <... gettid resumed>)                                                       = 2273
+2271  1669729914.282332 gettid( <unfinished ...>
+2270  1669729914.283958 <... rt_sigprocmask resumed>NULL, 8)                                        = 0
+2273  1669729914.285689 sigaltstack(NULL,  <unfinished ...>
+2272  1669729914.287148 sigaltstack({ss_sp=0xc00004c000, ss_flags=0, ss_size=32768},  <unfinished ...>
+2270  1669729914.288759 futex(0x52fca8, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2273  1669729914.290414 <... sigaltstack resumed>{ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})      = 0
+2271  1669729914.292044 <... gettid resumed>)                                                       = 2271
+2273  1669729914.293683 sigaltstack({ss_sp=0xc00005a000, ss_flags=0, ss_size=32768},  <unfinished ...>
+2272  1669729914.295368 <... sigaltstack resumed>NULL)                                              = 0
+2271  1669729914.297027 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2273  1669729914.298607 <... sigaltstack resumed>NULL)                                              = 0
+2272  1669729914.300583 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+2273  1669729914.302708 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+2271  1669729914.304568 <... nanosleep resumed>NULL)                                                = 0
+2273  1669729914.306562 <... rt_sigprocmask resumed>NULL, 8)                                        = 0
+2272  1669729914.307844 <... rt_sigprocmask resumed>NULL, 8)                                        = 0
+2273  1669729914.309315 gettid( <unfinished ...>
+2271  1669729914.311507 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2273  1669729914.313879 <... gettid resumed>)                                                       = 2273
+2272  1669729914.316829 gettid( <unfinished ...>
+2273  1669729914.318807 futex(0x52fca8, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729914.320986 <... nanosleep resumed>NULL)                                                = 0
+2270  1669729914.323233 <... futex resumed>)                                                        = 0
+2273  1669729914.325673 <... futex resumed>)                                                        = 1
+2272  1669729914.327378 <... gettid resumed>)                                                       = 2272
+2270  1669729914.329312 rt_sigprocmask(SIG_SETMASK, ~[],  <unfinished ...>
+2273  1669729914.333095 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729914.334902 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2270  1669729914.336405 <... rt_sigprocmask resumed>[], 8)                                          = 0
+2272  1669729914.338017 futex(0x52fca8, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2270  1669729914.339982 clone(child_stack=0xc000048000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS <unfinished ...>
+2271  1669729914.343591 <... nanosleep resumed>NULL)                                                = 0
+2272  1669729914.345178 <... futex resumed>)                                                        = 0
+2271  1669729914.347128 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2270  1669729914.348558 <... clone resumed>, tls=0xc00003ac90)                                      = 2274
+2274  1669729914.349959 gettid( <unfinished ...>
+2272  1669729914.352198 futex(0xc00003a548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2270  1669729914.354221 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+2274  1669729914.356574 <... gettid resumed>)                                                       = 2274
+2271  1669729914.358538 <... nanosleep resumed>NULL)                                                = 0
+2270  1669729914.360005 <... rt_sigprocmask resumed>NULL, 8)                                        = 0
+2274  1669729914.362566 sigaltstack(NULL,  <unfinished ...>
+2271  1669729914.364412 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2270  1669729914.366441 mmap(NULL, 262144, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0 <unfinished ...>
+2274  1669729914.368078 <... sigaltstack resumed>{ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})      = 0
+2270  1669729914.369545 <... mmap resumed>)                                                         = 0x7f9a94358000
+2271  1669729914.371773 <... nanosleep resumed>NULL)                                                = 0
+2270  1669729914.374195 fcntl(0</dev/pts/0<char 136:0>>, F_GETFL <unfinished ...>
+2274  1669729914.378176 sigaltstack({ss_sp=0xc000064000, ss_flags=0, ss_size=32768},  <unfinished ...>
+2270  1669729914.380779 <... fcntl resumed>)                                                        = 0x8002 (flags O_RDWR|O_LARGEFILE)
+2271  1669729914.382443 futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2270  1669729914.384220 futex(0x52fca8, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2274  1669729914.386028 <... sigaltstack resumed>NULL)                                              = 0
+2272  1669729914.388288 <... futex resumed>)                                                        = 0
+2271  1669729914.390175 <... futex resumed>)                                                        = 1
+2274  1669729914.391677 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+2272  1669729914.394292 futex(0x52fca8, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729914.395828 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2270  1669729914.397701 <... futex resumed>)                                                        = 0
+2274  1669729914.399531 <... rt_sigprocmask resumed>NULL, 8)                                        = 0
+2272  1669729914.401372 <... futex resumed>)                                                        = 1
+2270  1669729914.403029 fcntl(1</dev/pts/0<char 136:0>>, F_GETFL <unfinished ...>
+2274  1669729914.404423 gettid( <unfinished ...>
+2271  1669729914.405795 <... nanosleep resumed>NULL)                                                = 0
+2270  1669729914.408134 <... fcntl resumed>)                                                        = 0x8002 (flags O_RDWR|O_LARGEFILE)
+2274  1669729914.409936 <... gettid resumed>)                                                       = 2274
+2272  1669729914.411945 futex(0xc00003a548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2270  1669729914.413977 fcntl(2</dev/pts/0<char 136:0>>, F_GETFL <unfinished ...>
+2274  1669729914.415754 futex(0xc00003ad48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729914.419574 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2270  1669729914.421939 <... fcntl resumed>)                                                        = 0x8002 (flags O_RDWR|O_LARGEFILE)
+2270  1669729914.423877 getrlimit(RLIMIT_NOFILE,  <unfinished ...>
+2271  1669729914.425932 <... nanosleep resumed>NULL)                                                = 0
+2270  1669729914.427938 <... getrlimit resumed>{rlim_cur=1024*1024, rlim_max=1024*1024})            = 0
+2271  1669729914.430312 getpid( <unfinished ...>
+2270  1669729914.433138 futex(0xc00003ad48, FUTEX_WAKE_PRIVATE, 1)                                  = 1
+2274  1669729914.436274 <... futex resumed>)                                                        = 0
+2271  1669729914.437667 <... getpid resumed>)                                                       = 2270
+2270  1669729914.439005 futex(0x52fca8, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2274  1669729914.440548 futex(0x52fca8, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2270  1669729914.442410 <... futex resumed>)                                                        = -1 EAGAIN (Resource temporarily unavailable)
+2271  1669729914.443677 tgkill(2270, 2270, SIGURG <unfinished ...>
+2270  1669729914.445098 futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2274  1669729914.446859 <... futex resumed>)                                                        = 0
+2270  1669729914.448462 <... futex resumed>)                                                        = 1
+2272  1669729914.449738 <... futex resumed>)                                                        = 0
+2271  1669729914.451084 <... tgkill resumed>)                                                       = 0
+2270  1669729914.452370 --- SIGURG {si_signo=SIGURG, si_code=SI_TKILL, si_pid=2270, si_uid=0} ---
+2274  1669729914.453689 futex(0xc00003ad48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2272  1669729914.455228 nanosleep({tv_sec=0, tv_nsec=3000},  <unfinished ...>
+2270  1669729914.456404 rt_sigreturn({mask=[]} <unfinished ...>
+2271  1669729914.457705 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2270  1669729914.460369 <... rt_sigreturn resumed>)                                                 = 1
+2272  1669729914.462524 <... nanosleep resumed>NULL)                                                = 0
+2270  1669729914.464475 epoll_create1(EPOLL_CLOEXEC <unfinished ...>
+2271  1669729914.466145 <... nanosleep resumed>NULL)                                                = 0
+2270  1669729914.467699 <... epoll_create1 resumed>)                                                = 3<anon_inode:[eventpoll]>
+2272  1669729914.469125 rt_sigprocmask(SIG_SETMASK, ~[],  <unfinished ...>
+2270  1669729914.470858 pipe2( <unfinished ...>
+2271  1669729914.472315 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2270  1669729914.474165 <... pipe2 resumed>[4<pipe:[40293]>, 5<pipe:[40293]>], O_NONBLOCK|O_CLOEXEC) = 0
+2272  1669729914.476023 <... rt_sigprocmask resumed>[], 8)                                          = 0
+2270  1669729914.477864 epoll_ctl(3<anon_inode:[eventpoll]>, EPOLL_CTL_ADD, 4<pipe:[40293]>, {events=EPOLLIN, data={u32=5628344, u64=5628344}} <unfinished ...>
+2272  1669729914.479670 clone(child_stack=0xc00007e000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS <unfinished ...>
+2271  1669729914.481210 <... nanosleep resumed>NULL)                                                = 0
+2270  1669729914.483355 <... epoll_ctl resumed>)                                                    = 0
+2271  1669729914.485320 getpid( <unfinished ...>
+2270  1669729914.487033 write(1</dev/pts/0<char 136:0>>, "thread 1: start\n", 16 <unfinished ...>
+2275  1669729914.488911 gettid( <unfinished ...>
+2272  1669729914.491023 <... clone resumed>, tls=0xc00003b090)                                      = 2275
+2270  1669729914.492386 <... write resumed>)                                                        = 16
+2275  1669729914.493981 <... gettid resumed>)                                                       = 2275
+2272  1669729914.499902 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+2271  1669729914.501168 <... getpid resumed>)                                                       = 2270
+2275  1669729914.502657 sigaltstack(NULL,  <unfinished ...>
+2272  1669729914.503863 <... rt_sigprocmask resumed>NULL, 8)                                        = 0
+2271  1669729914.505267 tgkill(2270, 2272, SIGURG <unfinished ...>
+2275  1669729914.506788 <... sigaltstack resumed>{ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})      = 0
+2272  1669729914.508123 futex(0xc00003ad48, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729914.509721 <... tgkill resumed>)                                                       = 0
+2275  1669729914.510977 sigaltstack({ss_sp=0xc000070000, ss_flags=0, ss_size=32768},  <unfinished ...>
+2274  1669729914.512210 <... futex resumed>)                                                        = 0
+2272  1669729914.514526 <... futex resumed>)                                                        = 1
+2271  1669729914.517798 getpid( <unfinished ...>
+2275  1669729914.519524 <... sigaltstack resumed>NULL)                                              = 0
+2274  1669729914.520725 futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2272  1669729914.522054 --- SIGURG {si_signo=SIGURG, si_code=SI_TKILL, si_pid=2270, si_uid=0} ---
+2271  1669729914.523339 <... getpid resumed>)                                                       = 2270
+2275  1669729914.526036 rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+2274  1669729914.528689 <... futex resumed>)                                                        = 0
+2272  1669729914.530733 rt_sigreturn({mask=[]} <unfinished ...>
+2275  1669729914.532242 <... rt_sigprocmask resumed>NULL, 8)                                        = 0
+2274  1669729914.534074 futex(0xc00003ad48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729914.537648 tgkill(2270, 2270, SIGURG <unfinished ...>
+2275  1669729914.539271 gettid( <unfinished ...>
+2272  1669729914.540780 <... rt_sigreturn resumed>)                                                 = 1
+2271  1669729914.542294 <... tgkill resumed>)                                                       = 0
+2270  1669729914.544718 --- SIGURG {si_signo=SIGURG, si_code=SI_TKILL, si_pid=2270, si_uid=0} ---
+2275  1669729914.546486 <... gettid resumed>)                                                       = 2275
+2272  1669729914.547870 write(1</dev/pts/0<char 136:0>>, "thread 2: start\n", 16 <unfinished ...>
+2271  1669729914.549212 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2270  1669729914.551349 rt_sigreturn({mask=[]} <unfinished ...>
+2275  1669729914.553124 futex(0x55e3b8, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2272  1669729914.555196 <... write resumed>)                                                        = 16
+2270  1669729914.557031 <... rt_sigreturn resumed>)                                                 = 8719881
+2271  1669729914.558596 <... nanosleep resumed>NULL)                                                = 0
+2271  1669729914.561577 epoll_pwait(3<anon_inode:[eventpoll]>, [], 128, 0, NULL, 0)                 = 0
+2271  1669729914.564872 getpid( <unfinished ...>
+2270  1669729914.566656 futex(0xc00003ad48, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729914.568288 <... getpid resumed>)                                                       = 2270
+2270  1669729914.569838 <... futex resumed>)                                                        = 1
+2274  1669729914.571670 <... futex resumed>)                                                        = 0
+2271  1669729914.573155 tgkill(2270, 2270, SIGURG <unfinished ...>
+2270  1669729914.574817 futex(0x52fca8, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2274  1669729914.575997 futex(0x52fca8, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2270  1669729914.577302 <... futex resumed>)                                                        = -1 EAGAIN (Resource temporarily unavailable)
+2271  1669729914.578622 <... tgkill resumed>)                                                       = 0
+2270  1669729914.581289 --- SIGURG {si_signo=SIGURG, si_code=SI_TKILL, si_pid=2270, si_uid=0} ---
+2274  1669729914.582717 <... futex resumed>)                                                        = 0
+2270  1669729914.584843 rt_sigreturn({mask=[]} <unfinished ...>
+2271  1669729914.586811 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2270  1669729914.588859 <... rt_sigreturn resumed>)                                                 = -1 EAGAIN (Resource temporarily unavailable)
+2274  1669729914.591336 futex(0xc00003ad48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2270  1669729914.595546 write(1</dev/pts/0<char 136:0>>, "thread 1: fin\n", 14 <unfinished ...>
+2271  1669729914.597123 <... nanosleep resumed>NULL)                                                = 0
+2270  1669729914.599266 <... write resumed>)                                                        = 14
+2271  1669729914.601364 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2270  1669729914.604691 futex(0xc00003ad48, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729914.606853 <... epoll_pwait resumed>[], 128, 0, NULL, 0)                               = 0
+2270  1669729914.608074 <... futex resumed>)                                                        = 1
+2274  1669729914.609381 <... futex resumed>)                                                        = 0
+2270  1669729914.610701 futex(0x52fca8, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729914.612354 getpid( <unfinished ...>
+2274  1669729914.614484 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2272  1669729914.616973 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729914.619443 <... getpid resumed>)                                                       = 2270
+2273  1669729914.622585 <... futex resumed>)                                                        = 0
+2272  1669729914.625403 <... futex resumed>)                                                        = 1
+2273  1669729914.628382 futex(0xc00003a548, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729914.630631 tgkill(2270, 2272, SIGURG <unfinished ...>
+2273  1669729914.633560 <... futex resumed>)                                                        = 0
+2272  1669729914.635617 write(1</dev/pts/0<char 136:0>>, "thread 2: fin\n", 14 <unfinished ...>
+2273  1669729914.638568 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729914.640286 <... tgkill resumed>)                                                       = 0
+2272  1669729914.642113 <... write resumed>)                                                        = ? ERESTARTSYS (To be restarted if SA_RESTART is set)
+2271  1669729914.643882 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2272  1669729914.645531 --- SIGURG {si_signo=SIGURG, si_code=SI_TKILL, si_pid=2270, si_uid=0} ---
+2271  1669729914.647317 <... nanosleep resumed>NULL)                                                = 0
+2272  1669729914.649051 rt_sigreturn({mask=[]} <unfinished ...>
+2271  1669729914.650723 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2272  1669729914.653476 <... rt_sigreturn resumed>)                                                 = 1
+2271  1669729914.655965 <... nanosleep resumed>NULL)                                                = 0
+2272  1669729914.658204 write(1</dev/pts/0<char 136:0>>, "thread 2: fin\n", 14 <unfinished ...>
+2271  1669729914.659763 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2272  1669729914.661235 <... write resumed>)                                                        = 14
+2271  1669729914.662798 <... nanosleep resumed>NULL)                                                = 0
+2272  1669729914.664036 futex(0xc00003a548, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729914.665570 futex(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=798664595})       = -1 ETIMEDOUT (Connection timed out)
+2274  1669729915.468571 <... epoll_pwait resumed>[], 128, 851, NULL, 373426949307227)               = 0
+2271  1669729915.470256 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2274  1669729915.474061 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729915.476548 <... nanosleep resumed>NULL)                                                = 0
+2274  1669729915.478562 <... futex resumed>)                                                        = 1
+2273  1669729915.483381 <... futex resumed>)                                                        = 0
+2274  1669729915.486069 write(1</dev/pts/0<char 136:0>>, "sum1=18853927, sum2=18853599\n", 29 <unfinished ...>
+2273  1669729915.488055 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729915.490602 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2274  1669729915.492521 <... write resumed>)                                                        = 29
+2274  1669729915.494455 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729915.498271 <... epoll_pwait resumed>[], 128, 0, NULL, 0)                               = 0
+2274  1669729915.500878 <... futex resumed>)                                                        = 1
+2273  1669729915.502700 <... futex resumed>)                                                        = 0
+2274  1669729915.504372 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2273  1669729915.507712 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729915.510236 nanosleep({tv_sec=0, tv_nsec=20000}, NULL)                                  = 0
+2271  1669729915.515952 futex(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=978622323})       = -1 ETIMEDOUT (Connection timed out)
+2274  1669729916.500132 <... epoll_pwait resumed>[], 128, 991, NULL, 1)                             = 0
+2271  1669729916.503074 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2274  1669729916.506408 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729916.509816 <... nanosleep resumed>NULL)                                                = 0
+2274  1669729916.511753 <... futex resumed>)                                                        = 1
+2273  1669729916.513641 <... futex resumed>)                                                        = 0
+2274  1669729916.515091 write(1</dev/pts/0<char 136:0>>, "sum1=18853927, sum2=18853599\n", 29 <unfinished ...>
+2271  1669729916.516814 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2274  1669729916.519695 <... write resumed>)                                                        = 29
+2273  1669729916.521780 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2274  1669729916.523880 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729916.525666 <... epoll_pwait resumed>[], 128, 0, NULL, 0)                               = 0
+2274  1669729916.527618 <... futex resumed>)                                                        = 0
+2273  1669729916.529216 <... futex resumed>)                                                        = -1 EAGAIN (Resource temporarily unavailable)
+2274  1669729916.530911 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2273  1669729916.532389 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729916.534129 nanosleep({tv_sec=0, tv_nsec=20000}, NULL)                                  = 0
+2271  1669729916.537912 futex(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=984101092})       = -1 ETIMEDOUT (Connection timed out)
+2274  1669729917.528382 <... epoll_pwait resumed>[], 128, 992, NULL, 2)                             = 0
+2271  1669729917.531547 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2274  1669729917.533219 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1)                                  = 1
+2273  1669729917.537437 <... futex resumed>)                                                        = 0
+2271  1669729917.538708 <... nanosleep resumed>NULL)                                                = 0
+2274  1669729917.540436 write(1</dev/pts/0<char 136:0>>, "sum1=18853927, sum2=18853599\n", 29 <unfinished ...>
+2273  1669729917.541926 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2274  1669729917.550063 <... write resumed>)                                                        = 29
+2271  1669729917.555226 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2274  1669729917.556933 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1)                                  = 1
+2271  1669729917.559680 <... epoll_pwait resumed>[], 128, 0, NULL, 0)                               = 0
+2274  1669729917.561220 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2273  1669729917.567059 <... futex resumed>)                                                        = 0
+2271  1669729917.568363 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2273  1669729917.569800 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729917.571762 <... nanosleep resumed>NULL)                                                = 0
+2271  1669729917.573724 futex(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=981530318})       = -1 ETIMEDOUT (Connection timed out)
+2271  1669729918.561118 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2274  1669729918.563474 <... epoll_pwait resumed>[], 128, 995, NULL, 1)                             = 0
+2271  1669729918.568006 <... nanosleep resumed>NULL)                                                = 0
+2274  1669729918.571549 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1)                                  = 1
+2271  1669729918.575010 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2273  1669729918.576789 <... futex resumed>)                                                        = 0
+2274  1669729918.578010 write(1</dev/pts/0<char 136:0>>, "sum1=18853927, sum2=18853599\n", 29 <unfinished ...>
+2271  1669729918.579612 <... epoll_pwait resumed>[], 128, 0, NULL, 0)                               = 0
+2274  1669729918.582396 <... write resumed>)                                                        = 29
+2273  1669729918.584769 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2274  1669729918.587281 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2273  1669729918.588787 <... futex resumed>)                                                        = -1 EAGAIN (Resource temporarily unavailable)
+2271  1669729918.590836 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2273  1669729918.592204 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729918.593428 <... futex resumed>)                                                        = 0
+2271  1669729918.595357 nanosleep({tv_sec=0, tv_nsec=20000}, NULL)                                  = 0
+2271  1669729918.599262 futex(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=985808633})       = -1 ETIMEDOUT (Connection timed out)
+2274  1669729919.590355 <... epoll_pwait resumed>[], 128, 999, NULL, 373431071590521)               = 0
+2271  1669729919.592231 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2274  1669729919.593904 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729919.595652 <... nanosleep resumed>NULL)                                                = 0
+2274  1669729919.597403 <... futex resumed>)                                                        = 1
+2273  1669729919.599321 <... futex resumed>)                                                        = 0
+2274  1669729919.601109 write(1</dev/pts/0<char 136:0>>, "sum1=18853927, sum2=18853599\n", 29 <unfinished ...>
+2273  1669729919.603567 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729919.606109 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2274  1669729919.608567 <... write resumed>)                                                        = 29
+2274  1669729919.610766 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729919.613144 <... epoll_pwait resumed>[], 128, 0, NULL, 0)                               = 0
+2274  1669729919.614609 <... futex resumed>)                                                        = 1
+2273  1669729919.617230 <... futex resumed>)                                                        = 0
+2274  1669729919.621929 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2271  1669729919.626917 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2273  1669729919.631379 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729919.634898 <... nanosleep resumed>NULL)                                                = 0
+2271  1669729919.636856 futex(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=973812211})       = -1 ETIMEDOUT (Connection timed out)
+2271  1669729920.616776 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2274  1669729920.620645 <... epoll_pwait resumed>[], 128, 993, NULL, 2)                             = 0
+2271  1669729920.623329 <... nanosleep resumed>NULL)                                                = 0
+2274  1669729920.625890 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729920.627990 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2274  1669729920.629638 <... futex resumed>)                                                        = 1
+2273  1669729920.631041 <... futex resumed>)                                                        = 0
+2274  1669729920.632643 write(1</dev/pts/0<char 136:0>>, "sum1=18853927, sum2=18853599\n", 29 <unfinished ...>
+2273  1669729920.634432 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729920.636729 <... epoll_pwait resumed>[], 128, 0, NULL, 0)                               = 0
+2274  1669729920.638181 <... write resumed>)                                                        = 29
+2271  1669729920.640331 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2274  1669729920.642053 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2271  1669729920.643548 <... futex resumed>)                                                        = 1
+2273  1669729920.645145 <... futex resumed>)                                                        = 0
+2273  1669729920.646923 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729920.648713 nanosleep({tv_sec=0, tv_nsec=20000}, NULL)                                  = 0
+2271  1669729920.652630 futex(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=987754773})       = -1 ETIMEDOUT (Connection timed out)
+2274  1669729921.645927 <... epoll_pwait resumed>[], 128, 999, NULL, 373433126889235)               = 0
+2271  1669729921.649710 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2274  1669729921.653700 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729921.656404 <... nanosleep resumed>NULL)                                                = 0
+2274  1669729921.658740 <... futex resumed>)                                                        = 1
+2273  1669729921.660424 <... futex resumed>)                                                        = 0
+2271  1669729921.661834 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2274  1669729921.663510 write(1</dev/pts/0<char 136:0>>, "sum1=18853927, sum2=18853599\n", 29 <unfinished ...>
+2273  1669729921.664910 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729921.666802 <... epoll_pwait resumed>[], 128, 0, NULL, 0)                               = 0
+2274  1669729921.668811 <... write resumed>)                                                        = 29
+2274  1669729921.670923 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2271  1669729921.672404 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2273  1669729921.674308 <... futex resumed>)                                                        = 0
+2271  1669729921.675937 <... futex resumed>)                                                        = 1
+2273  1669729921.677736 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729921.679298 nanosleep({tv_sec=0, tv_nsec=20000}, NULL)                                  = 0
+2271  1669729921.683171 futex(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=987678840} <unfinished ...>
+2274  1669729922.672777 <... epoll_pwait resumed>[], 128, 999, NULL, 373434157416261)               = 0
+2271  1669729922.680517 <... futex resumed>)                                                        = -1 ETIMEDOUT (Connection timed out)
+2274  1669729922.686324 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729922.689974 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2274  1669729922.693333 <... futex resumed>)                                                        = 1
+2273  1669729922.695304 <... futex resumed>)                                                        = 0
+2271  1669729922.697577 <... epoll_pwait resumed>[], 128, 0, NULL, 0)                               = 0
+2274  1669729922.702084 write(1</dev/pts/0<char 136:0>>, "sum1=18853927, sum2=18853599\n", 29 <unfinished ...>
+2273  1669729922.722828 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2274  1669729922.726381 <... write resumed>)                                                        = 29
+2273  1669729922.729254 <... futex resumed>)                                                        = -1 EAGAIN (Resource temporarily unavailable)
+2271  1669729922.732001 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2274  1669729922.735929 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2273  1669729922.739771 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729922.745742 <... futex resumed>)                                                        = 0
+2271  1669729922.748097 nanosleep({tv_sec=0, tv_nsec=20000}, NULL)                                  = 0
+2271  1669729922.752645 futex(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=976956943})       = -1 ETIMEDOUT (Connection timed out)
+2271  1669729923.734361 nanosleep({tv_sec=0, tv_nsec=20000}, NULL)                                  = 0
+2274  1669729923.739838 <... epoll_pwait resumed>[], 128, 999, NULL, 373435215810820)               = 0
+2271  1669729923.742330 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2274  1669729923.744432 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729923.746278 <... nanosleep resumed>NULL)                                                = 0
+2274  1669729923.748271 <... futex resumed>)                                                        = 1
+2273  1669729923.750185 <... futex resumed>)                                                        = 0
+2274  1669729923.752166 write(1</dev/pts/0<char 136:0>>, "sum1=18853927, sum2=18853599\n", 29 <unfinished ...>
+2273  1669729923.754369 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729923.757882 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2274  1669729923.761349 <... write resumed>)                                                        = 29
+2271  1669729923.764775 <... epoll_pwait resumed>[], 128, 0, NULL, 0)                               = 0
+2274  1669729923.766804 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729923.769067 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2274  1669729923.771410 <... futex resumed>)                                                        = 1
+2273  1669729923.773423 <... futex resumed>)                                                        = 0
+2274  1669729923.776114 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2273  1669729923.778392 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729923.779933 <... nanosleep resumed>NULL)                                                = 0
+2271  1669729923.781606 futex(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=983217012})       = -1 ETIMEDOUT (Connection timed out)
+2274  1669729924.771398 <... epoll_pwait resumed>[], 128, 991, NULL, 1)                             = 0
+2271  1669729924.774797 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2274  1669729924.778374 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1)                                  = 1
+2271  1669729924.782206 <... nanosleep resumed>NULL)                                                = 0
+2274  1669729924.784540 write(1</dev/pts/0<char 136:0>>, "sum1=18853927, sum2=18853599\n", 29 <unfinished ...>
+2273  1669729924.788672 <... futex resumed>)                                                        = 0
+2271  1669729924.792009 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2274  1669729924.795098 <... write resumed>)                                                        = 29
+2273  1669729924.797192 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729924.799879 <... epoll_pwait resumed>[], 128, 0, NULL, 0)                               = 0
+2274  1669729924.801944 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2273  1669729924.804139 <... futex resumed>)                                                        = -1 EAGAIN (Resource temporarily unavailable)
+2274  1669729924.806244 <... futex resumed>)                                                        = 0
+2273  1669729924.808098 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2271  1669729924.810011 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2274  1669729924.811908 futex(0xc00003ad48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729924.813622 <... nanosleep resumed>NULL)                                                = 0
+2271  1669729924.815765 futex(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=981424668})       = -1 ETIMEDOUT (Connection timed out)
+2273  1669729925.802352 <... epoll_pwait resumed>[], 128, 990, NULL, 373437283758334)               = 0
+2271  1669729925.806021 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2273  1669729925.807386 futex(0xc00003ad48, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729925.809220 <... nanosleep resumed>NULL)                                                = 0
+2274  1669729925.811381 <... futex resumed>)                                                        = 0
+2273  1669729925.812861 <... futex resumed>)                                                        = 1
+2274  1669729925.814271 futex(0xc00003ad48, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2273  1669729925.815762 write(1</dev/pts/0<char 136:0>>, "sum1=18853927, sum2=18853599\n", 29 <unfinished ...>
+2271  1669729925.817430 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2273  1669729925.820733 <... write resumed>)                                                        = 29
+2273  1669729925.823044 futex(0xc00003ad48, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729925.825121 <... epoll_pwait resumed>[], 128, 0, NULL, 0)                               = 0
+2274  1669729925.826176 <... futex resumed>)                                                        = 0
+2273  1669729925.827760 <... futex resumed>)                                                        = 1
+2271  1669729925.829970 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2274  1669729925.831415 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2273  1669729925.833210 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729925.835071 <... nanosleep resumed>NULL)                                                = 0
+2271  1669729925.838777 futex(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=984262686})       = -1 ETIMEDOUT (Connection timed out)
+2271  1669729926.828041 nanosleep({tv_sec=0, tv_nsec=20000},  <unfinished ...>
+2274  1669729926.831728 <... epoll_pwait resumed>[], 128, 995, NULL, 373438309601138)               = 0
+2271  1669729926.835043 <... nanosleep resumed>NULL)                                                = 0
+2274  1669729926.838515 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2271  1669729926.840867 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2274  1669729926.843608 <... futex resumed>)                                                        = 1
+2273  1669729926.844792 <... futex resumed>)                                                        = 0
+2274  1669729926.846378 write(1</dev/pts/0<char 136:0>>, "sum1=18853927, sum2=18853599\n", 29 <unfinished ...>
+2271  1669729926.848131 <... epoll_pwait resumed>[], 128, 0, NULL, 0)                               = 0
+2274  1669729926.852026 <... write resumed>)                                                        = 29
+2273  1669729926.853412 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729926.855272 futex(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 <unfinished ...>
+2274  1669729926.858128 epoll_pwait(3<anon_inode:[eventpoll]>,  <unfinished ...>
+2273  1669729926.859932 <... futex resumed>)                                                        = -1 EAGAIN (Resource temporarily unavailable)
+2271  1669729926.861831 <... futex resumed>)                                                        = 0
+2273  1669729926.863673 futex(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL <unfinished ...>
+2271  1669729926.865275 nanosleep({tv_sec=0, tv_nsec=20000}, NULL)                                  = 0
+2271  1669729926.869009 futex(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=984593169} <unfinished ...>
+2270  1669729927.591051 <... futex resumed>)                                                        = ? ERESTARTSYS (To be restarted if SA_RESTART is set)
+2270  1669729927.593398 --- SIGINT {si_signo=SIGINT, si_code=SI_KERNEL} ---
+2270  1669729927.595642 rt_sigprocmask(SIG_UNBLOCK, [INT], NULL, 8)                                 = 0
+2270  1669729927.607070 getpid()                                                                    = 2270
+2270  1669729927.611714 gettid()                                                                    = 2270
+2270  1669729927.615800 tgkill(2270, 2270, SIGINT)                                                  = 0
+2270  1669729927.619886 --- SIGINT {si_signo=SIGINT, si_code=SI_TKILL, si_pid=2270, si_uid=0} ---
+2270  1669729927.621809 rt_sigaction(SIGINT, {sa_handler=SIG_DFL, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8) = 0
+2270  1669729927.625237 rt_sigprocmask(SIG_UNBLOCK, [INT], NULL, 8)                                 = 0
+2270  1669729927.629046 getpid()                                                                    = 2270
+2270  1669729927.633568 gettid()                                                                    = 2270
+2270  1669729927.637529 tgkill(2270, 2270, SIGINT)                                                  = 0
+2270  1669729927.642563 --- SIGINT {si_signo=SIGINT, si_code=SI_TKILL, si_pid=2270, si_uid=0} ---
+2275  1669729927.645239 <... futex resumed>)                                                        = ?
+2273  1669729927.647177 <... futex resumed>)                                                        = ?
+2272  1669729927.649048 <... futex resumed>)                                                        = ?
+2271  1669729927.650925 <... futex resumed>)                                                        = 0
+2275  1669729927.653914 +++ killed by SIGINT +++
+2274  1669729927.655747 <... epoll_pwait resumed> <unfinished ...>)                                 = ?
+2273  1669729927.658124 +++ killed by SIGINT +++
+2272  1669729927.660490 +++ killed by SIGINT +++
+2274  1669729927.661937 +++ killed by SIGINT +++
+2271  1669729927.664351 +++ killed by SIGINT +++
+2270  1669729927.666795 +++ killed by SIGINT +++

@@ -1,0 +1,5380 @@
+[
+ {
+  "name": "execve",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939602322,
+  "dur": 3057,
+  "args": {
+   "first": "(\"./concurrency/concurrency\", [\"./concurrency/concurrency\"], 0x7ffefddec190 /* 13 vars */)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "arch_prctl",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939605885,
+  "dur": 473,
+  "args": {
+   "first": "(ARCH_SET_FS, 0x52fbf0)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "sched_getaffinity",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939606646,
+  "dur": 138,
+  "args": {
+   "first": "(0, 8192, [0, 1])",
+   "returnValue": "16"
+  }
+ },
+ {
+  "name": "openat",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939607198,
+  "dur": 433,
+  "args": {
+   "first": "(AT_FDCWD, \"/sys/kernel/mm/transparent_hugepage/hpage_pmd_size\", O_RDONLY)",
+   "returnValue": "3"
+  }
+ },
+ {
+  "name": "read",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939607721,
+  "dur": 20,
+  "args": {
+   "first": "(3, \"2097152\\n\", 20)",
+   "returnValue": "8"
+  }
+ },
+ {
+  "name": "close",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939608051,
+  "dur": 315,
+  "args": {
+   "first": "(3)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "madvise",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939615386,
+  "dur": 201,
+  "args": {
+   "first": "(0x7fb088400000, 2097152, MADV_HUGEPAGE)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigprocmask",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939617213,
+  "dur": 152,
+  "args": {
+   "first": "(SIG_SETMASK, NULL, [], 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "sigaltstack",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939617673,
+  "dur": 154,
+  "args": {
+   "first": "(NULL, {ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "sigaltstack",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939618044,
+  "dur": 239,
+  "args": {
+   "first": "({ss_sp=0xc000008000, ss_flags=0, ss_size=32768}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigprocmask",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939618488,
+  "dur": 143,
+  "args": {
+   "first": "(SIG_SETMASK, [], NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "gettid",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939618823,
+  "dur": 141,
+  "args": {
+   "first": "()",
+   "returnValue": "2185"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939619194,
+  "dur": 170,
+  "args": {
+   "first": "(SIGHUP, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939619571,
+  "dur": 162,
+  "args": {
+   "first": "(SIGHUP, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939619942,
+  "dur": 161,
+  "args": {
+   "first": "(SIGINT, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939620340,
+  "dur": 200,
+  "args": {
+   "first": "(SIGINT, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939620762,
+  "dur": 161,
+  "args": {
+   "first": "(SIGQUIT, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939621128,
+  "dur": 171,
+  "args": {
+   "first": "(SIGQUIT, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939621510,
+  "dur": 160,
+  "args": {
+   "first": "(SIGILL, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939621874,
+  "dur": 162,
+  "args": {
+   "first": "(SIGILL, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939622237,
+  "dur": 162,
+  "args": {
+   "first": "(SIGTRAP, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939622645,
+  "dur": 160,
+  "args": {
+   "first": "(SIGTRAP, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939623012,
+  "dur": 160,
+  "args": {
+   "first": "(SIGABRT, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939623360,
+  "dur": 143,
+  "args": {
+   "first": "(SIGABRT, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939623688,
+  "dur": 142,
+  "args": {
+   "first": "(SIGBUS, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939624014,
+  "dur": 217,
+  "args": {
+   "first": "(SIGBUS, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939624440,
+  "dur": 162,
+  "args": {
+   "first": "(SIGFPE, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939624783,
+  "dur": 137,
+  "args": {
+   "first": "(SIGFPE, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939625097,
+  "dur": 144,
+  "args": {
+   "first": "(SIGUSR1, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939625411,
+  "dur": 171,
+  "args": {
+   "first": "(SIGUSR1, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939625794,
+  "dur": 222,
+  "args": {
+   "first": "(SIGSEGV, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939626367,
+  "dur": 171,
+  "args": {
+   "first": "(SIGSEGV, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939626791,
+  "dur": 173,
+  "args": {
+   "first": "(SIGUSR2, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939627263,
+  "dur": 165,
+  "args": {
+   "first": "(SIGUSR2, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939627656,
+  "dur": 164,
+  "args": {
+   "first": "(SIGPIPE, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939628064,
+  "dur": 201,
+  "args": {
+   "first": "(SIGPIPE, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939628495,
+  "dur": 169,
+  "args": {
+   "first": "(SIGALRM, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939628890,
+  "dur": 169,
+  "args": {
+   "first": "(SIGALRM, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939629311,
+  "dur": 178,
+  "args": {
+   "first": "(SIGTERM, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939629725,
+  "dur": 178,
+  "args": {
+   "first": "(SIGTERM, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939630193,
+  "dur": 178,
+  "args": {
+   "first": "(SIGSTKFLT, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939630577,
+  "dur": 146,
+  "args": {
+   "first": "(SIGSTKFLT, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939630927,
+  "dur": 144,
+  "args": {
+   "first": "(SIGCHLD, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939631334,
+  "dur": 177,
+  "args": {
+   "first": "(SIGCHLD, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939631783,
+  "dur": 176,
+  "args": {
+   "first": "(SIGURG, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939632378,
+  "dur": 183,
+  "args": {
+   "first": "(SIGURG, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939632932,
+  "dur": 302,
+  "args": {
+   "first": "(SIGXCPU, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939633308,
+  "dur": 220,
+  "args": {
+   "first": "(SIGXCPU, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939633813,
+  "dur": 238,
+  "args": {
+   "first": "(SIGXFSZ, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939634285,
+  "dur": 212,
+  "args": {
+   "first": "(SIGXFSZ, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939634794,
+  "dur": 228,
+  "args": {
+   "first": "(SIGVTALRM, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939635258,
+  "dur": 212,
+  "args": {
+   "first": "(SIGVTALRM, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939635781,
+  "dur": 221,
+  "args": {
+   "first": "(SIGPROF, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939636252,
+  "dur": 182,
+  "args": {
+   "first": "(SIGPROF, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939636663,
+  "dur": 181,
+  "args": {
+   "first": "(SIGWINCH, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939637065,
+  "dur": 224,
+  "args": {
+   "first": "(SIGWINCH, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939637495,
+  "dur": 183,
+  "args": {
+   "first": "(SIGIO, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939637920,
+  "dur": 183,
+  "args": {
+   "first": "(SIGIO, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939638384,
+  "dur": 165,
+  "args": {
+   "first": "(SIGPWR, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939638764,
+  "dur": 167,
+  "args": {
+   "first": "(SIGPWR, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939639211,
+  "dur": 167,
+  "args": {
+   "first": "(SIGSYS, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939639592,
+  "dur": 180,
+  "args": {
+   "first": "(SIGSYS, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939640024,
+  "dur": 198,
+  "args": {
+   "first": "(SIGRTMIN, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939640462,
+  "dur": 181,
+  "args": {
+   "first": "(SIGRT_1, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939640873,
+  "dur": 171,
+  "args": {
+   "first": "(SIGRT_1, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939641274,
+  "dur": 184,
+  "args": {
+   "first": "(SIGRT_2, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939641686,
+  "dur": 170,
+  "args": {
+   "first": "(SIGRT_3, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939642069,
+  "dur": 245,
+  "args": {
+   "first": "(SIGRT_3, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939642529,
+  "dur": 171,
+  "args": {
+   "first": "(SIGRT_4, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939642912,
+  "dur": 170,
+  "args": {
+   "first": "(SIGRT_4, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939643296,
+  "dur": 209,
+  "args": {
+   "first": "(SIGRT_5, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939643732,
+  "dur": 170,
+  "args": {
+   "first": "(SIGRT_5, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939644116,
+  "dur": 197,
+  "args": {
+   "first": "(SIGRT_6, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939644487,
+  "dur": 206,
+  "args": {
+   "first": "(SIGRT_6, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939644962,
+  "dur": 271,
+  "args": {
+   "first": "(SIGRT_7, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939645400,
+  "dur": 187,
+  "args": {
+   "first": "(SIGRT_7, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939645856,
+  "dur": 147,
+  "args": {
+   "first": "(SIGRT_8, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939646255,
+  "dur": 168,
+  "args": {
+   "first": "(SIGRT_8, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939646647,
+  "dur": 162,
+  "args": {
+   "first": "(SIGRT_9, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939647032,
+  "dur": 187,
+  "args": {
+   "first": "(SIGRT_9, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939647434,
+  "dur": 157,
+  "args": {
+   "first": "(SIGRT_10, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939647840,
+  "dur": 160,
+  "args": {
+   "first": "(SIGRT_10, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939648236,
+  "dur": 136,
+  "args": {
+   "first": "(SIGRT_11, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939648559,
+  "dur": 149,
+  "args": {
+   "first": "(SIGRT_11, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939648898,
+  "dur": 150,
+  "args": {
+   "first": "(SIGRT_12, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939649321,
+  "dur": 174,
+  "args": {
+   "first": "(SIGRT_12, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939649796,
+  "dur": 170,
+  "args": {
+   "first": "(SIGRT_13, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939650309,
+  "dur": 247,
+  "args": {
+   "first": "(SIGRT_13, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939650802,
+  "dur": 199,
+  "args": {
+   "first": "(SIGRT_14, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939651395,
+  "dur": 213,
+  "args": {
+   "first": "(SIGRT_14, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939651936,
+  "dur": 457,
+  "args": {
+   "first": "(SIGRT_15, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939653137,
+  "dur": 273,
+  "args": {
+   "first": "(SIGRT_15, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939654002,
+  "dur": 458,
+  "args": {
+   "first": "(SIGRT_16, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939654938,
+  "dur": 194,
+  "args": {
+   "first": "(SIGRT_16, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939655462,
+  "dur": 189,
+  "args": {
+   "first": "(SIGRT_17, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939655913,
+  "dur": 182,
+  "args": {
+   "first": "(SIGRT_17, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939656395,
+  "dur": 178,
+  "args": {
+   "first": "(SIGRT_18, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939656798,
+  "dur": 179,
+  "args": {
+   "first": "(SIGRT_18, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939657213,
+  "dur": 231,
+  "args": {
+   "first": "(SIGRT_19, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939657662,
+  "dur": 170,
+  "args": {
+   "first": "(SIGRT_19, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939658047,
+  "dur": 215,
+  "args": {
+   "first": "(SIGRT_20, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939658488,
+  "dur": 172,
+  "args": {
+   "first": "(SIGRT_20, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939658897,
+  "dur": 173,
+  "args": {
+   "first": "(SIGRT_21, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939659299,
+  "dur": 174,
+  "args": {
+   "first": "(SIGRT_21, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939659735,
+  "dur": 173,
+  "args": {
+   "first": "(SIGRT_22, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939660141,
+  "dur": 167,
+  "args": {
+   "first": "(SIGRT_22, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939660600,
+  "dur": 168,
+  "args": {
+   "first": "(SIGRT_23, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939660998,
+  "dur": 127,
+  "args": {
+   "first": "(SIGRT_23, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939661392,
+  "dur": 160,
+  "args": {
+   "first": "(SIGRT_24, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939661773,
+  "dur": 175,
+  "args": {
+   "first": "(SIGRT_24, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939662177,
+  "dur": 320,
+  "args": {
+   "first": "(SIGRT_25, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939662975,
+  "dur": 249,
+  "args": {
+   "first": "(SIGRT_25, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939663527,
+  "dur": 258,
+  "args": {
+   "first": "(SIGRT_26, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939664138,
+  "dur": 251,
+  "args": {
+   "first": "(SIGRT_26, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939664630,
+  "dur": 295,
+  "args": {
+   "first": "(SIGRT_27, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939665168,
+  "dur": 268,
+  "args": {
+   "first": "(SIGRT_27, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939665510,
+  "dur": 214,
+  "args": {
+   "first": "(SIGRT_28, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939665984,
+  "dur": 242,
+  "args": {
+   "first": "(SIGRT_28, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939666492,
+  "dur": 205,
+  "args": {
+   "first": "(SIGRT_29, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939666964,
+  "dur": 212,
+  "args": {
+   "first": "(SIGRT_29, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939667282,
+  "dur": 209,
+  "args": {
+   "first": "(SIGRT_30, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939667709,
+  "dur": 169,
+  "args": {
+   "first": "(SIGRT_30, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939668085,
+  "dur": 179,
+  "args": {
+   "first": "(SIGRT_31, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939668450,
+  "dur": 145,
+  "args": {
+   "first": "(SIGRT_31, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939668782,
+  "dur": 142,
+  "args": {
+   "first": "(SIGRT_32, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigaction",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939669109,
+  "dur": 183,
+  "args": {
+   "first": "(SIGRT_32, {sa_handler=0x460640, sa_mask=~[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x460780}, NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigprocmask",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939669539,
+  "dur": 145,
+  "args": {
+   "first": "(SIG_SETMASK, ~[], [], 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "clone",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939669881,
+  "dur": 356,
+  "args": {
+   "first": "(child_stack=0xc00004a000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS, tls=0xc00003a090)",
+   "returnValue": "2186"
+  }
+ },
+ {
+  "name": "rt_sigprocmask",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939670583,
+  "dur": 91,
+  "args": {
+   "first": "(SIG_SETMASK, [],  ",
+   "second": "NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "gettid",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939670652,
+  "dur": 93,
+  "args": {
+   "first": "( ",
+   "second": ")",
+   "returnValue": "2186"
+  }
+ },
+ {
+  "name": "rt_sigprocmask",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939670956,
+  "dur": 102,
+  "args": {
+   "first": "(SIG_SETMASK, ~[],  ",
+   "second": "[], 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "sigaltstack",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939671023,
+  "dur": 107,
+  "args": {
+   "first": "(NULL,  ",
+   "second": "{ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "sigaltstack",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939671154,
+  "dur": 135,
+  "args": {
+   "first": "({ss_sp=0xc00003c000, ss_flags=0, ss_size=32768}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "clone",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939671463,
+  "dur": 349,
+  "args": {
+   "first": "(child_stack=0xc00004c000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS ",
+   "second": ", tls=0xc00003a490)",
+   "returnValue": "2187"
+  }
+ },
+ {
+  "name": "gettid",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713939671678,
+  "dur": 113,
+  "args": {
+   "first": "( ",
+   "second": ")",
+   "returnValue": "2187"
+  }
+ },
+ {
+  "name": "rt_sigprocmask",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939671748,
+  "dur": 157,
+  "args": {
+   "first": "(SIG_SETMASK, [],  ",
+   "second": "NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigprocmask",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939671785,
+  "dur": 112,
+  "args": {
+   "first": "(SIG_SETMASK, [],  ",
+   "second": "NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "gettid",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939671880,
+  "dur": 10,
+  "args": {
+   "first": "()",
+   "returnValue": "2186"
+  }
+ },
+ {
+  "name": "sigaltstack",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713939672022,
+  "dur": 147,
+  "args": {
+   "first": "(NULL,  ",
+   "second": "{ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigprocmask",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939672113,
+  "dur": 94,
+  "args": {
+   "first": "(SIG_SETMASK, ~[],  ",
+   "second": "[], 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939672332,
+  "dur": 397,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "sigaltstack",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713939672430,
+  "dur": 156,
+  "args": {
+   "first": "({ss_sp=0xc00004c000, ss_flags=0, ss_size=32768},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "clone",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939672485,
+  "dur": 114,
+  "args": {
+   "first": "(child_stack=0xc000046000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS ",
+   "second": ", tls=0xc00003a890)",
+   "returnValue": "2188"
+  }
+ },
+ {
+  "name": "rt_sigprocmask",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713939672564,
+  "dur": 14,
+  "args": {
+   "first": "(SIG_SETMASK, [], NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939672742,
+  "dur": 270,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigprocmask",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939672804,
+  "dur": 100,
+  "args": {
+   "first": "(SIG_SETMASK, [],  ",
+   "second": "NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "gettid",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713939672864,
+  "dur": 226,
+  "args": {
+   "first": "( ",
+   "second": ")",
+   "returnValue": "2187"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939673060,
+  "dur": 104,
+  "args": {
+   "first": "(0x52fca8, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "-1 EAGAIN (Resource temporarily unavailable)"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713939673247,
+  "dur": 100,
+  "args": {
+   "first": "(0x52fca8, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "mmap",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939673341,
+  "dur": 176,
+  "args": {
+   "first": "(NULL, 262144, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0 ",
+   "second": ")",
+   "returnValue": "0x7fb086024000"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939673424,
+  "dur": 406,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "gettid",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939673458,
+  "dur": 7,
+  "args": {
+   "first": "()",
+   "returnValue": "2188"
+  }
+ },
+ {
+  "name": "sigaltstack",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939673497,
+  "dur": 7,
+  "args": {
+   "first": "(NULL, {ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "sigaltstack",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939673546,
+  "dur": 8,
+  "args": {
+   "first": "({ss_sp=0xc00005a000, ss_flags=0, ss_size=32768}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigprocmask",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939673583,
+  "dur": 8,
+  "args": {
+   "first": "(SIG_SETMASK, [], NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "gettid",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939673765,
+  "dur": 135,
+  "args": {
+   "first": "( ",
+   "second": ")",
+   "returnValue": "2188"
+  }
+ },
+ {
+  "name": "rt_sigprocmask",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939673854,
+  "dur": 129,
+  "args": {
+   "first": "(SIG_SETMASK, ~[],  ",
+   "second": "[], 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939673988,
+  "dur": 13,
+  "args": {
+   "first": "(0x52fca8, FUTEX_WAKE_PRIVATE, 1)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939674269,
+  "dur": 419,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "clone",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939674447,
+  "dur": 505,
+  "args": {
+   "first": "(child_stack=0xc000092000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS ",
+   "second": ", tls=0xc000080090)",
+   "returnValue": "2189"
+  }
+ },
+ {
+  "name": "gettid",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939674656,
+  "dur": 111,
+  "args": {
+   "first": "( ",
+   "second": ")",
+   "returnValue": "2189"
+  }
+ },
+ {
+  "name": "rt_sigprocmask",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939674671,
+  "dur": 21,
+  "args": {
+   "first": "(SIG_SETMASK, [],  ",
+   "second": "NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939674860,
+  "dur": 296,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "sigaltstack",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939675181,
+  "dur": 398,
+  "args": {
+   "first": "(NULL,  ",
+   "second": "{ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "fcntl",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939675282,
+  "dur": 103,
+  "args": {
+   "first": "(0, F_GETFL ",
+   "second": ")",
+   "returnValue": "0x8000 (flags O_RDONLY|O_LARGEFILE)"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939675389,
+  "dur": 482,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "sigaltstack",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939675555,
+  "dur": 169,
+  "args": {
+   "first": "({ss_sp=0xc000084000, ss_flags=0, ss_size=32768},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "mmap",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939675601,
+  "dur": 91,
+  "args": {
+   "first": "(NULL, 262144, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0 ",
+   "second": ")",
+   "returnValue": "0x7fb085fe4000"
+  }
+ },
+ {
+  "name": "fcntl",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939675835,
+  "dur": 80,
+  "args": {
+   "first": "(1, F_GETFL ",
+   "second": ")",
+   "returnValue": "0x8002 (flags O_RDWR|O_LARGEFILE)"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939675860,
+  "dur": 265,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigprocmask",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939675947,
+  "dur": 170,
+  "args": {
+   "first": "(SIG_SETMASK, [],  ",
+   "second": "NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "fcntl",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939676046,
+  "dur": 157,
+  "args": {
+   "first": "(2, F_GETFL ",
+   "second": ")",
+   "returnValue": "0x8002 (flags O_RDWR|O_LARGEFILE)"
+  }
+ },
+ {
+  "name": "gettid",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939676220,
+  "dur": 138,
+  "args": {
+   "first": "( ",
+   "second": ")",
+   "returnValue": "2189"
+  }
+ },
+ {
+  "name": "getrlimit",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939676374,
+  "dur": 199,
+  "args": {
+   "first": "(RLIMIT_NOFILE,  ",
+   "second": "{rlim_cur=1024*1024, rlim_max=1024*1024})",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939676484,
+  "dur": 498,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939676753,
+  "dur": 271,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=3000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_create1",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939676775,
+  "dur": 178,
+  "args": {
+   "first": "(EPOLL_CLOEXEC ",
+   "second": ")",
+   "returnValue": "3"
+  }
+ },
+ {
+  "name": "pipe2",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939676906,
+  "dur": 23,
+  "args": {
+   "first": "([4, 5], O_NONBLOCK|O_CLOEXEC)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939676980,
+  "dur": 319,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_ctl",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939677258,
+  "dur": 162,
+  "args": {
+   "first": "(3, EPOLL_CTL_ADD, 4, {events=EPOLLIN, data={u32=5628344, u64=5628344}} ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigprocmask",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939677338,
+  "dur": 325,
+  "args": {
+   "first": "(SIG_SETMASK, ~[],  ",
+   "second": "[], 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939677647,
+  "dur": 488,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "write",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939677780,
+  "dur": 175,
+  "args": {
+   "first": "(1, \"thread 1: start\\n\", 16 ",
+   "second": ")",
+   "returnValue": "16"
+  }
+ },
+ {
+  "name": "clone",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939681566,
+  "dur": 4165,
+  "args": {
+   "first": "(child_stack=0xc000094000, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS ",
+   "second": ", tls=0xc000080490)",
+   "returnValue": "2190"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939681582,
+  "dur": 58,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 0, NULL, 824633746656)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "gettid",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2190,
+  "tid": 2190,
+  "ts": 1669713939681611,
+  "dur": 48,
+  "args": {
+   "first": "( ",
+   "second": ")",
+   "returnValue": "2190"
+  }
+ },
+ {
+  "name": "rt_sigprocmask",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939681746,
+  "dur": 94,
+  "args": {
+   "first": "(SIG_SETMASK, [],  ",
+   "second": "NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "sigaltstack",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2190,
+  "tid": 2190,
+  "ts": 1669713939681868,
+  "dur": 124,
+  "args": {
+   "first": "(NULL,  ",
+   "second": "{ss_sp=NULL, ss_flags=SS_DISABLE, ss_size=0})",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939681917,
+  "dur": 248,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "write",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939682021,
+  "dur": 105,
+  "args": {
+   "first": "(1, \"thread 2: start\\n\", 16 ",
+   "second": ")",
+   "returnValue": "16"
+  }
+ },
+ {
+  "name": "sigaltstack",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2190,
+  "tid": 2190,
+  "ts": 1669713939682170,
+  "dur": 152,
+  "args": {
+   "first": "({ss_sp=0xc0000a0000, ss_flags=0, ss_size=32768},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939682201,
+  "dur": 8143,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939682355,
+  "dur": 211,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "rt_sigprocmask",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2190,
+  "tid": 2190,
+  "ts": 1669713939682619,
+  "dur": 113,
+  "args": {
+   "first": "(SIG_SETMASK, [],  ",
+   "second": "NULL, 8)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939682654,
+  "dur": 455,
+  "args": {
+   "first": "(0xc000080148, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939682679,
+  "dur": 148,
+  "args": {
+   "first": "(0xc000080148, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939684433,
+  "dur": 1855,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "gettid",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2190,
+  "tid": 2190,
+  "ts": 1669713939684456,
+  "dur": 50,
+  "args": {
+   "first": "( ",
+   "second": ")",
+   "returnValue": "2190"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939684673,
+  "dur": 183,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939684703,
+  "dur": 154,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "getpid",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939684896,
+  "dur": 7,
+  "args": {
+   "first": "()",
+   "returnValue": "2185"
+  }
+ },
+ {
+  "name": "tgkill",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939684929,
+  "dur": 46,
+  "args": {
+   "first": "(2185, 2185, SIGURG)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939690446,
+  "dur": 5338,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigreturn",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939690595,
+  "dur": 204,
+  "args": {
+   "first": "({mask=[]} ",
+   "second": ")",
+   "returnValue": "2620004"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939690876,
+  "dur": 182,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 0, NULL, 0)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939690998,
+  "dur": 177,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939691073,
+  "dur": 6649,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939691195,
+  "dur": 149,
+  "args": {
+   "first": "(0x52fca8, FUTEX_WAKE_PRIVATE, 1)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939691425,
+  "dur": 311,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939691554,
+  "dur": 281,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939692032,
+  "dur": 358,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939692567,
+  "dur": 251,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939692969,
+  "dur": 358,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939693484,
+  "dur": 235,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939693865,
+  "dur": 311,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939694322,
+  "dur": 276,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "getpid",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939694830,
+  "dur": 109,
+  "args": {
+   "first": "()",
+   "returnValue": "2185"
+  }
+ },
+ {
+  "name": "tgkill",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939695085,
+  "dur": 233,
+  "args": {
+   "first": "(2185, 2189, SIGURG)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigreturn",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939695513,
+  "dur": 10,
+  "args": {
+   "first": "({mask=[]})",
+   "returnValue": "3619933"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939695569,
+  "dur": 55,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAKE_PRIVATE, 1)",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939695679,
+  "dur": 4166,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939695732,
+  "dur": 283,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939695917,
+  "dur": 102,
+  "args": {
+   "first": "(0xc000080148, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939695955,
+  "dur": 279,
+  "args": {
+   "first": "(0xc000080148, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "-1 EAGAIN (Resource temporarily unavailable)"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939696137,
+  "dur": 258,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939696318,
+  "dur": 247,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939696710,
+  "dur": 255,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939697110,
+  "dur": 280,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939697537,
+  "dur": 246,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939697934,
+  "dur": 255,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939698335,
+  "dur": 247,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939698726,
+  "dur": 262,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939699132,
+  "dur": 279,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939699558,
+  "dur": 246,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939699949,
+  "dur": 302,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939700400,
+  "dur": 247,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939700792,
+  "dur": 107,
+  "args": {
+   "first": "(3, [], 128, 0, NULL, 0)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939701039,
+  "dur": 165,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939701348,
+  "dur": 246,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "getpid",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939701739,
+  "dur": 106,
+  "args": {
+   "first": "()",
+   "returnValue": "2185"
+  }
+ },
+ {
+  "name": "tgkill",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939702192,
+  "dur": 187,
+  "args": {
+   "first": "(2185, 2185, SIGURG ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigreturn",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939702531,
+  "dur": 115,
+  "args": {
+   "first": "({mask=[]} ",
+   "second": ")",
+   "returnValue": "5149012"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939702868,
+  "dur": 434,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939702997,
+  "dur": 184,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939703073,
+  "dur": 7086,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939703300,
+  "dur": 187,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939703360,
+  "dur": 102,
+  "args": {
+   "first": "(0x52fca8, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939703694,
+  "dur": 249,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939703833,
+  "dur": 251,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939704267,
+  "dur": 251,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939709335,
+  "dur": 268,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "getpid",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939709749,
+  "dur": 106,
+  "args": {
+   "first": "()",
+   "returnValue": "2185"
+  }
+ },
+ {
+  "name": "tgkill",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939709992,
+  "dur": 146,
+  "args": {
+   "first": "(2185, 2189, SIGURG)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigreturn",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939710360,
+  "dur": 10,
+  "args": {
+   "first": "({mask=[]})",
+   "returnValue": "7031551"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939710414,
+  "dur": 53,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAKE_PRIVATE, 1)",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939710521,
+  "dur": 7018,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939710573,
+  "dur": 310,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939710758,
+  "dur": 103,
+  "args": {
+   "first": "(0xc000080148, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939710795,
+  "dur": 277,
+  "args": {
+   "first": "(0xc000080148, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "-1 EAGAIN (Resource temporarily unavailable)"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939710974,
+  "dur": 255,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939711103,
+  "dur": 133,
+  "args": {
+   "first": "(3, [], 128, 0, NULL, 0)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939711378,
+  "dur": 250,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939711773,
+  "dur": 319,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939712483,
+  "dur": 376,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939713238,
+  "dur": 302,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "getpid",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939713796,
+  "dur": 200,
+  "args": {
+   "first": "()",
+   "returnValue": "2185"
+  }
+ },
+ {
+  "name": "tgkill",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939714584,
+  "dur": 236,
+  "args": {
+   "first": "(2185, 2185, SIGURG ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigreturn",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939715006,
+  "dur": 225,
+  "args": {
+   "first": "({mask=[]} ",
+   "second": ")",
+   "returnValue": "8185535"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939715376,
+  "dur": 499,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939715518,
+  "dur": 194,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939715603,
+  "dur": 4776,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939715727,
+  "dur": 90,
+  "args": {
+   "first": "(0x52fca8, FUTEX_WAKE_PRIVATE, 1)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939716270,
+  "dur": 591,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939716478,
+  "dur": 319,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939717120,
+  "dur": 1552,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939718949,
+  "dur": 606,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939719800,
+  "dur": 430,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939720434,
+  "dur": 285,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939720911,
+  "dur": 290,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939721384,
+  "dur": 127,
+  "args": {
+   "first": "(3, [], 128, 0, NULL, 0)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "getpid",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939721687,
+  "dur": 156,
+  "args": {
+   "first": "()",
+   "returnValue": "2185"
+  }
+ },
+ {
+  "name": "tgkill",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939722193,
+  "dur": 192,
+  "args": {
+   "first": "(2185, 2189, SIGURG)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "rt_sigreturn",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939722597,
+  "dur": 10,
+  "args": {
+   "first": "({mask=[]})",
+   "returnValue": "8680297"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939722649,
+  "dur": 48,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAKE_PRIVATE, 1)",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939722762,
+  "dur": 6612,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939722824,
+  "dur": 282,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939723008,
+  "dur": 102,
+  "args": {
+   "first": "(0xc000080148, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939723040,
+  "dur": 293,
+  "args": {
+   "first": "(0xc000080148, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939723284,
+  "dur": 315,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939723414,
+  "dur": 258,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939723815,
+  "dur": 248,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939725682,
+  "dur": 740,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=40000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713939726585,
+  "dur": 3517,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939726630,
+  "dur": 66,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "write",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939727520,
+  "dur": 1786,
+  "args": {
+   "first": "(1, \"thread 1: fin\\n\", 14 ",
+   "second": ")",
+   "returnValue": "14"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939727589,
+  "dur": 848,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939727738,
+  "dur": 76,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAKE_PRIVATE, 1)",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713939727869,
+  "dur": 54448,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939727941,
+  "dur": 266,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939728174,
+  "dur": 184,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939728218,
+  "dur": 175,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "write",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939728677,
+  "dur": 120,
+  "args": {
+   "first": "(1, \"thread 2: fin\\n\", 14)",
+   "returnValue": "14"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939728851,
+  "dur": 383,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713939729513,
+  "dur": 302,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713940676948,
+  "dur": 950246,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 949, NULL, 357452894407113)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713940677054,
+  "dur": 947121,
+  "args": {
+   "first": "(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=946627877} ",
+   "second": ")",
+   "returnValue": "-1 ETIMEDOUT (Connection timed out)"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713940677624,
+  "dur": 163,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713940677735,
+  "dur": 949799,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713940677879,
+  "dur": 359,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 0, NULL, 0)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "write",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713940678452,
+  "dur": 362,
+  "args": {
+   "first": "(1, \"sum1=16405833, sum2=16415976\\n\", 29 ",
+   "second": ")",
+   "returnValue": "29"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713940678501,
+  "dur": 663,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713940678542,
+  "dur": 356,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713940679427,
+  "dur": 75,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713940679551,
+  "dur": 172,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "-1 EAGAIN (Resource temporarily unavailable)"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713940679945,
+  "dur": 413,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713941679582,
+  "dur": 999922,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 999, NULL, 2)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713941679776,
+  "dur": 999404,
+  "args": {
+   "first": "(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=998649958} ",
+   "second": ")",
+   "returnValue": "-1 ETIMEDOUT (Connection timed out)"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713941680927,
+  "dur": 799,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713941681028,
+  "dur": 1001297,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713941681406,
+  "dur": 597,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 0, NULL, 0)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "write",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713941681860,
+  "dur": 538,
+  "args": {
+   "first": "(1, \"sum1=16405833, sum2=16415976\\n\", 29 ",
+   "second": ")",
+   "returnValue": "29"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713941682104,
+  "dur": 274,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "-1 EAGAIN (Resource temporarily unavailable)"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713941682761,
+  "dur": 339,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713941682839,
+  "dur": 846,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713941682901,
+  "dur": 248,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713941683720,
+  "dur": 650,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713942683419,
+  "dur": 1000410,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 999, NULL, 357454900357748)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713942683600,
+  "dur": 999508,
+  "args": {
+   "first": "(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=998559169} ",
+   "second": ")",
+   "returnValue": "-1 ETIMEDOUT (Connection timed out)"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713942684379,
+  "dur": 1001233,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713942684522,
+  "dur": 572,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713942684572,
+  "dur": 497,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 0, NULL, 0)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713942685453,
+  "dur": 512,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "-1 EAGAIN (Resource temporarily unavailable)"
+  }
+ },
+ {
+  "name": "write",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713942685523,
+  "dur": 435,
+  "args": {
+   "first": "(1, \"sum1=16405833, sum2=16415976\\n\", 29 ",
+   "second": ")",
+   "returnValue": "29"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713942685554,
+  "dur": 434,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713942686564,
+  "dur": 835,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "failed",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713942687841,
+  "dur": 998718,
+  "args": {
+   "first": "(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=997944289})",
+   "returnValue": "-1 ETIMEDOUT (Connection timed out)"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713943687438,
+  "dur": 1001019,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 999, NULL, 357455903640134)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713943687791,
+  "dur": 440,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713943688038,
+  "dur": 1001684,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713943688110,
+  "dur": 490,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713943688528,
+  "dur": 118,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 0, NULL, 0)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "write",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713943688796,
+  "dur": 350,
+  "args": {
+   "first": "(1, \"sum1=16405833, sum2=16415976\\n\", 29 ",
+   "second": ")",
+   "returnValue": "29"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713943689576,
+  "dur": 1198,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713943689627,
+  "dur": 620,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713943690374,
+  "dur": 656,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713944690124,
+  "dur": 1000971,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 999, NULL, 357456906884980)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713944690456,
+  "dur": 998906,
+  "args": {
+   "first": "(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=997685229} ",
+   "second": ")",
+   "returnValue": "-1 ETIMEDOUT (Connection timed out)"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713944691314,
+  "dur": 434,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713944691396,
+  "dur": 1001037,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713944691435,
+  "dur": 326,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 0, NULL, 0)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713944691685,
+  "dur": 192,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "-1 EAGAIN (Resource temporarily unavailable)"
+  }
+ },
+ {
+  "name": "write",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713944691980,
+  "dur": 336,
+  "args": {
+   "first": "(1, \"sum1=16405833, sum2=16415976\\n\", 29 ",
+   "second": ")",
+   "returnValue": "29"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713944692011,
+  "dur": 334,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713944693568,
+  "dur": 1593,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713944693751,
+  "dur": 746,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713944693819,
+  "dur": 617,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713945693008,
+  "dur": 999120,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 998, NULL, 357457909990890)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713945693156,
+  "dur": 999101,
+  "args": {
+   "first": "(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=998192701} ",
+   "second": ")",
+   "returnValue": "-1 ETIMEDOUT (Connection timed out)"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713945693603,
+  "dur": 192,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713945693719,
+  "dur": 999815,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713945693760,
+  "dur": 329,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 0, NULL, 0)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "write",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713945694333,
+  "dur": 320,
+  "args": {
+   "first": "(1, \"sum1=16405833, sum2=16415976\\n\", 29 ",
+   "second": ")",
+   "returnValue": "29"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713945694378,
+  "dur": 265,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "-1 EAGAIN (Resource temporarily unavailable)"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713945694403,
+  "dur": 266,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713945695140,
+  "dur": 420,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713946695503,
+  "dur": 1000517,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 999, NULL, 357458912474076)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713946695602,
+  "dur": 999292,
+  "args": {
+   "first": "(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=998671151} ",
+   "second": ")",
+   "returnValue": "-1 ETIMEDOUT (Connection timed out)"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713946695680,
+  "dur": 91,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAKE_PRIVATE, 1)",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713946695879,
+  "dur": 1000755,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713946695940,
+  "dur": 265,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000},  ",
+   "second": "NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "write",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713946695970,
+  "dur": 40,
+  "args": {
+   "first": "(1, \"sum1=16405833, sum2=16415976\\n\", 29 ",
+   "second": ")",
+   "returnValue": "29"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713946696189,
+  "dur": 142,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "-1 EAGAIN (Resource temporarily unavailable)"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713946696321,
+  "dur": 235,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713946696345,
+  "dur": 275,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 0, NULL, 0)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713946696450,
+  "dur": 245,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713947697004,
+  "dur": 1000619,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 999, NULL, 357459913949879)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713947697179,
+  "dur": 1000195,
+  "args": {
+   "first": "(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=999277538} ",
+   "second": ")",
+   "returnValue": "-1 ETIMEDOUT (Connection timed out)"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713947697625,
+  "dur": 1001186,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713947697767,
+  "dur": 369,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713947697816,
+  "dur": 393,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 0, NULL, 0)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713947698705,
+  "dur": 371,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "-1 EAGAIN (Resource temporarily unavailable)"
+  }
+ },
+ {
+  "name": "write",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713947698830,
+  "dur": 350,
+  "args": {
+   "first": "(1, \"sum1=16405833, sum2=16415976\\n\", 29 ",
+   "second": ")",
+   "returnValue": "29"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713947699082,
+  "dur": 571,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713947699189,
+  "dur": 247,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "-1 EAGAIN (Resource temporarily unavailable)"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713947699390,
+  "dur": 326,
+  "args": {
+   "first": "(0xc00003a948, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713947699863,
+  "dur": 653,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713948699967,
+  "dur": 1000160,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 999, NULL, 357460916783778)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713948700128,
+  "dur": 998977,
+  "args": {
+   "first": "(0x530058, FUTEX_WAIT_PRIVATE, 0, {tv_sec=0, tv_nsec=998044599} ",
+   "second": ")",
+   "returnValue": "-1 ETIMEDOUT (Connection timed out)"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713948700401,
+  "dur": 51,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "1"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713948700563,
+  "dur": 1000714,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713948700603,
+  "dur": 230,
+  "args": {
+   "first": "(3,  ",
+   "second": "[], 128, 0, NULL, 0)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "write",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713948702284,
+  "dur": 1771,
+  "args": {
+   "first": "(1, \"sum1=16405833, sum2=16415976\\n\", 29 ",
+   "second": ")",
+   "returnValue": "29"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713948703229,
+  "dur": 396,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAIT_PRIVATE, 0, NULL ",
+   "second": ")",
+   "returnValue": "-1 EAGAIN (Resource temporarily unavailable)"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "detached",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713948703378,
+  "dur": 464,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAKE_PRIVATE, 1 ",
+   "second": ")",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "nanosleep",
+  "cat": "successful",
+  "ph": "X",
+  "pid": 2186,
+  "tid": 2186,
+  "ts": 1669713948703892,
+  "dur": 451,
+  "args": {
+   "first": "({tv_sec=0, tv_nsec=20000}, NULL)",
+   "returnValue": "0"
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "unfinished",
+  "ph": "i",
+  "pid": 2187,
+  "tid": 2187,
+  "ts": 1669713948703329,
+  "args": {
+   "first": "(0xc00003a548, FUTEX_WAIT_PRIVATE, 0, NULL "
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "unfinished",
+  "ph": "i",
+  "pid": 2189,
+  "tid": 2189,
+  "ts": 1669713939729336,
+  "args": {
+   "first": "(0xc000080148, FUTEX_WAIT_PRIVATE, 0, NULL "
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "unfinished",
+  "ph": "i",
+  "pid": 2190,
+  "tid": 2190,
+  "ts": 1669713939684517,
+  "args": {
+   "first": "(0x55e3b8, FUTEX_WAIT_PRIVATE, 0, NULL "
+  }
+ },
+ {
+  "name": "futex",
+  "cat": "unfinished",
+  "ph": "i",
+  "pid": 2185,
+  "tid": 2185,
+  "ts": 1669713939728055,
+  "args": {
+   "first": "(0x52fca8, FUTEX_WAIT_PRIVATE, 0, NULL "
+  }
+ },
+ {
+  "name": "epoll_pwait",
+  "cat": "unfinished",
+  "ph": "i",
+  "pid": 2188,
+  "tid": 2188,
+  "ts": 1669713948702931,
+  "args": {
+   "first": "(3,  "
+  }
+ }
+]

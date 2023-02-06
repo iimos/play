@@ -48,8 +48,8 @@ func TestParseStraceLine(t *testing.T) {
 			in: `2273  1669729914.298607 <... sigaltstack resumed>NULL)     = 0`,
 			expect: Event{
 				Name:      "sigaltstack",
-				Cat:       "detached", // mayby it's wrong
-				Ph:        "X",        // mayby it's wrong
+				Cat:       "detached", // maybe it's wrong
+				Ph:        "X",        // maybe it's wrong
 				PID:       2273,
 				TID:       2273,
 				Timestamp: 1669729914298607000,

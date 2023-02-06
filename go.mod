@@ -11,7 +11,9 @@ require (
 )
 
 require (
+	github.com/hugelgupf/go-strace v0.0.0-20210320044838-ac8c2b116f12
+	github.com/seccomp/libseccomp-golang v0.10.0
 	github.com/stretchr/testify v1.8.1
-	golang.design/x/thread v0.0.0-20210122121316-335e9adffdf1 // indirect
-	golang.org/x/sys v0.2.0 // indirect
+	golang.design/x/thread v0.0.0-20210122121316-335e9adffdf1
+	golang.org/x/sys v0.2.0
 )

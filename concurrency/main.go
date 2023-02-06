@@ -16,7 +16,7 @@ func testAtomic() {
 		fmt.Printf("thread %d: start\n", tid)
 
 		if useAtomic {
-			for i := 0; i < 10_000_000 || true; i++ {
+			for i := 0; i < 10_000_000; i++ {
 				atomic.AddInt64(&sum1, 1)
 				sum2 += 1
 			}
@@ -39,10 +39,10 @@ func testAtomic() {
 
 	t2 := thread.New()
 	t2.CallNonBlock(func() {
-		counter(t2.ID(), false)
+		counter(t2.ID(), true)
 	})
 
-	for {
+	for i := 0; i < 10; i++ {
 		time.Sleep(time.Second)
 		fmt.Printf("sum1=%d, sum2=%d\n", sum1, sum2)
 	}

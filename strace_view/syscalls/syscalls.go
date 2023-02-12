@@ -20,17 +20,16 @@ import (
 	"github.com/hugelgupf/go-strace/strace"
 )
 
-// FormatSpecifier values describe how an individual syscall argument should be
-// formatted.
-type FormatSpecifier int
+// TypeSpecifier specifies an individual syscall argument type.
+type TypeSpecifier int
 
-// Valid FormatSpecifiers.
+// Valid TypeSpecifiers.
 //
 // Unless otherwise specified, values are formatted before syscall execution
 // and not updated after syscall execution (the same value is output).
 const (
 	// Hex is just a hexadecimal number.
-	Hex FormatSpecifier = iota
+	Hex TypeSpecifier = iota
 
 	// Dec is just a decimal number.
 	Dec
@@ -179,17 +178,35 @@ const (
 
 	// CPUSet is a cpu_set_t.
 	CPUSet
+
+	// MMapProt is an mmap(2) protection flags.
+	MMapProt
+
+	// MMapFlags is an mmap(2) flags.
+	MMapFlags
+
+	// MADVFlags is an madvise(2) flags.
+	MADVFlags
+
+	// ArchPrctl is an arch_prctl(2) code.
+	ArchPrctl
+
+	// Signal is a process signal.
+	Signal
 )
 
 // defaultFormat is the syscall argument Format to use if the actual Format is
 // not known. It formats all six arguments as hex.
-var defaultFormat = []FormatSpecifier{Hex, Hex, Hex, Hex, Hex, Hex}
+var defaultFormat = []TypeSpecifier{Hex, Hex, Hex, Hex, Hex, Hex}
 
 func Details(s *strace.SyscallEvent) SyscallInfo {
 	if v, ok := syscalls[uintptr(s.Sysno)]; ok {
 		return v
 	}
-	return SyscallInfo{Name: fmt.Sprintf("%d", s.Sysno), Format: defaultFormat}
+	return SyscallInfo{
+		Name:     fmt.Sprintf("%d", s.Sysno),
+		ArgTypes: defaultFormat,
+	}
 }
 
 // SyscallInfo captures the Name and printing Format of a syscall.
@@ -197,16 +214,13 @@ type SyscallInfo struct {
 	// Name is the name of the syscall.
 	Name string
 
-	// Format contains the format specifiers for each argument.
-	//
-	// Syscall calls can have up to six arguments. Arguments without a
-	// corresponding entry in Format will not be printed.
-	Format []FormatSpecifier
+	// ArgTypes contains the type specifiers for each argument.
+	ArgTypes []TypeSpecifier
 }
 
 // makeSyscallInfo returns a SyscallInfo for a syscall.
-func makeSyscallInfo(name string, f ...FormatSpecifier) SyscallInfo {
-	return SyscallInfo{Name: name, Format: f}
+func makeSyscallInfo(name string, f ...TypeSpecifier) SyscallInfo {
+	return SyscallInfo{Name: name, ArgTypes: f}
 }
 
 // SyscallMap maps syscalls into names and printing formats.

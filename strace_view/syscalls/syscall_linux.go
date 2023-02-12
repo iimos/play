@@ -17,8 +17,10 @@ package syscalls
 import (
 	"encoding/binary"
 	"fmt"
+	"math/bits"
 	"os"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -32,7 +34,7 @@ func path(t strace.Task, addr strace.Addr) string {
 	if err != nil {
 		return fmt.Sprintf("%#x (error decoding path: %s)", addr, err)
 	}
-	return fmt.Sprintf("%#x %s", addr, path)
+	return path
 }
 
 func utimensTimespec(t strace.Task, addr strace.Addr) string {
@@ -173,12 +175,105 @@ func cpuSet(t strace.Task, addr strace.Addr) string {
 	return fmt.Sprintf("%v", cpus)
 }
 
+type flagSpec struct {
+	flag int
+	str  string
+}
+
+var mapProtFlags = [...]flagSpec{
+	{syscall.PROT_EXEC, "EXEC"},
+	{syscall.PROT_GROWSDOWN, "GROWSDOWN"},
+	{syscall.PROT_GROWSUP, "GROWSUP"},
+	{syscall.PROT_NONE, "NONE"},
+	{syscall.PROT_READ, "READ"},
+	{syscall.PROT_WRITE, "WRITE"},
+}
+
+var mapFlags = [...]flagSpec{
+	{syscall.MAP_32BIT, "32BIT"},
+	{syscall.MAP_ANON, "ANON"},
+	{syscall.MAP_ANONYMOUS, "ANONYMOUS"},
+	{syscall.MAP_DENYWRITE, "DENYWRITE"},
+	{syscall.MAP_EXECUTABLE, "EXECUTABLE"},
+	{syscall.MAP_FILE, "FILE"},
+	{syscall.MAP_FIXED, "FIXED"},
+	{syscall.MAP_GROWSDOWN, "GROWSDOWN"},
+	{syscall.MAP_HUGETLB, "HUGETLB"},
+	{syscall.MAP_LOCKED, "LOCKED"},
+	{syscall.MAP_NONBLOCK, "NONBLOCK"},
+	{syscall.MAP_NORESERVE, "NORESERVE"},
+	{syscall.MAP_POPULATE, "POPULATE"},
+	{syscall.MAP_PRIVATE, "PRIVATE"},
+	{syscall.MAP_SHARED, "SHARED"},
+	{syscall.MAP_STACK, "STACK"},
+	{syscall.MAP_TYPE, "TYPE"},
+}
+
+var madvFlags = [...]flagSpec{
+	{syscall.MADV_DOFORK, "DOFORK"},
+	{syscall.MADV_DONTFORK, "DONTFORK"},
+	{syscall.MADV_DONTNEED, "DONTNEED"},
+	{syscall.MADV_HUGEPAGE, "HUGEPAGE"},
+	{syscall.MADV_HWPOISON, "HWPOISON"},
+	{syscall.MADV_MERGEABLE, "MERGEABLE"},
+	{syscall.MADV_NOHUGEPAGE, "NOHUGEPAGE"},
+	{syscall.MADV_NORMAL, "NORMAL"},
+	{syscall.MADV_RANDOM, "RANDOM"},
+	{syscall.MADV_REMOVE, "REMOVE"},
+	{syscall.MADV_SEQUENTIAL, "SEQUENTIAL"},
+	{syscall.MADV_UNMERGEABLE, "UNMERGEABLE"},
+	{syscall.MADV_WILLNEED, "WILLNEED"},
+}
+
+var archPrctlCodes = map[int]string{
+	0x1001: "ARCH_SET_GS",
+	0x1002: "ARCH_SET_FS",
+	0x1003: "ARCH_GET_FS",
+	0x1004: "ARCH_GET_GS",
+	0x1011: "ARCH_GET_CPUID",
+	0x1012: "ARCH_SET_CPUID",
+	0x1021: "ARCH_GET_XCOMP_SUPP",
+	0x1022: "ARCH_GET_XCOMP_PERM",
+	0x1023: "ARCH_REQ_XCOMP_PERM",
+	0x1024: "ARCH_GET_XCOMP_GUEST_PERM",
+	0x1025: "ARCH_REQ_XCOMP_GUEST_PERM",
+	0x2001: "ARCH_MAP_VDSO_X32",
+	0x2002: "ARCH_MAP_VDSO_32",
+	0x2003: "ARCH_MAP_VDSO_64",
+}
+
+func flagsToStrings(specs []flagSpec, flags int) []string {
+	if flags == 0 {
+		for _, v := range specs {
+			if v.flag == 0 {
+				return []string{v.str}
+			}
+		}
+		return []string{"0"}
+	}
+
+	count := bits.OnesCount(uint(flags))
+	ret := make([]string, 0, count)
+	for _, v := range specs {
+		if v.flag&flags != 0 {
+			ret = append(ret, v.str)
+			flags &= ^v.flag // erase flag to avoid dublicates
+		}
+	}
+	return ret
+}
+
+func flags(specs []flagSpec, t strace.Task, bits int) string {
+	flagsStr := flagsToStrings(specs, bits)
+	return strings.Join(flagsStr, "|")
+}
+
 // ArgumentsStrings fills arguments for a system call. If an argument
 // cannot be interpreted, then a hex value will be used. Note that
 // a full output slice will always be provided, that is len(return) == len(args).
 func ArgumentsStrings(si SyscallInfo, t strace.Task, args strace.SyscallArguments, rval strace.SyscallArgument, maximumBlobSize uint) []string {
-	output := make([]string, len(si.Format))
-	for i, format := range si.Format {
+	output := make([]string, len(si.ArgTypes))
+	for i, format := range si.ArgTypes {
 		if i >= len(args) {
 			break
 		}
@@ -234,6 +329,20 @@ func ArgumentsStrings(si SyscallInfo, t strace.Task, args strace.SyscallArgument
 			output[i] = abi.PtraceRequestSet.Parse(args[i].Uint64())
 		case ItimerType:
 			output[i] = abi.ItimerTypes.Parse(uint64(args[i].Int()))
+		case MMapProt:
+			output[i] = flags(mapProtFlags[:], t, int(args[i].Int()))
+		case MMapFlags:
+			output[i] = flags(mapFlags[:], t, int(args[i].Int()))
+		case MADVFlags:
+			output[i] = flags(madvFlags[:], t, int(args[i].Int()))
+		case Signal:
+			output[i] = SignalString(unix.Signal(args[i].Int()))
+		case ArchPrctl:
+			v := archPrctlCodes[int(args[i].Int())]
+			if v == "" {
+				v = strconv.FormatUint(args[i].Uint64(), 16)
+			}
+			output[i] = v
 		case Oct:
 			if args[i].Uint64() == 0 {
 				output[i] = "0"
@@ -289,7 +398,6 @@ func ArgumentsStrings(si SyscallInfo, t strace.Task, args strace.SyscallArgument
 			output[i] = rusage(t, args[i].Pointer())
 		case CPUSet:
 			output[i] = cpuSet(t, args[i].Pointer())
-
 		default:
 			output[i] = "0x" + strconv.FormatUint(args[i].Uint64(), 16)
 		}
@@ -299,7 +407,7 @@ func ArgumentsStrings(si SyscallInfo, t strace.Task, args strace.SyscallArgument
 
 func SignalString(s unix.Signal) string {
 	if 0 <= s && int(s) < len(signals) {
-		return fmt.Sprintf("%s (%d)", signals[s], int(s))
+		return signals[s]
 	}
 	return fmt.Sprintf("signal %d", int(s))
 }

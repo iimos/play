@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -78,69 +79,64 @@ func main() {
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 
-	events, err := trace(cmd)
-	if err != nil {
-		panic(err)
-	}
+	events := trace(cmd)
 
-	outpath := "strace.html"
-	out, err := NewHTMLWriter(outpath)
-	if err != nil {
-		panic(err)
-	}
-	defer out.Close()
-
-	jsonEvents, err := json.Marshal(events)
-	if err != nil {
-		panic(err)
-	}
-
-	html := strings.Replace(templateHTML, "{{events}}", string(jsonEvents), 1)
+	// html := strings.Replace(templateHTML, "{{events}}", string(jsonEvents), 1)
+	html := templateHTML
 	html = strings.Replace(html, "{{js}}", scriptJS, 1)
 	html = strings.Replace(html, "{{css}}", scriptJS, 1)
 	html = strings.Replace(html, "{{syscalls}}", syscallsJSON, 1)
-	err = out.WriteString(html)
-	if err != nil {
-		panic(err)
-	}
 
-	fmt.Printf("result written in %q\n", outpath)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	addr := ":80"
+	fmt.Printf("listen on %s\n", addr)
+	startServer(ctx, addr, html, events)
 }
 
-func trace(cmd *exec.Cmd) (TraceEvents, error) {
-	events := TraceEvents{
-		Event:           make([]Event, 0, 64),
-		DisplayTimeUnit: "ns",
-	}
-	err := strace.Trace(cmd, func(t strace.Task, record *strace.TraceRecord) error {
-		switch record.Event {
-		case strace.SyscallExit:
-			e := newTraceEvent(t, record)
-			events.Event = append(events.Event, e)
-			if debug != "" {
-				fmt.Printf("%#v\n", e)
-			}
+func trace(cmd *exec.Cmd) <-chan Event {
+	events := make(chan Event, 128)
+	go func() {
+		err := strace.Trace(cmd, func(t strace.Task, record *strace.TraceRecord) error {
+			switch record.Event {
+			case strace.SyscallExit:
+				e := newTraceEvent(t, record)
+				if e.Name == "" {
+					fmt.Printf("empty syscall: %v", record.Syscall.Sysno)
+					return nil
+				}
 
-		case strace.SignalExit:
-			if debug != "" {
-				fmt.Printf("PID %d exited from signal %s\n", record.PID, syscalls.SignalString(record.SignalExit.Signal))
+				events <- e
+				if debug != "" {
+					fmt.Printf("%#v\n", e)
+				}
+
+			case strace.SignalExit:
+				if debug != "" {
+					fmt.Printf("PID %d exited from signal %s\n", record.PID, syscalls.SignalString(record.SignalExit.Signal))
+				}
+			case strace.Exit:
+				if debug != "" {
+					fmt.Printf("PID %d exited from exit status %d (code = %d)\n", record.PID, record.Exit.WaitStatus, record.Exit.WaitStatus.ExitStatus())
+				}
+			case strace.SignalStop:
+				if debug != "" {
+					fmt.Printf("PID %d got signal %s\n", record.PID, syscalls.SignalString(record.SignalStop.Signal))
+				}
+			case strace.NewChild:
+				if debug != "" {
+					fmt.Printf("PID %d spawned new child %d\n", record.PID, record.NewChild.PID)
+				}
 			}
-		case strace.Exit:
-			if debug != "" {
-				fmt.Printf("PID %d exited from exit status %d (code = %d)\n", record.PID, record.Exit.WaitStatus, record.Exit.WaitStatus.ExitStatus())
-			}
-		case strace.SignalStop:
-			if debug != "" {
-				fmt.Printf("PID %d got signal %s\n", record.PID, syscalls.SignalString(record.SignalStop.Signal))
-			}
-		case strace.NewChild:
-			if debug != "" {
-				fmt.Printf("PID %d spawned new child %d\n", record.PID, record.NewChild.PID)
-			}
+			return nil
+		})
+		if err != nil {
+			fmt.Printf("error: %s", err)
 		}
-		return nil
-	})
-	return events, err
+		close(events)
+	}()
+	return events
 }
 
 const LogMaximumSize = 1024
@@ -148,6 +144,7 @@ const LogMaximumSize = 1024
 func newTraceEvent(t strace.Task, record *strace.TraceRecord) Event {
 	call := record.Syscall
 	syscallInfo := syscalls.Details(call)
+
 	e := Event{
 		Name:      syscallInfo.Name,
 		Cat:       "successful",

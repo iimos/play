@@ -64,7 +64,6 @@ func TestParseStraceLine(t *testing.T) {
 	for _, tt := range tests {
 		p := NewStraceParser()
 		got, _, err := p.ParseLine(tt.in)
-		tt.expect.Args.FullLine = tt.in
 		if assert.NoError(t, err) {
 			assert.Equal(t, tt.expect, got, tt.in)
 		}

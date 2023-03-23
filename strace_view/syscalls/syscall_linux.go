@@ -103,7 +103,7 @@ func fileMode(mode uint32) string {
 	return fmt.Sprintf("%#09o", mode&0x1ff)
 }
 
-func stat(t strace.Task, addr strace.Addr) string {
+func stat(t strace.Task, addr strace.Addr) interface{} {
 	if addr == 0 {
 		return "null"
 	}
@@ -112,7 +112,8 @@ func stat(t strace.Task, addr strace.Addr) string {
 	if _, err := t.Read(addr, &stat); err != nil {
 		return fmt.Sprintf("%#x (error decoding stat: %s)", addr, err)
 	}
-	return fmt.Sprintf("%#x {dev=%d, ino=%d, mode=%s, nlink=%d, uid=%d, gid=%d, rdev=%d, size=%d, blksize=%d, blocks=%d, atime=%s, mtime=%s, ctime=%s}", addr, stat.Dev, stat.Ino, fileMode(stat.Mode), stat.Nlink, stat.Uid, stat.Gid, stat.Rdev, stat.Size, stat.Blksize, stat.Blocks, time.Unix(int64(stat.Atim.Sec), int64(stat.Atim.Nsec)), time.Unix(int64(stat.Mtim.Sec), int64(stat.Mtim.Nsec)), time.Unix(int64(stat.Ctim.Sec), int64(stat.Ctim.Nsec)))
+	return Arg{"stat", stat}
+	// return fmt.Sprintf("{dev=%d, ino=%d, mode=%s, nlink=%d, uid=%d, gid=%d, rdev=%d, size=%d, blksize=%d, blocks=%d, atime=%s, mtime=%s, ctime=%s}", stat.Dev, stat.Ino, fileMode(stat.Mode), stat.Nlink, stat.Uid, stat.Gid, stat.Rdev, stat.Size, stat.Blksize, stat.Blocks, time.Unix(int64(stat.Atim.Sec), int64(stat.Atim.Nsec)), time.Unix(int64(stat.Mtim.Sec), int64(stat.Mtim.Nsec)), time.Unix(int64(stat.Ctim.Sec), int64(stat.Ctim.Nsec)))
 }
 
 func itimerval(t strace.Task, addr strace.Addr) string {
@@ -271,92 +272,24 @@ func flags(specs []flagSpec, t strace.Task, bits int) string {
 // ArgumentsStrings fills arguments for a system call. If an argument
 // cannot be interpreted, then a hex value will be used. Note that
 // a full output slice will always be provided, that is len(return) == len(args).
-func ArgumentsStrings(si SyscallInfo, t strace.Task, args strace.SyscallArguments, rval strace.SyscallArgument, maximumBlobSize uint) []string {
-	output := make([]string, len(si.ArgTypes))
+func ArgumentsStrings(si SyscallInfo, t strace.Task, args strace.SyscallArguments, rval strace.SyscallArgument, maximumBlobSize uint) []interface{} {
+	output := make([]interface{}, len(si.ArgTypes))
 	for i, format := range si.ArgTypes {
 		if i >= len(args) {
 			break
 		}
 		switch format {
 		// Available on syscall enter:
-		// case WriteBuffer:
-		// 	output[i] = dump(t, args[i].Pointer(), args[i+1].SizeT(), maximumBlobSize)
-		// case WriteIOVec:
-		// 	output[i] = iovecs(t, args[i].Pointer(), int(args[i+1].Int()), true /* content */, uint64(maximumBlobSize))
-		// case IOVec:
-		// 	output[i] = iovecs(t, args[i].Pointer(), int(args[i+1].Int()), false /* content */, uint64(maximumBlobSize))
-		// case SendMsgHdr:
-		// 	output[i] = msghdr(t, args[i].Pointer(), true /* content */, uint64(maximumBlobSize))
-		// case RecvMsgHdr:
-		// 	output[i] = msghdr(t, args[i].Pointer(), false /* content */, uint64(maximumBlobSize))
-		case Path:
-			output[i] = path(t, args[i].Pointer())
-		case ExecveStringVector:
-			output[i] = stringVector(t, args[i].Pointer())
 		case SockAddr:
 			output[i] = sockAddr(t, args[i].Pointer(), uint32(args[i+1].Uint64()))
-		// case SockLen:
-		// 	output[i] = sockLenPointer(t, args[i].Pointer())
-		case SockFamily:
-			output[i] = abi.SocketFamily.Parse(uint64(args[i].Int()))
-		case SockType:
-			output[i] = abi.SockType(args[i].Int())
 		case SockProtocol:
 			output[i] = abi.SockProtocol(args[i-2].Int(), args[i].Int())
-		case SockFlags:
-			output[i] = abi.SockFlags(args[i].Int())
-		case Timespec:
-			output[i] = timespec(t, args[i].Pointer())
-		case UTimeTimespec:
-			output[i] = utimensTimespec(t, args[i].Pointer())
-		case ItimerVal:
-			output[i] = itimerval(t, args[i].Pointer())
-		case ItimerSpec:
-			output[i] = itimerspec(t, args[i].Pointer())
-		// case Timeval:
-		// 	output[i] = timeval(t, args[i].Pointer())
-		case Utimbuf:
-			output[i] = utimbuf(t, args[i].Pointer())
-		case CloneFlags:
-			output[i] = abi.CloneFlagSet.Parse(uint64(args[i].Uint()))
-		case OpenFlags:
-			output[i] = abi.Open(uint64(args[i].Uint()))
-		case Mode:
-			output[i] = os.FileMode(args[i].Uint()).String()
-		case FutexOp:
-			output[i] = abi.Futex(uint64(args[i].Uint()))
-		case PtraceRequest:
-			output[i] = abi.PtraceRequestSet.Parse(args[i].Uint64())
-		case ItimerType:
-			output[i] = abi.ItimerTypes.Parse(uint64(args[i].Int()))
-		case MMapProt:
-			output[i] = flags(mapProtFlags[:], t, int(args[i].Int()))
-		case MMapFlags:
-			output[i] = flags(mapFlags[:], t, int(args[i].Int()))
-		case MADVFlags:
-			output[i] = flags(madvFlags[:], t, int(args[i].Int()))
-		case Signal:
-			output[i] = SignalString(unix.Signal(args[i].Int()))
-		case ArchPrctl:
-			v := archPrctlCodes[int(args[i].Int())]
-			if v == "" {
-				v = strconv.FormatUint(args[i].Uint64(), 16)
-			}
-			output[i] = v
-		case Oct:
-			if args[i].Uint64() == 0 {
-				output[i] = "0"
-			} else {
-				output[i] = "0o" + strconv.FormatUint(args[i].Uint64(), 8)
-			}
-		case Dec, PID:
-			output[i] = strconv.FormatInt(int64(args[i].Int()), 10)
-		case Hex:
-			if args[i].Uint64() == 0 {
-				output[i] = "0"
-			} else {
-				output[i] = "0x" + strconv.FormatUint(args[i].Uint64(), 16)
-			}
+		case WriteBuffer:
+			output[i] = dump(t, args[i].Pointer(), args[i+1].SizeT(), maximumBlobSize)
+		case WriteIOVec:
+			output[i] = iovecs(t, args[i].Pointer(), int(args[i+1].Int()), true /* content */, uint64(maximumBlobSize))
+		case IOVec:
+			output[i] = iovecs(t, args[i].Pointer(), int(args[i+1].Int()), false /* content */, uint64(maximumBlobSize))
 
 		// Available on syscall exit:
 		case ReadBuffer:
@@ -367,42 +300,121 @@ func ArgumentsStrings(si SyscallInfo, t strace.Task, args strace.SyscallArgument
 				printLength = uint32(maximumBlobSize)
 			}
 			output[i] = iovecs(t, args[i].Pointer(), int(args[i+1].Int()), true /* content */, uint64(printLength))
-		case WriteIOVec, IOVec, WriteBuffer:
-			// We already have a big blast from write.
-			output[i] = "..."
-		case SendMsgHdr:
-			output[i] = msghdr(t, args[i].Pointer(), false /* content */, uint64(maximumBlobSize))
-		case RecvMsgHdr:
-			output[i] = msghdr(t, args[i].Pointer(), true /* content */, uint64(maximumBlobSize))
-		case PostPath:
-			output[i] = path(t, args[i].Pointer())
-		case PipeFDs:
-			output[i] = fdpair(t, args[i].Pointer())
-		case Uname:
-			output[i] = uname(t, args[i].Pointer())
-		case Stat:
-			output[i] = stat(t, args[i].Pointer())
+		// case WriteIOVec, IOVec, WriteBuffer:
+		// We already have a big blast from write.
+		// output[i] = "..."
 		case PostSockAddr:
 			output[i] = postSockAddr(t, args[i].Pointer(), args[i+1].Pointer())
-		case SockLen:
-			output[i] = sockLenPointer(t, args[i].Pointer())
-		case PostTimespec:
-			output[i] = timespec(t, args[i].Pointer())
-		case PostItimerVal:
-			output[i] = itimerval(t, args[i].Pointer())
-		case PostItimerSpec:
-			output[i] = itimerspec(t, args[i].Pointer())
-		case Timeval:
-			output[i] = timeval(t, args[i].Pointer())
-		case Rusage:
-			output[i] = rusage(t, args[i].Pointer())
-		case CPUSet:
-			output[i] = cpuSet(t, args[i].Pointer())
 		default:
-			output[i] = "0x" + strconv.FormatUint(args[i].Uint64(), 16)
+			output[i] = ArgumentStringSimple(t, format, args[i], maximumBlobSize)
 		}
 	}
 	return output
+}
+
+func ArgumentStringSimple(t strace.Task, format Type, arg strace.SyscallArgument, maximumBlobSize uint) interface{} {
+	switch format {
+	// Available on syscall enter:
+	// case SendMsgHdr:
+	// 	return msghdr(t, arg.Pointer(), true /* content */, uint64(maximumBlobSize))
+	// case RecvMsgHdr:
+	// 	return msghdr(t, arg.Pointer(), false /* content */, uint64(maximumBlobSize))
+	case Path:
+		return path(t, arg.Pointer())
+	case ExecveStringVector:
+		return stringVector(t, arg.Pointer())
+	// case SockLen:
+	// 	return sockLenPointer(t, arg.Pointer())
+	case SockFamily:
+		return abi.SocketFamily.Parse(uint64(arg.Int()))
+	case SockType:
+		return abi.SockType(arg.Int())
+	case SockFlags:
+		return abi.SockFlags(arg.Int())
+	case Timespec:
+		return timespec(t, arg.Pointer())
+	case UTimeTimespec:
+		return utimensTimespec(t, arg.Pointer())
+	case ItimerVal:
+		return itimerval(t, arg.Pointer())
+	case ItimerSpec:
+		return itimerspec(t, arg.Pointer())
+	// case Timeval:
+	// 	return timeval(t, arg.Pointer())
+	case Utimbuf:
+		return utimbuf(t, arg.Pointer())
+	case CloneFlags:
+		return abi.CloneFlagSet.Parse(uint64(arg.Uint()))
+	case OpenFlags:
+		return abi.Open(uint64(arg.Uint()))
+	case Mode:
+		return os.FileMode(arg.Uint()).String()
+	case FutexOp:
+		return abi.Futex(uint64(arg.Uint()))
+	case PtraceRequest:
+		return abi.PtraceRequestSet.Parse(arg.Uint64())
+	case ItimerType:
+		return abi.ItimerTypes.Parse(uint64(arg.Int()))
+	case MMapProt:
+		return flags(mapProtFlags[:], t, int(arg.Int()))
+	case MMapFlags:
+		return flags(mapFlags[:], t, int(arg.Int()))
+	case MADVFlags:
+		return flags(madvFlags[:], t, int(arg.Int()))
+	case Signal:
+		return SignalString(unix.Signal(arg.Int()))
+	case ArchPrctl:
+		v := archPrctlCodes[int(arg.Int())]
+		if v == "" {
+			v = strconv.FormatUint(arg.Uint64(), 16)
+		}
+		return v
+	case Oct:
+		if arg.Uint64() == 0 {
+			return "0"
+		} else {
+			return "0o" + strconv.FormatUint(arg.Uint64(), 8)
+		}
+	case FD:
+		return Arg{"fd", arg.Int()}
+	case Dec, PID:
+		return int64(arg.Int())
+	case Hex:
+		if arg.Uint64() == 0 {
+			return "0"
+		} else {
+			return "0x" + strconv.FormatUint(arg.Uint64(), 16)
+		}
+
+	// Available on syscall exit:
+	case SendMsgHdr:
+		return msghdr(t, arg.Pointer(), false /* content */, uint64(maximumBlobSize))
+	case RecvMsgHdr:
+		return msghdr(t, arg.Pointer(), true /* content */, uint64(maximumBlobSize))
+	case PostPath:
+		return path(t, arg.Pointer())
+	case PipeFDs:
+		return fdpair(t, arg.Pointer())
+	case Uname:
+		return uname(t, arg.Pointer())
+	case Stat:
+		return stat(t, arg.Pointer())
+	case SockLen:
+		return sockLenPointer(t, arg.Pointer())
+	case PostTimespec:
+		return timespec(t, arg.Pointer())
+	case PostItimerVal:
+		return itimerval(t, arg.Pointer())
+	case PostItimerSpec:
+		return itimerspec(t, arg.Pointer())
+	case Timeval:
+		return timeval(t, arg.Pointer())
+	case Rusage:
+		return rusage(t, arg.Pointer())
+	case CPUSet:
+		return cpuSet(t, arg.Pointer())
+	}
+	return "0x" + strconv.FormatUint(arg.Uint64(), 16)
 }
 
 func SignalString(s unix.Signal) string {

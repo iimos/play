@@ -42,10 +42,9 @@ type Event struct {
 }
 
 type Args struct {
-	FullLine    string
 	Syscall     string
-	SyscallArgs string
-	Result      string
+	SyscallArgs []interface{}
+	Result      interface{}
 	Duration    float64
 }
 
@@ -96,9 +95,8 @@ func (p *StraceParser) ParseLine(line string) (e Event, complete bool, err error
 		e.Ph = "B" // Begin event
 	}
 
-	e.Args.FullLine = line
 	e.Args.Syscall = syscall
-	e.Args.SyscallArgs = strings.Trim(args, " ()")
+	e.Args.SyscallArgs = []interface{}{strings.Trim(args, " ()")}
 	e.Args.Result = ret
 	{
 		f, err := parseDuration(duration)
@@ -126,7 +124,7 @@ func (p *StraceParser) ParseLine(line string) (e Event, complete bool, err error
 		p.prevUnfinished[e.PID] = e
 	case "detached":
 		prev := p.prevUnfinished[e.PID]
-		if prev != (Event{}) {
+		if prev.Name != "" { // !prev.Empty()
 			if prev.Args.Syscall != e.Args.Syscall {
 				return e, complete, fmt.Errorf("failed to match continuation event with starting one: %q != %q", prev.Args.Syscall, e.Args.Syscall)
 			}
@@ -135,7 +133,7 @@ func (p *StraceParser) ParseLine(line string) (e Event, complete bool, err error
 			e.Cat = "successful"
 			e.Ph = "X"
 			e.Timestamp = prev.Timestamp
-			e.Args.SyscallArgs = prev.Args.SyscallArgs + e.Args.SyscallArgs
+			e.Args.SyscallArgs = append(append([]interface{}(nil), prev.Args.SyscallArgs...), e.Args.SyscallArgs...)
 			complete = true
 		}
 	}

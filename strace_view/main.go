@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"time"
 
@@ -154,24 +153,25 @@ func newTraceEvent(t strace.Task, record *strace.TraceRecord) Event {
 		Timestamp: int(time.Now().UnixNano()),
 		Duration:  int(call.Duration.Nanoseconds()),
 		Args: Args{
-			// FullLine:    syscalls.SyscallString(syscallInfo, t, call.Args, call.Ret[0], call.Errno),
 			Syscall: syscallInfo.Name,
 		},
 	}
 
 	if call.Errno == 0 {
-		if call.Ret[0].Value < 128 {
-			e.Args.Result = strconv.Itoa(int(call.Ret[0].Int()))
-		} else {
-			e.Args.Result = fmt.Sprintf("%#x", call.Ret[0].Uint64())
-		}
+		e.Args.Result = syscalls.ArgumentStringSimple(t, syscallInfo.ReturnType, call.Ret[0], LogMaximumSize)
+		// if call.Ret[0].Value < 128 {
+		// 	e.Args.Result = strconv.Itoa(int(call.Ret[0].Int()))
+		// } else {
+		// 	e.Args.Result = fmt.Sprintf("%#x", call.Ret[0].Uint64())
+		// }
 	} else {
 		e.Args.Result = fmt.Sprintf("%q (%d)", call.Errno, call.Errno)
 		e.Cat = "failed"
 	}
 
 	args := syscalls.ArgumentsStrings(syscallInfo, t, call.Args, call.Ret[0], LogMaximumSize)
-	e.Args.SyscallArgs = strings.Join(args, ", ")
+	// e.Args.SyscallArgs = strings.Join(args, ", ")
+	e.Args.SyscallArgs = args
 
 	return e
 }

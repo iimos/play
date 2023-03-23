@@ -8,7 +8,7 @@ function createColumn(parent, id) {
 }
 
 function escapeHtml(unsafe) {
-    return (unsafe || "")
+    return String(unsafe || "")
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
@@ -29,12 +29,42 @@ function getSyscallLink(name) {
     return link
 }
 
+function render(arg) {
+    if (typeof arg != 'object') {
+        arg = {Type: "string", Value: arg}
+    }
+    
+    content = ""
+    switch(arg.Type) {
+        case "string":
+            content = renderStringContent(arg.Value)
+            break
+        default:
+            content = JSON.stringify(arg.Value)
+            break
+    }
+
+    cls = "strace_arg strace_arg_type_"+arg.Type
+    return `<span class="${cls}">${escapeHtml(content)}</span>`
+}
+
+function renderStringContent(str) {
+    str = String(str)
+    if (str.startsWith("\x7fELF")) {
+        return "<bin content>"
+    }
+    if (str.length > 30) {
+        return str.substr(0, 20) + "..."
+    }
+    return str
+}
+
 function renderStraceItem(e) {
     const link = getSyscallLink(e.args.Syscall)
     let t = `<a class="strace_syscall_name" href="${escapeHtml(link)}" target="_blank">${escapeHtml(e.args.Syscall)}</a>`
-    t += `<span class="strace_syscall_args">(${escapeHtml(e.args.SyscallArgs)})</span>`
+    t += `<span class="strace_syscall_args">(${e.args.SyscallArgs.map(render).join(', ')})</span>`
     if (e.args.Result) {
-        t += `<span class="strace_result"> = ${escapeHtml(e.args.Result)}</span>`
+        t += `<span class="strace_result"> = ${render(e.args.Result)}</span>`
     }
     if (e.args.Duration) {
         t += ` <span class="strace_result">&lt;${escapeHtml(String(e.args.Duration))}&gt;</span>`
@@ -153,6 +183,7 @@ function renderStraceItem(e) {
 
         // if the PID is unknown add a column for it
         if (!pids[e.pid]) {
+            pids[e.pid] = true
             pidOrder.push(e.pid)
             appendChild(timelineHeaderNode, 'timeline_head_cell', e.pid)
         }
@@ -163,11 +194,6 @@ function renderStraceItem(e) {
     eventSource.addEventListener('message', function (event) {
         const e = JSON.parse(event.data)
         addEvent(e)
-        // main.innerHTML += `<div>${event.data}</div>`
-        // const newElement = document.createElement("li")
-        // const eventList = document.getElementById("list")
-        // newElement.textContent = `message: ${event.data}`
-        // eventList.appendChild(newElement)
     })
     eventSource.addEventListener('fin', function () {
         eventSource.close()

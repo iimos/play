@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -33,7 +32,7 @@ func eventsEndpoint(events <-chan Event) http.HandlerFunc {
 		}
 
 		defer func() {
-			log.Print("events: stream closed")
+			fmt.Print("events: stream closed")
 			io.WriteString(w, "event:fin\n\n")
 			flush()
 		}()
@@ -41,7 +40,7 @@ func eventsEndpoint(events <-chan Event) http.HandlerFunc {
 		for {
 			select {
 			case <-ctx.Done():
-				log.Print("events: stream cancelled")
+				fmt.Print("events: stream cancelled")
 				return
 			case e, more := <-events:
 				if !more {
@@ -54,7 +53,6 @@ func eventsEndpoint(events <-chan Event) http.HandlerFunc {
 					io.WriteString(w, "error:"+err.Error()+"\n\n")
 				}
 				flush()
-				fmt.Print(string(eventJSON) + "\n")
 			}
 		}
 	}
@@ -102,6 +100,6 @@ func startServer(ctx context.Context, addr, html string, events <-chan Event) {
 	})
 
 	if err := g.Wait(); err != nil {
-		log.Printf("shutdown server: %s", err)
+		fmt.Printf("shutdown server: %s", err)
 	}
 }

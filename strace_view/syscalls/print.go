@@ -52,13 +52,13 @@ func dump(t strace.Task, addr strace.Addr, size uint, maximumBlobSize uint) stri
 		return fmt.Sprintf("%#x (error decoding string: %s)", addr, err)
 	}
 
-	dot := ""
+	ellipsis := ""
 	if uint(amt) < origSize {
 		// ... if we truncated the dump.
-		dot = "..."
+		ellipsis = "..."
 	}
 
-	return fmt.Sprintf("%#x %q%s", addr, b[:amt], dot)
+	return string(b[:amt]) + ellipsis
 }
 
 type iovec struct {

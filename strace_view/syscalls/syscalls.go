@@ -20,8 +20,8 @@ import (
 	"github.com/hugelgupf/go-strace/strace"
 )
 
-// TypeSpecifier specifies an individual syscall argument type.
-type TypeSpecifier int
+// Type specifies an individual syscall argument type.
+type Type int
 
 // Valid TypeSpecifiers.
 //
@@ -29,7 +29,7 @@ type TypeSpecifier int
 // and not updated after syscall execution (the same value is output).
 const (
 	// Hex is just a hexadecimal number.
-	Hex TypeSpecifier = iota
+	Hex Type = iota
 
 	// Dec is just a decimal number.
 	Dec
@@ -87,6 +87,9 @@ const (
 	// ExecveStringVector is a NULL-terminated array of strings. Enforces
 	// the maximum execve array length.
 	ExecveStringVector
+
+	// FD is a file descriptor.
+	FD
 
 	// PipeFDs is an array of two FDs, formatted after syscall execution.
 	PipeFDs
@@ -197,7 +200,7 @@ const (
 
 // defaultFormat is the syscall argument Format to use if the actual Format is
 // not known. It formats all six arguments as hex.
-var defaultFormat = []TypeSpecifier{Hex, Hex, Hex, Hex, Hex, Hex}
+var defaultFormat = []Type{Hex, Hex, Hex, Hex, Hex, Hex}
 
 func Details(s *strace.SyscallEvent) SyscallInfo {
 	if v, ok := syscalls[uintptr(s.Sysno)]; ok {
@@ -209,19 +212,31 @@ func Details(s *strace.SyscallEvent) SyscallInfo {
 	}
 }
 
-// SyscallInfo captures the Name and printing Format of a syscall.
+// SyscallInfo specifies syscall signature.
 type SyscallInfo struct {
-	// Name is the name of the syscall.
+	// Name is the syscall name.
 	Name string
 
 	// ArgTypes contains the type specifiers for each argument.
-	ArgTypes []TypeSpecifier
+	ArgTypes []Type
+
+	// ReturnType is a type specifier of the return value.
+	ReturnType Type
 }
 
 // makeSyscallInfo returns a SyscallInfo for a syscall.
-func makeSyscallInfo(name string, f ...TypeSpecifier) SyscallInfo {
-	return SyscallInfo{Name: name, ArgTypes: f}
+func makeSyscallInfo(name string, ret Type, args ...Type) SyscallInfo {
+	return SyscallInfo{
+		Name:       name,
+		ArgTypes:   args,
+		ReturnType: ret,
+	}
 }
 
 // SyscallMap maps syscalls into names and printing formats.
 type SyscallMap map[uintptr]SyscallInfo
+
+type Arg struct {
+	Type  string
+	Value interface{}
+}

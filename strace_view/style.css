@@ -33,7 +33,7 @@ h1 {
 }
 .strace_syscall_name {
     color: #0066bb;
-    font-weight: bold;
+    /* font-weight: bold; */
     text-decoration: none;
 }
 .strace_syscall_args {

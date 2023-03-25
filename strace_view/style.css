@@ -1,3 +1,6 @@
+body {
+    padding-bottom: 300px; /* place for popups */
+}
 h1 {
     padding: 18px 18px 0;
     margin-bottom: 15px;
@@ -54,4 +57,18 @@ h1 {
 }
 .strace_item:hover .strace_item_shadow {
     display: block;
+}
+
+.strace_struct {
+    display: inline-block;
+}
+.strace_struct:hover .strace_struct_content {
+    display: block;
+}
+.strace_struct_content {
+    display: none;
+    position: absolute;
+    background: #ddd;
+    padding: 1em;
+    border-radius: 3px;
 }

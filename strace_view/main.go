@@ -83,7 +83,7 @@ func main() {
 	// html := strings.Replace(templateHTML, "{{events}}", string(jsonEvents), 1)
 	html := templateHTML
 	html = strings.Replace(html, "{{js}}", scriptJS, 1)
-	html = strings.Replace(html, "{{css}}", scriptJS, 1)
+	html = strings.Replace(html, "{{css}}", styleCSS, 1)
 	html = strings.Replace(html, "{{syscalls}}", syscallsJSON, 1)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -158,7 +158,7 @@ func newTraceEvent(t strace.Task, record *strace.TraceRecord) Event {
 	}
 
 	if call.Errno == 0 {
-		e.Args.Result = syscalls.ArgumentStringSimple(t, syscallInfo.ReturnType, call.Ret[0], LogMaximumSize)
+		e.Args.Result = syscalls.ArgumentSimple(t, syscallInfo.ReturnType, call.Ret[0], LogMaximumSize)
 		// if call.Ret[0].Value < 128 {
 		// 	e.Args.Result = strconv.Itoa(int(call.Ret[0].Int()))
 		// } else {

@@ -20,7 +20,6 @@ import (
 	"math/bits"
 	"os"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -73,9 +72,9 @@ func timespec(t strace.Task, addr strace.Addr) string {
 	// return fmt.Sprintf("%#x {sec=%v nsec=%v}", addr, tim.Sec, tim.Nsec)
 }
 
-func timeval(t strace.Task, addr strace.Addr) string {
+func timeval(t strace.Task, addr strace.Addr) interface{} {
 	if addr == 0 {
-		return "null"
+		return nil
 	}
 
 	var tim unix.Timeval
@@ -83,12 +82,12 @@ func timeval(t strace.Task, addr strace.Addr) string {
 		return fmt.Sprintf("%#x (error decoding timeval: %s)", addr, err)
 	}
 
-	return fmt.Sprintf("%#x {sec=%v usec=%v}", addr, tim.Sec, tim.Usec)
+	return tim
 }
 
-func utimbuf(t strace.Task, addr strace.Addr) string {
+func utimbuf(t strace.Task, addr strace.Addr) interface{} {
 	if addr == 0 {
-		return "null"
+		return nil
 	}
 
 	var utim syscall.Utimbuf
@@ -96,7 +95,8 @@ func utimbuf(t strace.Task, addr strace.Addr) string {
 		return fmt.Sprintf("%#x (error decoding utimbuf: %s)", addr, err)
 	}
 
-	return fmt.Sprintf("%#x {actime=%v, modtime=%v}", addr, utim.Actime, utim.Modtime)
+	return utim
+	// return fmt.Sprintf("%#x {actime=%v, modtime=%v}", addr, utim.Actime, utim.Modtime)
 }
 
 func fileMode(mode uint32) string {
@@ -105,7 +105,7 @@ func fileMode(mode uint32) string {
 
 func stat(t strace.Task, addr strace.Addr) interface{} {
 	if addr == 0 {
-		return "null"
+		return nil
 	}
 
 	var stat unix.Stat_t
@@ -123,7 +123,7 @@ func itimerval(t strace.Task, addr strace.Addr) string {
 
 	interval := timeval(t, addr)
 	value := timeval(t, addr+strace.Addr(binary.Size(unix.Timeval{})))
-	return fmt.Sprintf("%#x {interval=%s, value=%s}", addr, interval, value)
+	return fmt.Sprintf("{interval=%s, value=%s}", interval, value)
 }
 
 func itimerspec(t strace.Task, addr strace.Addr) string {
@@ -133,7 +133,7 @@ func itimerspec(t strace.Task, addr strace.Addr) string {
 
 	interval := timespec(t, addr)
 	value := timespec(t, addr+strace.Addr(binary.Size(unix.Timespec{})))
-	return fmt.Sprintf("%#x {interval=%s, value=%s}", addr, interval, value)
+	return fmt.Sprintf("{interval=%s, value=%s}", interval, value)
 }
 
 func stringVector(t strace.Task, addr strace.Addr) string {
@@ -153,12 +153,12 @@ func rusage(t strace.Task, addr strace.Addr) string {
 	if _, err := t.Read(addr, &ru); err != nil {
 		return fmt.Sprintf("%#x (error decoding rusage: %s)", addr, err)
 	}
-	return fmt.Sprintf("%#x %+v", addr, ru)
+	return fmt.Sprintf("%+v", ru)
 }
 
-func cpuSet(t strace.Task, addr strace.Addr) string {
+func cpuSet(t strace.Task, addr strace.Addr) interface{} {
 	if addr == 0 {
-		return "null"
+		return nil
 	}
 
 	var set unix.CPUSet
@@ -173,7 +173,7 @@ func cpuSet(t strace.Task, addr strace.Addr) string {
 			cpus = append(cpus, i)
 		}
 	}
-	return fmt.Sprintf("%v", cpus)
+	return Arg{"CPUSet", cpus}
 }
 
 type flagSpec struct {
@@ -264,9 +264,11 @@ func flagsToStrings(specs []flagSpec, flags int) []string {
 	return ret
 }
 
-func flags(specs []flagSpec, t strace.Task, bits int) string {
-	flagsStr := flagsToStrings(specs, bits)
-	return strings.Join(flagsStr, "|")
+func flags(specs []flagSpec, t strace.Task, bits int) Arg {
+	return Arg{
+		Type:  "flags",
+		Value: flagsToStrings(specs, bits),
+	}
 }
 
 // ArgumentsStrings fills arguments for a system call. If an argument
@@ -306,13 +308,13 @@ func ArgumentsStrings(si SyscallInfo, t strace.Task, args strace.SyscallArgument
 		case PostSockAddr:
 			output[i] = postSockAddr(t, args[i].Pointer(), args[i+1].Pointer())
 		default:
-			output[i] = ArgumentStringSimple(t, format, args[i], maximumBlobSize)
+			output[i] = ArgumentSimple(t, format, args[i], maximumBlobSize)
 		}
 	}
 	return output
 }
 
-func ArgumentStringSimple(t strace.Task, format Type, arg strace.SyscallArgument, maximumBlobSize uint) interface{} {
+func ArgumentSimple(t strace.Task, format Type, arg strace.SyscallArgument, maximumBlobSize uint) interface{} {
 	switch format {
 	// Available on syscall enter:
 	// case SendMsgHdr:

@@ -29,42 +29,72 @@ function getSyscallLink(name) {
     return link
 }
 
-function render(arg) {
+function renderArg(arg) {
     if (typeof arg != 'object') {
         arg = {Type: "string", Value: arg}
     }
     
-    content = ""
+    html = ""
     switch(arg.Type) {
         case "string":
-            content = renderStringContent(arg.Value)
+            html = renderString(arg.Value)
             break
         default:
-            content = JSON.stringify(arg.Value)
+            html = renderAnything(arg.Value)
             break
     }
 
     cls = "strace_arg strace_arg_type_"+arg.Type
-    return `<span class="${cls}">${escapeHtml(content)}</span>`
+    return `<span class="${cls}">${html}</span>`
 }
 
-function renderStringContent(str) {
+function renderAnything(smth) {
+    if (Array.isArray(smth)) {
+        return escapeHtml(smth.map(String).join("|"))
+    }
+    if (typeof smth === 'object') {
+        if (smth === null) {
+            return "nil"
+        }
+        if ('Type' in smth && 'Value' in smth) {
+            return renderArg(smth)
+        }
+        if ('Sec' in smth && 'Nsec' in smth) { // unix timeval or timespec
+            return escapeHtml(new Date(1e3*smth.Sec + smth.Nsec/1e6).toJSON())
+        }
+        return renderStruct(smth)
+    }
+    return escapeHtml(JSON.stringify(smth))
+}
+
+function renderString(str) {
     str = String(str)
     if (str.startsWith("\x7fELF")) {
-        return "<bin content>"
+        return escapeHtml("<bin content>")
     }
-    if (str.length > 30) {
-        return str.substr(0, 20) + "..."
+    if (str.length > 40) {
+        str = str.substr(0, 40) + "..."
     }
-    return str
+    return escapeHtml(str)
+}
+
+function renderStruct(obj) {
+    let html = ''
+    for (let key in obj) {
+        html += `<div class="strace_struct_row">${escapeHtml(key)}: ${renderAnything(obj[key])}</div>`
+    }
+    return `<div class="strace_struct">
+        <div class="strace_struct_icon">{...}</div>
+        <div class="strace_struct_content">${html}</div>
+    </div>`
 }
 
 function renderStraceItem(e) {
     const link = getSyscallLink(e.args.Syscall)
     let t = `<a class="strace_syscall_name" href="${escapeHtml(link)}" target="_blank">${escapeHtml(e.args.Syscall)}</a>`
-    t += `<span class="strace_syscall_args">(${e.args.SyscallArgs.map(render).join(', ')})</span>`
+    t += `<span class="strace_syscall_args">(${e.args.SyscallArgs.map(renderArg).join(', ')})</span>`
     if (e.args.Result) {
-        t += `<span class="strace_result"> = ${render(e.args.Result)}</span>`
+        t += `<span class="strace_result"> = ${renderArg(e.args.Result)}</span>`
     }
     if (e.args.Duration) {
         t += ` <span class="strace_result">&lt;${escapeHtml(String(e.args.Duration))}&gt;</span>`

@@ -37,10 +37,13 @@ function renderArg(arg) {
     html = ""
     switch(arg.Type) {
         case "string":
-            html = renderString(arg.Value)
+            html = renderString(arg.Value, arg.Formated)
+            break
+        case "stat":
+            html = renderStat(arg.Value, arg.Formated)
             break
         default:
-            html = renderAnything(arg.Value)
+            html = renderAnything(arg.Value, arg.Formated)
             break
     }
 
@@ -48,7 +51,7 @@ function renderArg(arg) {
     return `<span class="${cls}">${html}</span>`
 }
 
-function renderAnything(smth) {
+function renderAnything(smth, formated) {
     if (Array.isArray(smth)) {
         return escapeHtml(smth.map(String).join("|"))
     }
@@ -62,7 +65,7 @@ function renderAnything(smth) {
         if ('Sec' in smth && 'Nsec' in smth) { // unix timeval or timespec
             return escapeHtml(new Date(1e3*smth.Sec + smth.Nsec/1e6).toJSON())
         }
-        return renderStruct(smth)
+        return renderStruct(smth, formated)
     }
     return escapeHtml(JSON.stringify(smth))
 }
@@ -78,15 +81,29 @@ function renderString(str) {
     return escapeHtml(str)
 }
 
-function renderStruct(obj) {
+function renderStruct(obj, formated, header) {
+    header = header || "{...}"
+    let popupHtml = renderStructPopup(obj, formated)
+    return `<div class="strace_struct">
+        <div class="strace_struct_header">${escapeHtml(header)}</div>
+        ${popupHtml}
+    </div>`
+}
+
+function renderStructPopup(obj, formated) {
+    formated = formated || {}
     let html = ''
     for (let key in obj) {
-        html += `<div class="strace_struct_row">${escapeHtml(key)}: ${renderAnything(obj[key])}</div>`
+        let val = formated[key] || obj[key]
+        html += `<div class="strace_struct_row">${escapeHtml(key)}: ${renderAnything(val)}</div>`
     }
-    return `<div class="strace_struct">
-        <div class="strace_struct_icon">{...}</div>
-        <div class="strace_struct_content">${html}</div>
-    </div>`
+    return `<div class="strace_struct_content">${html}</div>`
+}
+
+function renderStat(obj, formated) {
+    let mode = formated.Mode
+    let size = formated.Size
+    return renderStruct(obj, formated, `{mode=${mode}, size=${size}, ...}`)
 }
 
 function renderStraceItem(e) {
@@ -241,7 +258,41 @@ function appendChild(parent, className, html){
     el.classList.add(className)
     el.innerHTML = String(html)
     if (parent) {
-        parent.appendChild(el)
+        parent.append(el)
     }
     return el
+}
+
+/**
+ * Format bytes as human-readable text.
+ * 
+ * @param bytes Number of bytes.
+ * @param si True to use metric (SI) units, aka powers of 1000. False to use 
+ *           binary (IEC), aka powers of 1024.
+ * @param dp Number of decimal places to display.
+ * 
+ * @return Formatted string.
+ * 
+ * Source: https://stackoverflow.com/a/14919494/502860
+ */
+function humanFileSize(bytes, si=false, dp=1) {
+    const thresh = si ? 1000 : 1024;
+  
+    if (Math.abs(bytes) < thresh) {
+      return bytes + ' B';
+    }
+  
+    const units = si 
+      ? ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'] 
+      : ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
+    let u = -1;
+    const r = 10**dp;
+  
+    do {
+      bytes /= thresh;
+      ++u;
+    } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
+  
+  
+    return bytes.toFixed(dp) + ' ' + units[u];
 }

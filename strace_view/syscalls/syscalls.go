@@ -237,6 +237,7 @@ func makeSyscallInfo(name string, ret Type, args ...Type) SyscallInfo {
 type SyscallMap map[uintptr]SyscallInfo
 
 type Arg struct {
-	Type  string
-	Value interface{}
+	Type     string
+	Value    interface{}
+	Formated map[string]interface{}
 }

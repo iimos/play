@@ -17,12 +17,14 @@ package syscalls
 import (
 	"encoding/binary"
 	"fmt"
+	"io/fs"
 	"math/bits"
 	"os"
 	"strconv"
 	"syscall"
 	"time"
 
+	"github.com/docker/go-units"
 	"github.com/hugelgupf/go-strace/strace"
 	"github.com/iimos/play/strace_view/abi"
 	"golang.org/x/sys/unix"
@@ -55,7 +57,7 @@ func utimensTimespec(t strace.Task, addr strace.Addr) string {
 	default:
 		ns = fmt.Sprintf("%v", tim.Nsec)
 	}
-	return fmt.Sprintf("%#x {sec=%v nsec=%s}", addr, tim.Sec, ns)
+	return fmt.Sprintf("{sec=%v nsec=%s}", tim.Sec, ns)
 }
 
 func timespec(t strace.Task, addr strace.Addr) string {
@@ -112,7 +114,15 @@ func stat(t strace.Task, addr strace.Addr) interface{} {
 	if _, err := t.Read(addr, &stat); err != nil {
 		return fmt.Sprintf("%#x (error decoding stat: %s)", addr, err)
 	}
-	return Arg{"stat", stat}
+
+	return Arg{
+		Type:  "stat",
+		Value: stat,
+		Formated: map[string]interface{}{
+			"Mode": fs.FileMode(stat.Mode).String(),
+			"Size": units.BytesSize(float64(stat.Size)),
+		},
+	}
 	// return fmt.Sprintf("{dev=%d, ino=%d, mode=%s, nlink=%d, uid=%d, gid=%d, rdev=%d, size=%d, blksize=%d, blocks=%d, atime=%s, mtime=%s, ctime=%s}", stat.Dev, stat.Ino, fileMode(stat.Mode), stat.Nlink, stat.Uid, stat.Gid, stat.Rdev, stat.Size, stat.Blksize, stat.Blocks, time.Unix(int64(stat.Atim.Sec), int64(stat.Atim.Nsec)), time.Unix(int64(stat.Mtim.Sec), int64(stat.Mtim.Nsec)), time.Unix(int64(stat.Ctim.Sec), int64(stat.Ctim.Nsec)))
 }
 
@@ -173,7 +183,7 @@ func cpuSet(t strace.Task, addr strace.Addr) interface{} {
 			cpus = append(cpus, i)
 		}
 	}
-	return Arg{"CPUSet", cpus}
+	return Arg{Type: "CPUSet", Value: cpus}
 }
 
 type flagSpec struct {
@@ -378,7 +388,7 @@ func ArgumentSimple(t strace.Task, format Type, arg strace.SyscallArgument, maxi
 			return "0o" + strconv.FormatUint(arg.Uint64(), 8)
 		}
 	case FD:
-		return Arg{"fd", arg.Int()}
+		return Arg{Type: "fd", Value: arg.Int()}
 	case Dec, PID:
 		return int64(arg.Int())
 	case Hex:

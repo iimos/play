@@ -119,6 +119,21 @@ function renderStraceItem(e) {
     return t
 }
 
+(function memstat(){
+    if (!performance || !performance.memory) {
+        return
+    }
+
+    const el = document.querySelector("#memstat")
+    setInterval(() => {
+        el.textContent = humanFileSize(performance.memory.totalJSHeapSize)
+        let usagePerc = Math.round(100 * performance.memory.totalJSHeapSize / performance.memory.jsHeapSizeLimit)
+        if (usagePerc > 0) {
+            el.textContent += " (" + usagePerc + "%)"
+        }
+    }, 1000)
+})();
+
 (function main(){
     const events = [] //window.__events__.traceEvents
     const main = document.querySelector("#main")
@@ -203,8 +218,8 @@ function renderStraceItem(e) {
                         let t = renderStraceItem(e)
                         timeFromStartMs = Math.round((e.ts - (minTimeslot * timeslotWidth)) / 1e6)
                         // strace_item_shadow is a clone that appears on hover
+                        // <div class="strace_item_shadow">${t}</div>
                         html += `<div class="strace_item" title="+${timeFromStartMs}ms">
-                            <div class="strace_item_shadow">${t}</div>
                             ${t}
                         </div>`
                     }
@@ -251,7 +266,7 @@ function renderStraceItem(e) {
         eventSource.close()
         flush()
     }
-})()
+})();
 
 function appendChild(parent, className, html){
     const el = document.createElement('div')
@@ -259,6 +274,16 @@ function appendChild(parent, className, html){
     el.innerHTML = String(html)
     if (parent) {
         parent.append(el)
+    }
+    return el
+}
+
+function prependChild(parent, className, html){
+    const el = document.createElement('div')
+    el.classList.add(className)
+    el.innerHTML = String(html)
+    if (parent) {
+        parent.prepend(el)
     }
     return el
 }

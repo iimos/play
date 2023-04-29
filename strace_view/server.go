@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/go-chi/chi"
 	"golang.org/x/sync/errgroup"
@@ -32,7 +31,7 @@ func eventsEndpoint(events <-chan Event) http.HandlerFunc {
 		}
 
 		defer func() {
-			fmt.Print("events: stream closed")
+			fmt.Print("events: stream closed\n")
 			io.WriteString(w, "event:fin\n\n")
 			flush()
 		}()
@@ -40,7 +39,7 @@ func eventsEndpoint(events <-chan Event) http.HandlerFunc {
 		for {
 			select {
 			case <-ctx.Done():
-				fmt.Print("events: stream cancelled")
+				fmt.Print("events: stream cancelled\n")
 				return
 			case e, more := <-events:
 				if !more {
@@ -68,9 +67,9 @@ func startServer(ctx context.Context, addr, html string, events <-chan Event) {
 	r.Get("/events", eventsEndpoint(events))
 
 	srv := &http.Server{
-		Addr:        addr,
-		ReadTimeout: 75 * time.Second,
-		Handler:     r,
+		Addr: addr,
+		// ReadTimeout: 75 * time.Second,
+		Handler: r,
 	}
 
 	ctx, cancel := context.WithCancel(ctx)

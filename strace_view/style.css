@@ -5,6 +5,11 @@ h1 {
     padding: 18px 18px 0;
     margin-bottom: 15px;
 }
+#memstat {
+    float: right;
+    padding: 26px 18px 0;
+}
+
 #strace-data {
     font-family: monospace;
     white-space: pre-line;

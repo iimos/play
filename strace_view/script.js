@@ -34,21 +34,25 @@ function renderArg(arg) {
         arg = {Type: "string", Value: arg}
     }
     
-    html = ""
+    let html = "", child;
     switch(arg.Type) {
         case "string":
-            html = renderString(arg.Value, arg.Formated)
+            child = renderString(arg.Value, arg.Formated)
             break
         case "stat":
-            html = renderStat(arg.Value, arg.Formated)
+            child = renderStat(arg.Value, arg.Formated)
             break
         default:
             html = renderAnything(arg.Value, arg.Formated)
             break
     }
 
-    cls = "strace_arg strace_arg_type_"+arg.Type
-    return `<span class="${cls}">${html}</span>`
+    const elem = el('strace_arg', html)
+    elem.classList.add('strace_arg_type_' + arg.Type)
+    if (child) {
+        elem.append(child)
+    }
+    return elem
 }
 
 function renderAnything(smth, formated) {
@@ -73,21 +77,40 @@ function renderAnything(smth, formated) {
 function renderString(str) {
     str = String(str)
     if (str.startsWith("\x7fELF")) {
-        return escapeHtml("<bin content>")
+        str = "<bin content>"
     }
     if (str.length > 40) {
         str = str.substr(0, 40) + "..."
     }
-    return escapeHtml(str)
+    const span = document.createElement('span')
+    span.textContent = str
+    return span
 }
+
 
 function renderStruct(obj, formated, header) {
     header = header || "{...}"
     let popupHtml = renderStructPopup(obj, formated)
-    return `<div class="strace_struct">
-        <div class="strace_struct_header">${escapeHtml(header)}</div>
-        ${popupHtml}
-    </div>`
+    const container = el('strace_struct')
+    const head = el('strace_struct_header')
+    head.textContent = header
+    container.append(head)
+    tippy(container, {
+        // trigger: 'click',
+        content: popupHtml,
+        // appendTo: container,
+        appendTo: () => document.body,
+        allowHTML: true,
+        interactive: true,
+        placement: 'bottom-start',
+        offset: [0, 0],
+        arrow: false,
+    })
+    return container
+    // return `<div class="strace_struct">
+    //     <div class="strace_struct_header">${escapeHtml(header)}</div>
+    //     ${popupHtml}
+    // </div>`
 }
 
 function renderStructPopup(obj, formated) {
@@ -95,9 +118,9 @@ function renderStructPopup(obj, formated) {
     let html = ''
     for (let key in obj) {
         let val = formated[key] || obj[key]
-        html += `<div class="strace_struct_row">${escapeHtml(key)}: ${renderAnything(val)}</div>`
+        html += `<div class="st111race_struct_row">${escapeHtml(key)}: ${renderAnything(val)}</div>`
     }
-    return `<div class="strace_struct_content">${html}</div>`
+    return `<div class="str111ace_struct_content">${html}</div>`
 }
 
 function renderStat(obj, formated) {
@@ -107,16 +130,28 @@ function renderStat(obj, formated) {
 }
 
 function renderStraceItem(e) {
-    const link = getSyscallLink(e.args.Syscall)
-    let t = `<a class="strace_syscall_name" href="${escapeHtml(link)}" target="_blank">${escapeHtml(e.args.Syscall)}</a>`
-    t += `<span class="strace_syscall_args">(${e.args.SyscallArgs.map(renderArg).join(', ')})</span>`
+    const item = el('strace_item')
+
+    const a = document.createElement('a')
+    a.classList.add('strace_syscall_name')
+    a.href = getSyscallLink(e.args.Syscall)
+    a.target = '_blank'
+    a.textContent = e.args.Syscall
+    item.append(a)
+    
+    const args = el('strace_syscall_args')
+    for (let x of e.args.SyscallArgs) {
+        let arg = renderArg(x)
+        args.append(arg)
+    }
+    item.append(args)
+
     if (e.args.Result) {
-        t += `<span class="strace_result"> = ${renderArg(e.args.Result)}</span>`
+        const res = el('strace_result')
+        res.append(renderArg(e.args.Result))
+        item.append(res)
     }
-    if (e.args.Duration) {
-        t += ` <span class="strace_result">&lt;${escapeHtml(String(e.args.Duration))}&gt;</span>`
-    }
-    return t
+    return item
 }
 
 (function memstat(){
@@ -134,23 +169,23 @@ function renderStraceItem(e) {
     }, 1000)
 })();
 
+const UI = {
+    rowHeight: 24,
+    cellHeightMin: 5,
+    borderHeight: 1,
+};
+
 (function main(){
-    const events = [] //window.__events__.traceEvents
+    const events = []
     const main = document.querySelector("#main")
     const timeslotWidth = 10_000_000 // 10ms (10e6 ns)
 
     // let minTimeslot = Number.MAX_SAFE_INTEGER, maxTimeslot = 0;
 
-    // It's needed to order processes by the time of first event
-    // pid -> min(timestamp)
-    const pidStarts = {}
-
     // timeslot -> pid -> events
     const data = {}
 
-    for (const e of events) {
-        pidStarts[e.pid] = Math.min(e.ts, pidStarts[e.pid] || Number.MAX_SAFE_INTEGER)
-
+    data.addEvent = function(e) {
         const timeslot = Math.floor(e.ts / timeslotWidth)
         // minTimeslot = Math.min(minTimeslot, timeslot)
         // maxTimeslot = Math.max(maxTimeslot, timeslot)
@@ -202,6 +237,9 @@ function renderStraceItem(e) {
     let currentEvents = {} // pid -> events
     const pids = {}
 
+    // heights of timeslot blocks in pixels
+    const layout = []
+
     function flush(nextTimeslot) {
         if (currentTimeslot == 0) {
             return
@@ -209,29 +247,46 @@ function renderStraceItem(e) {
         
         nextTimeslot = nextTimeslot || (currentTimeslot + 1)
 
+        // calc timeslots hight
+        const biggestCell = Math.max(...pidOrder.map(pid => (currentEvents[pid] || []).length));
+        layout.push(
+            (biggestCell > 0 ? UI.rowHeight*biggestCell : UI.cellHeightMin) + UI.borderHeight
+        )
+        for (let slot = currentTimeslot+1; slot < nextTimeslot; slot += 1) {
+            layout.push(UI.cellHeightMin + UI.borderHeight)
+        }
+
         for (let slot = currentTimeslot; slot < nextTimeslot; slot += 1) {
-            let html = ''
+            let row = el('timeline_row')
+            row.setAttribute('timeslot', slot)
+            row.setAttribute('i', slot-minTimeslot)
+            
+            const height = layout[slot-minTimeslot]
+            row.style.height = height+'px'
+
             for (let pid of pidOrder) {
-                html += '<div class="timeline_cell">'
+                let cell = el('timeline_cell')
+                row.append(cell)
+
                 if (slot == currentTimeslot && currentEvents[pid]) {
                     for (const e of currentEvents[pid]) {
-                        let t = renderStraceItem(e)
-                        timeFromStartMs = Math.round((e.ts - (minTimeslot * timeslotWidth)) / 1e6)
-                        // strace_item_shadow is a clone that appears on hover
-                        // <div class="strace_item_shadow">${t}</div>
-                        html += `<div class="strace_item" title="+${timeFromStartMs}ms">
-                            ${t}
-                        </div>`
+                        // timeFromStartMs = Math.round((e.ts - (minTimeslot * timeslotWidth)) / 1e6)
+                        let item = renderStraceItem(e)
+                        // cell.append(item)
                     }
                 }
-                html += '</div>'
             }
-            appendChild(timelineNode, 'timeline_row', html)
+
+            timelineNode.append(row)
+            // appendChild(timelineNode, 'timeline_row', html)
         }
-        currentEvents = []
+        
+        currentEvents = {}
     }
 
     function addEvent(e) {
+        data.addEvent(e)
+
         const timeslot = Math.floor(e.ts / timeslotWidth)
         if (timeslot > currentTimeslot) {
             flush(timeslot)
@@ -266,7 +321,29 @@ function renderStraceItem(e) {
         eventSource.close()
         flush()
     }
+
+
+    ;(function scroll() {
+        function calcScrollHeight() {
+            return layout.reduce((a, b) => a + b, 0)
+        }
+    
+        window.addEventListener('scroll', () => {
+            // if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 1000 && ready)
+            console.log('scroll = ' + window.scrollY + '; scrollHeight = ' + calcScrollHeight())
+            window.layout = layout
+        })
+    }())
 })();
+
+function el(className, html) {
+    const el = document.createElement('div')
+    el.classList.add(className)
+    if (html) {
+        el.innerHTML = String(html)
+    }
+    return el
+}
 
 function appendChild(parent, className, html){
     const el = document.createElement('div')

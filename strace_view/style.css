@@ -34,10 +34,14 @@ h1 {
     border-top: 1px solid #e3e3e3;
     height: 6px;
     padding: 0 18px;
+    min-width: 1000px;
 }
 
 .strace_item {
     white-space: nowrap;
+}
+.strace_item > div {
+    display: inline-block;
 }
 .strace_syscall_name {
     color: #0066bb;
@@ -46,10 +50,35 @@ h1 {
 }
 .strace_syscall_args {
     display: inline-block;
-    max-width: 400px;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    vertical-align: top;
+    /* max-width: 400px; */
+    /* text-overflow: ellipsis; */
+    /* overflow: hidden; */
+    /* vertical-align: top; */
+}
+.strace_syscall_args::before {
+    content: "(";
+}
+.strace_syscall_args::after {
+    content: ")";
+}
+.strace_arg {
+    display: inline-block;
+}
+.strace_arg:hover {
+    background: #fff9e0;
+}
+.strace_arg::after {
+    content: ",";
+    padding-right: 0.25em;
+}
+.strace_arg:last-child::after {
+    content: "";
+    padding-right: 0;
+}
+.strace_result::before {
+    content: "=";
+    padding-right: 0.25em;
+    padding-left: 0.25em;
 }
 
 .strace_item_shadow {
@@ -66,6 +95,7 @@ h1 {
 
 .strace_struct {
     display: inline-block;
+    position: relative;
 }
 .strace_struct:hover .strace_struct_content {
     display: block;

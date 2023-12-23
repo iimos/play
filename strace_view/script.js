@@ -149,7 +149,7 @@ function renderStraceItem(e) {
     if (e.args.Result) {
         const res = el('strace_result')
         res.append(renderArg(e.args.Result))
-        item.append(res)
+        // item.append(res)
     }
     return item
 }
@@ -175,165 +175,185 @@ const UI = {
     borderHeight: 1,
 };
 
-(function main(){
-    const events = []
-    const main = document.querySelector("#main")
-    const timeslotWidth = 10_000_000 // 10ms (10e6 ns)
+// draft
+class Timeline {
+    #rootNode;
+    #headerNode;
+    #slotNodes = {}
 
-    // let minTimeslot = Number.MAX_SAFE_INTEGER, maxTimeslot = 0;
+    data = {}; // timeslot -> pid -> events
 
-    // timeslot -> pid -> events
-    const data = {}
-
-    data.addEvent = function(e) {
-        const timeslot = Math.floor(e.ts / timeslotWidth)
-        // minTimeslot = Math.min(minTimeslot, timeslot)
-        // maxTimeslot = Math.max(maxTimeslot, timeslot)
-
-        data[timeslot] = data[timeslot] || {}
-        data[timeslot][e.pid] = data[timeslot][e.pid] || []
-        data[timeslot][e.pid].push(e)
-    }
-
-    // pidOrder maintains an order of pid columns
-    const pidOrder = [] //Object.entries(pidStarts).sort((a, b) => a[1] - b[1]).map(x => x[0])
-
-    let html = '<div class="timeline">'
-
-    html += '<div class="timeline_head">'
-    for (let pid of pidOrder) {
-        html += `<div class="timeline_head_cell">${pid}</div>`
-    }
-    html += '</div>'
-
-    // for (let slot = minTimeslot; slot <= maxTimeslot; slot += 1) {
-    //     html += '<div class="timeline_row">'
-    //     for (let pid of pidOrder) {
-    //         html += '<div class="timeline_cell">'
-    //         if (data[slot] && data[slot][pid]) {
-    //             for (const e of data[slot][pid]) {
-    //                 let t = renderStraceItem(e)
-    //                 timeFromStartMs = Math.round((e.ts - (minTimeslot * timeslotWidth)) / 1e6)
-    //                 // strace_item_shadow is a clone that appears on hover
-    //                 html += `<div class="strace_item" title="+${timeFromStartMs}ms">
-    //                     <div class="strace_item_shadow">${t}</div>
-    //                     ${t}
-    //                 </div>`
-    //             }
-    //         }
-    //         html += '</div>'
-    //     }
-    //     html += '</div>'
-    // }
-    html += '</div>'
-
-    main.innerHTML += html
-
-    const timelineNode = document.querySelector("#main .timeline")
-    const timelineHeaderNode = timelineNode.querySelector(".timeline_head")
-
-    let minTimeslot = 0
-    let currentTimeslot = 0
-    let currentEvents = {} // pid -> events
-    const pids = {}
+    #timeslotDuration = 10_000_000; // 10ms (10e6 ns)
+    #PIDOrder = [];
+    #PIDIndexes = {};
+    #minTimeslot = 0;
+    #currentTimeslot = 0;
 
     // heights of timeslot blocks in pixels
-    const layout = []
+    #layout = []
 
-    function flush(nextTimeslot) {
-        if (currentTimeslot == 0) {
+    constructor(rootNode) {
+        this.#rootNode = rootNode
+        this.#headerNode = el('timeline_head')
+        this.#rootNode.append(this.#headerNode)
+
+        window.addEventListener('scroll', debounce(this.#render.bind(this), 200))
+    }
+
+    appendEvent(e) {
+        // store event into this.data
+        {
+            const timeslot = Math.floor(e.ts / this.#timeslotDuration)
+            this.data[timeslot] = this.data[timeslot] || {}
+            this.data[timeslot][e.pid] = this.data[timeslot][e.pid] || []
+            this.data[timeslot][e.pid].push(e)
+
+            if (0 === this.#minTimeslot) {
+                this.#minTimeslot = timeslot
+            }
+        }
+
+        const timeslot = Math.floor(e.ts / this.#timeslotDuration)
+        if (0 == this.#currentTimeslot) {
+            this.#currentTimeslot = timeslot
+        }
+
+        if (timeslot < this.#currentTimeslot) {
+            console.error("got event with slot < currentTimeslot; timeslot="+timeslot+"; currentTimeslot="+this.#currentTimeslot)
+            return
+        }
+
+        for (let slot = this.#currentTimeslot; slot <= timeslot; slot += 1) {
+            this.#appendPlaceholder(slot)
+        }
+        this.#currentTimeslot = timeslot
+        this.addPID(e.pid)
+    }
+
+    finish() {
+        this.#currentTimeslot = this.#currentTimeslot + 1
+    }
+
+    addPID(pid) {
+        if (!(pid in this.#PIDIndexes)) {
+            this.#PIDIndexes[pid] = this.#PIDOrder.length
+            this.#PIDOrder.push(pid)
+            appendChild(this.#headerNode, 'timeline_head_cell', String(pid))
+        }
+    }
+
+    #appendPlaceholder(timeslot) {
+        if (this.#slotNodes[timeslot]) {
+            return
+        }
+
+        const events = this.data[timeslot] || {}
+
+        // calc timeslot height
+        const biggestCell = Math.max(...this.#PIDOrder.map(pid => (events[pid] || []).length));
+        const height = Math.max(UI.rowHeight*biggestCell, UI.cellHeightMin) + UI.borderHeight;
+        const lastHeight = this.#layout[this.#layout.length-1] || 0;
+        this.#layout.push(lastHeight + height)
+        
+        const row = el('timeline_row')
+        row.style.height = height+'px'
+        row.setAttribute('data-timeslot', timeslot)
+        row.setAttribute('data-i', timeslot - this.#minTimeslot)
+        
+        this.#slotNodes[timeslot] = row
+        this.#rootNode.append(row)
+    }
+
+    #render() {
+        if (this.#minTimeslot === 0) {
             return
         }
         
-        nextTimeslot = nextTimeslot || (currentTimeslot + 1)
+        const rootY = this.#rootNode.getBoundingClientRect().top;
+        const topOffset = window.scrollY - rootY;
+        const windowHeight = window.innerHeight;
+        const margin = windowHeight;
+        // console.log('top=' + topOffset + '; bottom=' + (topOffset + windowHeight) + '; minTimeslot=' + this.#minTimeslot)
 
-        // calc timeslots hight
-        const biggestCell = Math.max(...pidOrder.map(pid => (currentEvents[pid] || []).length));
-        layout.push(
-            (biggestCell > 0 ? UI.rowHeight*biggestCell : UI.cellHeightMin) + UI.borderHeight
-        )
-        for (let slot = currentTimeslot+1; slot < nextTimeslot; slot += 1) {
-            layout.push(UI.cellHeightMin + UI.borderHeight)
+        const toRender = []
+        for (let i = 0; i < this.#layout.length; i++) {
+            const slot = this.#minTimeslot + i
+            const y = this.#layout[i]
+            if (slot == this.#currentTimeslot) {
+                continue
+            }
+            if (y > topOffset + windowHeight + margin) {
+                toRender.push(i)
+                this.#renderContent(slot)
+                break
+            }
+            if (y >= topOffset - margin) {
+                toRender.push(i)
+                this.#renderContent(slot)
+            } else {
+                // this.#hideContent(slot)
+            }
+        }
+        console.log('toRender = ' + toRender.join(', '))
+        window.layout = this.#layout
+        window.slotNodes = this.#slotNodes
+        window.minTimeslot = this.#minTimeslot
+    }
+
+    #renderContent(timeslot) {
+        const node = this.#slotNodes[timeslot]
+        if (!node) {
+            console.error("can't find node for timeslot=" + timeslot)
+            return
+        }
+        if (node.childNodes.length > 0) {
+            return
         }
 
-        for (let slot = currentTimeslot; slot < nextTimeslot; slot += 1) {
-            let row = el('timeline_row')
-            row.setAttribute('timeslot', slot)
-            row.setAttribute('i', slot-minTimeslot)
-            
-            const height = layout[slot-minTimeslot]
-            row.style.height = height+'px'
-
-            for (let pid of pidOrder) {
-                let cell = el('timeline_cell')
-                row.append(cell)
-
-                if (slot == currentTimeslot && currentEvents[pid]) {
-                    for (const e of currentEvents[pid]) {
-                        // timeFromStartMs = Math.round((e.ts - (minTimeslot * timeslotWidth)) / 1e6)
-                        let item = renderStraceItem(e)
-                        // cell.append(item)
-                    }
+        for (let pid of this.#PIDOrder) {
+            const cell = el('timeline_cell')
+            if (this.data[timeslot] && this.data[timeslot][pid]) {
+                for (const e of this.data[timeslot][pid]) {
+                    let item = renderStraceItem(e)
+                    cell.append(item)
                 }
             }
-
-            timelineNode.append(row)
-            // appendChild(timelineNode, 'timeline_row', html)
-        }
-        
-        currentEvents = {}
-    }
-
-    function addEvent(e) {
-        data.addEvent(e)
-
-        const timeslot = Math.floor(e.ts / timeslotWidth)
-        if (timeslot > currentTimeslot) {
-            flush(timeslot)
-        }
-        if (0 == minTimeslot) {
-            minTimeslot = timeslot
-        }
-        currentTimeslot = timeslot
-        currentEvents[e.pid] = currentEvents[e.pid] || []
-        currentEvents[e.pid].push(e)
-
-        // if the PID is unknown add a column for it
-        if (!pids[e.pid]) {
-            pids[e.pid] = true
-            pidOrder.push(e.pid)
-            appendChild(timelineHeaderNode, 'timeline_head_cell', e.pid)
+            node.append(cell)
         }
     }
 
+    #hideContent(timeslot) {
+        const node = this.#slotNodes[timeslot]
+        if (!node) {
+            console.error("can't find node for timeslot=" + timeslot)
+            return
+        }
+        while (node.firstChild) {
+            node.removeChild(node.lastChild)
+        }
+    }
+
+}
+
+(function main(){
+    const root = document.querySelector('#main .timeline')
+    const timeline = new Timeline(root)
     const eventSource = new EventSource("/events")
 
-    eventSource.addEventListener('message', function (event) {
+    eventSource.addEventListener('message', (event) => {
+        console.log('got eventSource message')
         const e = JSON.parse(event.data)
-        addEvent(e)
+        timeline.appendEvent(e)
     })
-    eventSource.addEventListener('fin', function () {
+    eventSource.addEventListener('fin', () => {
         eventSource.close()
-        flush()
+        timeline.finish()
     })
-    eventSource.onerror = function (err) {
+    eventSource.onerror = (err) => {
         console.error("EventSource failed:", err)
         eventSource.close()
-        flush()
+        timeline.finish()
     }
-
-
-    ;(function scroll() {
-        function calcScrollHeight() {
-            return layout.reduce((a, b) => a + b, 0)
-        }
-    
-        window.addEventListener('scroll', () => {
-            // if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 1000 && ready)
-            console.log('scroll = ' + window.scrollY + '; scrollHeight = ' + calcScrollHeight())
-            window.layout = layout
-        })
-    }())
 })();
 
 function el(className, html) {
@@ -397,4 +417,12 @@ function humanFileSize(bytes, si=false, dp=1) {
   
   
     return bytes.toFixed(dp) + ' ' + units[u];
+}
+
+function debounce(callback, wait) {
+    let timeoutId = null;
+    return (...args) => {
+        window.clearTimeout(timeoutId)
+        timeoutId = window.setTimeout(callback, wait)
+    }
 }

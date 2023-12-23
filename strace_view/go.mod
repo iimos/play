@@ -2,6 +2,8 @@ module github.com/iimos/play/strace_view
 
 go 1.19
 
+replace github.com/hugelgupf/go-strace => /proj/src/github.com/hugelgupf/go-strace
+
 require (
 	github.com/docker/go-units v0.5.0
 	github.com/go-chi/chi v1.5.4

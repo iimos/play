@@ -67,6 +67,10 @@ func main_v1() {
 // go run -ldflags "-X main.debug=1" .
 var debug = ""
 
+func isDebug() bool {
+	return debug != ""
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Printf("Usage: %s PROG [ARGS]\n", os.Args[0])
@@ -107,24 +111,24 @@ func trace(cmd *exec.Cmd) <-chan Event {
 				}
 
 				events <- e
-				if debug != "" {
+				if isDebug() {
 					fmt.Printf("%#v\n", e)
 				}
 
 			case strace.SignalExit:
-				if debug != "" {
+				if isDebug() {
 					fmt.Printf("PID %d exited from signal %s\n", record.PID, syscalls.SignalString(record.SignalExit.Signal))
 				}
 			case strace.Exit:
-				if debug != "" {
+				if isDebug() {
 					fmt.Printf("PID %d exited from exit status %d (code = %d)\n", record.PID, record.Exit.WaitStatus, record.Exit.WaitStatus.ExitStatus())
 				}
 			case strace.SignalStop:
-				if debug != "" {
+				if isDebug() {
 					fmt.Printf("PID %d got signal %s\n", record.PID, syscalls.SignalString(record.SignalStop.Signal))
 				}
 			case strace.NewChild:
-				if debug != "" {
+				if isDebug() {
 					fmt.Printf("PID %d spawned new child %d\n", record.PID, record.NewChild.PID)
 				}
 			}

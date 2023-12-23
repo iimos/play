@@ -77,7 +77,7 @@ function renderAnything(smth, formated) {
 function renderString(str) {
     str = String(str)
     if (str.startsWith("\x7fELF")) {
-        str = "<bin content>"
+        str = "<binary>"
     }
     if (str.length > 40) {
         str = str.substr(0, 40) + "..."
@@ -193,28 +193,42 @@ class Timeline {
     #layout = []
 
     constructor(rootNode) {
+        const that = this
+        this.observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                const row = entry.target
+                const timeslot = row.getAttribute("data-timeslot")
+                if (entry.isIntersecting) {
+                    that.#renderContent(timeslot)
+                } else {
+                    // that.#hideContent(timeslot)
+                }
+            })
+        }, {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0,
+        })
+
         this.#rootNode = rootNode
         this.#headerNode = el('timeline_head')
         this.#rootNode.append(this.#headerNode)
-
-        window.addEventListener('scroll', debounce(this.#render.bind(this), 200))
+        // window.addEventListener('scroll', debounce(this.#render.bind(this), 200))
     }
 
     appendEvent(e) {
-        // store event into this.data
-        {
-            const timeslot = Math.floor(e.ts / this.#timeslotDuration)
-            this.data[timeslot] = this.data[timeslot] || {}
-            this.data[timeslot][e.pid] = this.data[timeslot][e.pid] || []
-            this.data[timeslot][e.pid].push(e)
-
-            if (0 === this.#minTimeslot) {
-                this.#minTimeslot = timeslot
-            }
-        }
-
         const timeslot = Math.floor(e.ts / this.#timeslotDuration)
-        if (0 == this.#currentTimeslot) {
+
+        // store event into this.data
+        this.data[timeslot] = this.data[timeslot] || {}
+        this.data[timeslot][e.pid] = this.data[timeslot][e.pid] || []
+        this.data[timeslot][e.pid].push(e)
+
+        if (!this.#minTimeslot) {
+            // here we assume data is appended chronologically
+            this.#minTimeslot = timeslot
+        }
+        if (!this.#currentTimeslot) {
             this.#currentTimeslot = timeslot
         }
 
@@ -226,8 +240,9 @@ class Timeline {
         for (let slot = this.#currentTimeslot; slot <= timeslot; slot += 1) {
             this.#appendPlaceholder(slot)
         }
-        this.#currentTimeslot = timeslot
         this.addPID(e.pid)
+        this.#currentTimeslot = timeslot
+        // this.#renderContent(timeslot)
     }
 
     finish() {
@@ -243,8 +258,14 @@ class Timeline {
     }
 
     #appendPlaceholder(timeslot) {
-        if (this.#slotNodes[timeslot]) {
-            return
+        let row = this.#slotNodes[timeslot]
+        if (!row) {
+            row = el('timeline_row')
+            row.setAttribute('data-timeslot', timeslot)
+            row.setAttribute('data-i', timeslot - this.#minTimeslot)
+            this.#slotNodes[timeslot] = row
+            this.#rootNode.append(row)
+            this.observer.observe(row)
         }
 
         const events = this.data[timeslot] || {}
@@ -252,28 +273,22 @@ class Timeline {
         // calc timeslot height
         const biggestCell = Math.max(...this.#PIDOrder.map(pid => (events[pid] || []).length));
         const height = Math.max(UI.rowHeight*biggestCell, UI.cellHeightMin) + UI.borderHeight;
-        const lastHeight = this.#layout[this.#layout.length-1] || 0;
-        this.#layout.push(lastHeight + height)
-        
-        const row = el('timeline_row')
-        row.style.height = height+'px'
-        row.setAttribute('data-timeslot', timeslot)
-        row.setAttribute('data-i', timeslot - this.#minTimeslot)
-        
-        this.#slotNodes[timeslot] = row
-        this.#rootNode.append(row)
+        // const lastHeight = this.#layout[this.#layout.length-1] || 0;
+        // this.#layout.push(lastHeight + height) // old
+        row.style.height = height+'px'        
     }
 
     #render() {
         if (this.#minTimeslot === 0) {
             return
         }
-        
+
         const rootY = this.#rootNode.getBoundingClientRect().top;
         const topOffset = window.scrollY - rootY;
         const windowHeight = window.innerHeight;
         const margin = windowHeight;
-        // console.log('top=' + topOffset + '; bottom=' + (topOffset + windowHeight) + '; minTimeslot=' + this.#minTimeslot)
+        
+        console.log('render; top=' + topOffset + '; bottom=' + (topOffset + windowHeight) + '; minTimeslot=' + this.#minTimeslot)
 
         const toRender = []
         for (let i = 0; i < this.#layout.length; i++) {
@@ -339,10 +354,11 @@ class Timeline {
     const root = document.querySelector('#main .timeline')
     const timeline = new Timeline(root)
     const eventSource = new EventSource("/events")
+    window.timeline = timeline
 
     eventSource.addEventListener('message', (event) => {
-        console.log('got eventSource message')
         const e = JSON.parse(event.data)
+        // console.log('got eventSource message', e)
         timeline.appendEvent(e)
     })
     eventSource.addEventListener('fin', () => {

@@ -26,7 +26,7 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/hugelgupf/go-strace/strace"
-	"github.com/iimos/play/strace_view/abi"
+	"github.com/iimos/play/stracy/abi"
 	"golang.org/x/sys/unix"
 )
 

@@ -1,4 +1,4 @@
-module github.com/iimos/play/strace_view
+module github.com/iimos/play/stracy
 
 go 1.19
 

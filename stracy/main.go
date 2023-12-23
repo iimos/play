@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/hugelgupf/go-strace/strace"
-	"github.com/iimos/play/strace_view/syscalls"
+	"github.com/iimos/play/stracy/syscalls"
 )
 
 //go:embed template.html

@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	"github.com/hugelgupf/go-strace/strace"
-	"github.com/iimos/play/strace_view/ubinary"
+	"github.com/iimos/play/stracy/ubinary"
 	"golang.org/x/sys/unix"
 )
 

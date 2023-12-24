@@ -99,7 +99,7 @@ func main() {
 }
 
 func trace(cmd *exec.Cmd) <-chan Event {
-	events := make(chan Event, 128)
+	events := make(chan Event, 32768)
 	go func() {
 		err := strace.Trace(cmd, func(t strace.Task, record *strace.TraceRecord) error {
 			switch record.Event {

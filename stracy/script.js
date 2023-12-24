@@ -136,6 +136,7 @@ function renderStraceItem(e) {
     a.classList.add('strace_syscall_name')
     a.href = getSyscallLink(e.args.Syscall)
     a.target = '_blank'
+    a.title = JSON.stringify(e)
     a.textContent = e.args.Syscall
     item.append(a)
     
@@ -149,7 +150,7 @@ function renderStraceItem(e) {
     if (e.args.Result) {
         const res = el('strace_result')
         res.append(renderArg(e.args.Result))
-        // item.append(res)
+        item.append(res)
     }
     return item
 }
@@ -237,16 +238,18 @@ class Timeline {
             return
         }
 
-        for (let slot = this.#currentTimeslot; slot <= timeslot; slot += 1) {
-            this.#appendPlaceholder(slot)
-        }
         this.addPID(e.pid)
+        for (let slot = this.#currentTimeslot; slot <= timeslot; slot += 1) {
+            this.#adjustPlaceholder(slot)
+        }
         this.#currentTimeslot = timeslot
-        // this.#renderContent(timeslot)
     }
 
     finish() {
         this.#currentTimeslot = this.#currentTimeslot + 1
+        for (let slot = this.#currentTimeslot; slot <= this.#currentTimeslot; slot += 1) {
+            this.#adjustPlaceholder(slot)
+        }
     }
 
     addPID(pid) {
@@ -257,15 +260,14 @@ class Timeline {
         }
     }
 
-    #appendPlaceholder(timeslot) {
-        let row = this.#slotNodes[timeslot]
-        if (!row) {
-            row = el('timeline_row')
-            row.setAttribute('data-timeslot', timeslot)
-            row.setAttribute('data-i', timeslot - this.#minTimeslot)
-            this.#slotNodes[timeslot] = row
-            this.#rootNode.append(row)
-            this.observer.observe(row)
+    #adjustPlaceholder(timeslot) {
+        let slotNode = this.#slotNodes[timeslot]
+        if (!slotNode) {
+            slotNode = el('timeline_row')
+            slotNode.setAttribute('data-timeslot', timeslot)
+            slotNode.setAttribute('data-i', timeslot - this.#minTimeslot)
+            this.#slotNodes[timeslot] = slotNode
+            this.#rootNode.append(slotNode)
         }
 
         const events = this.data[timeslot] || {}
@@ -273,9 +275,20 @@ class Timeline {
         // calc timeslot height
         const biggestCell = Math.max(...this.#PIDOrder.map(pid => (events[pid] || []).length));
         const height = Math.max(UI.rowHeight*biggestCell, UI.cellHeightMin) + UI.borderHeight;
-        // const lastHeight = this.#layout[this.#layout.length-1] || 0;
-        // this.#layout.push(lastHeight + height) // old
-        row.style.height = height+'px'        
+        slotNode.style.height = height+'px'
+        if (biggestCell > 0) {
+            slotNode.style.display = ""
+            this.observer.observe(slotNode)
+        } else {
+            slotNode.style.display = "none"
+            // пустые отрисовываем сразу
+            // this.#renderContent(timeslot)
+        }
+
+        if (slotNode.childNodes.length > 0) {
+            // если слот уже отрисован то апдейтим его
+            this.#renderContent(timeslot)
+        }
     }
 
     #render() {
@@ -321,19 +334,21 @@ class Timeline {
             console.error("can't find node for timeslot=" + timeslot)
             return
         }
-        if (node.childNodes.length > 0) {
-            return
-        }
 
-        for (let pid of this.#PIDOrder) {
-            const cell = el('timeline_cell')
-            if (this.data[timeslot] && this.data[timeslot][pid]) {
-                for (const e of this.data[timeslot][pid]) {
-                    let item = renderStraceItem(e)
-                    cell.append(item)
-                }
+        for (let i = 0; i < this.#PIDOrder.length; i++) {
+            const pid = this.#PIDOrder[i]
+            let cellNode = node.childNodes[i]
+            if (!cellNode) {
+                cellNode = el('timeline_cell')
+                node.append(cellNode)
             }
-            node.append(cell)
+
+            let rows = this.data[timeslot] && this.data[timeslot][pid] || []
+            for (let j = cellNode.childNodes.length; j < rows.length; j++) {
+                const e = rows[j]
+                let item = renderStraceItem(e)
+                cellNode.append(item)
+            }
         }
     }
 
@@ -347,7 +362,6 @@ class Timeline {
             node.removeChild(node.lastChild)
         }
     }
-
 }
 
 (function main(){

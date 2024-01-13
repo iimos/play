@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/go-chi/chi"
 	"golang.org/x/sync/errgroup"
@@ -71,21 +68,6 @@ func startServer(ctx context.Context, addr, html string, events <-chan Event) {
 		// ReadTimeout: 75 * time.Second,
 		Handler: r,
 	}
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	go func() {
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, os.Interrupt, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
-		defer signal.Stop(c)
-
-		select {
-		case <-ctx.Done():
-		case <-c:
-			cancel()
-		}
-	}()
 
 	var g errgroup.Group
 

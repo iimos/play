@@ -7,9 +7,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/hugelgupf/go-strace/strace"
@@ -77,12 +80,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	cmd := exec.Command(os.Args[1], os.Args[2:]...)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, os.Args[1], os.Args[2:]...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 
-	events := trace(cmd)
+	events, done := trace(cmd)
+	go func() {
+		<-done
+		cancel()
+	}()
 
 	// html := strings.Replace(templateHTML, "{{events}}", string(jsonEvents), 1)
 	html := templateHTML
@@ -90,17 +100,18 @@ func main() {
 	html = strings.Replace(html, "{{css}}", styleCSS, 1)
 	html = strings.Replace(html, "{{syscalls}}", syscallsJSON, 1)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	addr := ":80"
 	fmt.Printf("listen on %s\n", addr)
 	startServer(ctx, addr, html, events)
 }
 
-func trace(cmd *exec.Cmd) <-chan Event {
-	events := make(chan Event, 32768)
+func trace(cmd *exec.Cmd) (events <-chan Event, done chan struct{}) {
+	ch := make(chan Event, 32768)
+	done = make(chan struct{})
 	go func() {
+		defer close(done)
+		defer close(ch)
+
 		err := strace.Trace(cmd, func(t strace.Task, record *strace.TraceRecord) error {
 			switch record.Event {
 			case strace.SyscallExit:
@@ -110,13 +121,14 @@ func trace(cmd *exec.Cmd) <-chan Event {
 					return nil
 				}
 
-				events <- e
+				ch <- e
 				if isDebug() {
 					fmt.Printf("%#v\n", e)
 				}
 
 			case strace.SignalExit:
 				if isDebug() {
+					log.Default()
 					fmt.Printf("PID %d exited from signal %s\n", record.PID, syscalls.SignalString(record.SignalExit.Signal))
 				}
 			case strace.Exit:
@@ -137,9 +149,8 @@ func trace(cmd *exec.Cmd) <-chan Event {
 		if err != nil {
 			fmt.Printf("error: %s", err)
 		}
-		close(events)
 	}()
-	return events
+	return ch, done
 }
 
 const LogMaximumSize = 1024

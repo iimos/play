@@ -260,6 +260,7 @@ class Timeline {
         }
     }
 
+    // adjustPlaceholder adjusts the placeholder for a given timeslot.
     #adjustPlaceholder(timeslot) {
         let slotNode = this.#slotNodes[timeslot]
         if (!slotNode) {
@@ -272,21 +273,21 @@ class Timeline {
 
         const events = this.data[timeslot] || {}
 
-        // calc timeslot height
+        // calculate the height of the timeslot block
         const biggestCell = Math.max(...this.#PIDOrder.map(pid => (events[pid] || []).length));
         const height = Math.max(UI.rowHeight*biggestCell, UI.cellHeightMin) + UI.borderHeight;
         slotNode.style.height = height+'px'
+
+        // if the timeslot has any events, show it and observe it
         if (biggestCell > 0) {
             slotNode.style.display = ""
             this.observer.observe(slotNode)
         } else {
             slotNode.style.display = "none"
-            // пустые отрисовываем сразу
-            // this.#renderContent(timeslot)
         }
 
         if (slotNode.childNodes.length > 0) {
-            // если слот уже отрисован то апдейтим его
+            // if the timeslot is already rendered, update it
             this.#renderContent(timeslot)
         }
     }

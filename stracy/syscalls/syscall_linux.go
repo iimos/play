@@ -191,51 +191,6 @@ type flagSpec struct {
 	str  string
 }
 
-var mapProtFlags = [...]flagSpec{
-	{syscall.PROT_EXEC, "EXEC"},
-	{syscall.PROT_GROWSDOWN, "GROWSDOWN"},
-	{syscall.PROT_GROWSUP, "GROWSUP"},
-	{syscall.PROT_NONE, "NONE"},
-	{syscall.PROT_READ, "READ"},
-	{syscall.PROT_WRITE, "WRITE"},
-}
-
-var mapFlags = [...]flagSpec{
-	{syscall.MAP_32BIT, "32BIT"},
-	{syscall.MAP_ANON, "ANON"},
-	{syscall.MAP_ANONYMOUS, "ANONYMOUS"},
-	{syscall.MAP_DENYWRITE, "DENYWRITE"},
-	{syscall.MAP_EXECUTABLE, "EXECUTABLE"},
-	{syscall.MAP_FILE, "FILE"},
-	{syscall.MAP_FIXED, "FIXED"},
-	{syscall.MAP_GROWSDOWN, "GROWSDOWN"},
-	{syscall.MAP_HUGETLB, "HUGETLB"},
-	{syscall.MAP_LOCKED, "LOCKED"},
-	{syscall.MAP_NONBLOCK, "NONBLOCK"},
-	{syscall.MAP_NORESERVE, "NORESERVE"},
-	{syscall.MAP_POPULATE, "POPULATE"},
-	{syscall.MAP_PRIVATE, "PRIVATE"},
-	{syscall.MAP_SHARED, "SHARED"},
-	{syscall.MAP_STACK, "STACK"},
-	{syscall.MAP_TYPE, "TYPE"},
-}
-
-var madvFlags = [...]flagSpec{
-	{syscall.MADV_DOFORK, "DOFORK"},
-	{syscall.MADV_DONTFORK, "DONTFORK"},
-	{syscall.MADV_DONTNEED, "DONTNEED"},
-	{syscall.MADV_HUGEPAGE, "HUGEPAGE"},
-	{syscall.MADV_HWPOISON, "HWPOISON"},
-	{syscall.MADV_MERGEABLE, "MERGEABLE"},
-	{syscall.MADV_NOHUGEPAGE, "NOHUGEPAGE"},
-	{syscall.MADV_NORMAL, "NORMAL"},
-	{syscall.MADV_RANDOM, "RANDOM"},
-	{syscall.MADV_REMOVE, "REMOVE"},
-	{syscall.MADV_SEQUENTIAL, "SEQUENTIAL"},
-	{syscall.MADV_UNMERGEABLE, "UNMERGEABLE"},
-	{syscall.MADV_WILLNEED, "WILLNEED"},
-}
-
 var archPrctlCodes = map[int]string{
 	0x1001: "ARCH_SET_GS",
 	0x1002: "ARCH_SET_FS",
@@ -368,11 +323,14 @@ func ArgumentSimple(t strace.Task, format Type, arg strace.SyscallArgument, maxi
 	case ItimerType:
 		return abi.ItimerTypes.Parse(uint64(arg.Int()))
 	case MMapProt:
-		return flags(mapProtFlags[:], t, int(arg.Int()))
+		// return flags(mapProtFlags[:], t, int(arg.Int()))
+		return abi.MmapProt.Parse(uint64(arg.Int()))
 	case MMapFlags:
-		return flags(mapFlags[:], t, int(arg.Int()))
+		// return flags(mapFlags[:], t, int(arg.Int()))
+		return abi.MmapFlagSet.Parse(uint64(arg.Int()))
 	case MADVFlags:
-		return flags(madvFlags[:], t, int(arg.Int()))
+		// return flags(madvFlags[:], t, int(arg.Int()))
+		return abi.MadviseFlagSet.Parse(uint64(arg.Int()))
 	case Signal:
 		return SignalString(unix.Signal(arg.Int()))
 	case ArchPrctl:

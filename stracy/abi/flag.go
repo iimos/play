@@ -116,6 +116,16 @@ func (e *Value) Mask() uint64 {
 // Unknown flags are printed as numeric if the Flagset did not cover all the bits
 // in the argument.
 func (s FlagSet) Parse(val uint64) string {
+	// Special case
+	if val == 0 {
+		for _, f := range s {
+			if f.Match(0) {
+				return f.String(val)
+			}
+		}
+		return "0"
+	}
+
 	var flags []string
 	var clr uint64
 
@@ -124,6 +134,9 @@ func (s FlagSet) Parse(val uint64) string {
 			flags = append(flags, f.String(val))
 			val &^= f.Mask()
 			clr |= f.Mask()
+		}
+		if val == 0 {
+			break
 		}
 	}
 

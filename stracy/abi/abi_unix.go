@@ -571,3 +571,105 @@ type MessageHeader64 struct {
 	Flags int32
 	_     int32
 }
+
+// mmap
+
+// MmapProt are mmap(2) memory protection modes.
+var MmapProt = FlagSet{
+	&Value{
+		Value: syscall.PROT_NONE,
+		Name:  "PROT_NONE",
+	},
+	&BitFlag{
+		Value: syscall.PROT_EXEC,
+		Name:  "PROT_EXEC",
+	},
+	&BitFlag{
+		Value: syscall.PROT_GROWSDOWN,
+		Name:  "PROT_GROWSDOWN",
+	},
+	&BitFlag{
+		Value: syscall.PROT_GROWSUP,
+		Name:  "PROT_GROWSUP",
+	},
+	&BitFlag{
+		Value: syscall.PROT_READ,
+		Name:  "PROT_READ",
+	},
+	&BitFlag{
+		Value: syscall.PROT_WRITE,
+		Name:  "PROT_WRITE",
+	},
+}
+
+// MmapFlagSet is the set of mmap(2) flags.
+var MmapFlagSet = FlagSet{
+	&BitFlag{
+		Value: syscall.MAP_32BIT,
+		Name:  "MAP_32BIT",
+	},
+	&BitFlag{
+		Value: syscall.MAP_ANON,
+		Name:  "MAP_ANON",
+	},
+	&BitFlag{
+		Value: syscall.MAP_ANONYMOUS,
+		Name:  "MAP_ANONYMOUS",
+	},
+	&BitFlag{
+		Value: syscall.MAP_DENYWRITE,
+		Name:  "MAP_DENYWRITE",
+	},
+	&BitFlag{
+		Value: syscall.MAP_EXECUTABLE,
+		Name:  "MAP_EXECUTABLE",
+	},
+	&Value{
+		Value: syscall.MAP_FILE,
+		Name:  "MAP_FILE",
+	},
+	&BitFlag{
+		Value: syscall.MAP_FIXED,
+		Name:  "MAP_FIXED",
+	},
+	&BitFlag{
+		Value: syscall.MAP_GROWSDOWN,
+		Name:  "MAP_GROWSDOWN",
+	},
+	&BitFlag{
+		Value: syscall.MAP_HUGETLB,
+		Name:  "MAP_HUGETLB",
+	},
+	&BitFlag{
+		Value: syscall.MAP_LOCKED,
+		Name:  "MAP_LOCKED",
+	},
+	&BitFlag{
+		Value: syscall.MAP_NONBLOCK,
+		Name:  "MAP_NONBLOCK",
+	},
+	&BitFlag{
+		Value: syscall.MAP_NORESERVE,
+		Name:  "MAP_NORESERVE",
+	},
+	&BitFlag{
+		Value: syscall.MAP_POPULATE,
+		Name:  "MAP_POPULATE",
+	},
+	&BitFlag{
+		Value: syscall.MAP_PRIVATE,
+		Name:  "MAP_PRIVATE",
+	},
+	&BitFlag{
+		Value: syscall.MAP_SHARED,
+		Name:  "MAP_SHARED",
+	},
+	&BitFlag{
+		Value: syscall.MAP_STACK,
+		Name:  "MAP_STACK",
+	},
+	&BitFlag{
+		Value: syscall.MAP_TYPE,
+		Name:  "MAP_TYPE",
+	},
+}

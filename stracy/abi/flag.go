@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/bits"
 	"strconv"
 )
 
@@ -116,24 +117,27 @@ func (e *Value) Mask() uint64 {
 // Unknown flags are printed as numeric if the Flagset did not cover all the bits
 // in the argument.
 func (s FlagSet) Parse(val uint64) Flags {
+	flags := Flags{}
+
 	// Special case
 	if val == 0 {
 		for _, f := range s {
 			if f.Match(0) {
-				return Flags{
-					flags: []string{f.String(val)},
-				}
+				flags.Add(f.String(val))
+				return flags
 			}
 		}
-		return Flags{}
+		return flags
 	}
 
-	var flags []string
 	var clr uint64
+
+	onesCount := bits.OnesCount(uint(val))
+	flags.flags = make([]string, 0, onesCount)
 
 	for _, f := range s {
 		if f.Match(val) {
-			flags = append(flags, f.String(val))
+			flags.Add(f.String(val))
 			val &^= f.Mask()
 			clr |= f.Mask()
 		}
@@ -149,12 +153,10 @@ func (s FlagSet) Parse(val uint64) Flags {
 	// It's possible to miss bits and have val be 0 if the bits
 	// we missed are 0, as in the earlier code.
 	if clr != math.MaxUint64 && val != 0 {
-		flags = append(flags, "0x"+strconv.FormatUint(val, 16))
+		flags.Add("0x" + strconv.FormatUint(val, 16))
 	}
 
-	return Flags{
-		flags: flags,
-	}
+	return flags
 }
 
 type Flags struct {

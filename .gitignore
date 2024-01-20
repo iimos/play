@@ -16,6 +16,7 @@
 # Go workspace file
 go.work
 
+.vscode
 .idea
 .DS_Store
 /tmp

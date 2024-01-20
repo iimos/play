@@ -214,7 +214,7 @@ func Details(s *strace.SyscallEvent) SyscallInfo {
 
 // SyscallInfo specifies syscall signature.
 type SyscallInfo struct {
-	// Name is the syscall name.
+	// Name of a syscall.
 	Name string
 
 	// ArgTypes contains the type specifiers for each argument.

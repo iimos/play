@@ -5,6 +5,7 @@
 package abi
 
 import (
+	"strings"
 	"testing"
 
 	"golang.org/x/sys/unix"
@@ -14,7 +15,7 @@ import (
 // Bits	 Content	 Notes
 // 63-57	 Unused
 // 56	 Successful Boot Flag
-//Set to 1 the first time the system has successfully booted from this partition (see the File System/Autoupdate design document for the definition of success).
+// Set to 1 the first time the system has successfully booted from this partition (see the File System/Autoupdate design document for the definition of success).
 // 55-52	 Tries Remaining	Number of times to attempt booting this partition. Used only when the Successful Boot Flag is 0.
 // 51-48	 Priority	4-bit number: 15 = highest, 1 = lowest, 0 = not bootable.
 // 47-0	 Reserved by EFI Spec
@@ -54,7 +55,7 @@ func TestCrosGPT(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.n, func(t *testing.T) {
 			s := tc.f.Parse(tc.v)
-			if s != tc.o {
+			if strings.Join(s.flags, "|") != tc.o {
 				t.Fatalf("Got %s, want %s", s, tc.o)
 			}
 		})

@@ -97,12 +97,11 @@ var OpenFlagSet = FlagSet{
 	},
 }
 
-func Open(val uint64) string {
-	s := OpenMode.Parse(val & syscall.O_ACCMODE)
-	if flags := OpenFlagSet.Parse(val &^ syscall.O_ACCMODE); flags != "" {
-		s += "|" + flags
-	}
-	return s
+func Open(val uint64) Flags {
+	f1 := OpenMode.Parse(val & syscall.O_ACCMODE)
+	f2 := OpenFlagSet.Parse(val &^ syscall.O_ACCMODE)
+	f1.AddFlags(f2)
+	return f1
 }
 
 // socket
@@ -521,26 +520,24 @@ var ControlMessageType = map[int32]string{
 	unix.SO_TIMESTAMP:    "SO_TIMESTAMP",
 }
 
-func SockType(stype int32) string {
-	s := SocketType.Parse(uint64(stype & SOCK_TYPE_MASK))
-	if flags := SocketFlagSet.Parse(uint64(stype &^ SOCK_TYPE_MASK)); flags != "" {
-		s += "|" + flags
-	}
-	return s
+func SockType(stype int32) Flags {
+	f1 := SocketType.Parse(uint64(stype & SOCK_TYPE_MASK))
+	f2 := SocketFlagSet.Parse(uint64(stype &^ SOCK_TYPE_MASK))
+	f1.AddFlags(f2)
+	return f1
 }
 
-func SockProtocol(family, protocol int32) string {
+func SockProtocol(family, protocol int32) Flags {
 	protocols, ok := SocketProtocol[family]
 	if !ok {
-		return fmt.Sprintf("%#x", protocol)
+		f := Flags{}
+		f.Add(fmt.Sprintf("%#x", protocol))
+		return f
 	}
 	return protocols.Parse(uint64(protocol))
 }
 
-func SockFlags(flags int32) string {
-	if flags == 0 {
-		return "0"
-	}
+func SockFlags(flags int32) Flags {
 	return SocketFlagSet.Parse(uint64(flags))
 }
 

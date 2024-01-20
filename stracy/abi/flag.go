@@ -15,10 +15,10 @@
 package abi
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"strconv"
-	"strings"
 )
 
 // The Flag interface has three functions:
@@ -115,15 +115,17 @@ func (e *Value) Mask() uint64 {
 // Parse returns a pretty version of a FlagSet, using the flag names for known flags.
 // Unknown flags are printed as numeric if the Flagset did not cover all the bits
 // in the argument.
-func (s FlagSet) Parse(val uint64) string {
+func (s FlagSet) Parse(val uint64) Flags {
 	// Special case
 	if val == 0 {
 		for _, f := range s {
 			if f.Match(0) {
-				return f.String(val)
+				return Flags{
+					flags: []string{f.String(val)},
+				}
 			}
 		}
-		return "0"
+		return Flags{}
 	}
 
 	var flags []string
@@ -150,5 +152,29 @@ func (s FlagSet) Parse(val uint64) string {
 		flags = append(flags, "0x"+strconv.FormatUint(val, 16))
 	}
 
-	return strings.Join(flags, "|")
+	return Flags{
+		flags: flags,
+	}
+}
+
+type Flags struct {
+	flags []string
+}
+
+func (f *Flags) Add(flag ...string) {
+	f.flags = append(f.flags, flag...)
+}
+
+func (f *Flags) AddFlags(flags Flags) {
+	f.Add(flags.flags...)
+}
+
+func (f Flags) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Type  string
+		Value []string
+	}{
+		Type:  "flags",
+		Value: f.flags,
+	})
 }

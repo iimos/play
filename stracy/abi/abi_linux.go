@@ -789,19 +789,19 @@ var FutexCmd = FlagSet{
 	},
 }
 
-func Futex(op uint64) string {
+func Futex(op uint64) Flags {
 	cmd := op &^ (FUTEX_PRIVATE_FLAG | FUTEX_CLOCK_REALTIME)
 	clockRealtime := (op & FUTEX_CLOCK_REALTIME) == FUTEX_CLOCK_REALTIME
 	private := (op & FUTEX_PRIVATE_FLAG) == FUTEX_PRIVATE_FLAG
 
-	s := FutexCmd.Parse(cmd)
+	f := FutexCmd.Parse(cmd)
 	if clockRealtime {
-		s += "|FUTEX_CLOCK_REALTIME"
+		f.Add("FUTEX_CLOCK_REALTIME")
 	}
 	if private {
-		s += "|FUTEX_PRIVATE_FLAG"
+		f.Add("FUTEX_PRIVATE_FLAG")
 	}
-	return s
+	return f
 }
 
 // madvise

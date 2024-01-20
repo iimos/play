@@ -42,6 +42,9 @@ function renderArg(arg) {
         case "stat":
             child = renderStat(arg.Value, arg.Formated)
             break
+        case "flags":
+            child = renderFlags(arg.Value, arg.Formated)
+            break
         default:
             html = renderAnything(arg.Value, arg.Formated)
             break
@@ -74,6 +77,19 @@ function renderAnything(smth, formated) {
     return escapeHtml(JSON.stringify(smth))
 }
 
+function renderFlags(arr, formated) {
+    if (!arr || !arr.length) {
+        return "0"
+    }
+    // strip common prefix
+    let parts = arr[0].split('_')
+    if (parts.length > 1) {
+        let prefix = parts[0] + '_'
+        arr = arr.map(x => x.replace(prefix, ''))
+    }
+    return escapeHtml(arr.join("|"))
+}
+
 function renderString(str) {
     str = String(str)
     if (str.startsWith("\x7fELF")) {
@@ -86,7 +102,6 @@ function renderString(str) {
     span.textContent = str
     return span
 }
-
 
 function renderStruct(obj, formated, header) {
     header = header || "{...}"

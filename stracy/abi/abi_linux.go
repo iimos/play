@@ -717,76 +717,28 @@ const (
 
 // ItimerTypes are the possible itimer types.
 var ItimerTypes = FlagSet{
-	&Value{
-		Value: ITIMER_REAL,
-		Name:  "ITIMER_REAL",
-	},
-	&Value{
-		Value: ITIMER_VIRTUAL,
-		Name:  "ITIMER_VIRTUAL",
-	},
-	&Value{
-		Value: ITIMER_PROF,
-		Name:  "ITIMER_PROF",
-	},
+	&Value{Value: ITIMER_REAL, Name: "ITIMER_REAL"},
+	&Value{Value: ITIMER_VIRTUAL, Name: "ITIMER_VIRTUAL"},
+	&Value{Value: ITIMER_PROF, Name: "ITIMER_PROF"},
 }
 
 // FutexCmd are the possible futex(2) commands.
 //
 // from gvisor futex.go
 var FutexCmd = FlagSet{
-	&Value{
-		Value: FUTEX_WAIT,
-		Name:  "FUTEX_WAIT",
-	},
-	&Value{
-		Value: FUTEX_WAKE,
-		Name:  "FUTEX_WAKE",
-	},
-	&Value{
-		Value: FUTEX_FD,
-		Name:  "FUTEX_FD",
-	},
-	&Value{
-		Value: FUTEX_REQUEUE,
-		Name:  "FUTEX_REQUEUE",
-	},
-	&Value{
-		Value: FUTEX_CMP_REQUEUE,
-		Name:  "FUTEX_CMP_REQUEUE",
-	},
-	&Value{
-		Value: FUTEX_WAKE_OP,
-		Name:  "FUTEX_WAKE_OP",
-	},
-	&Value{
-		Value: FUTEX_LOCK_PI,
-		Name:  "FUTEX_LOCK_PI",
-	},
-	&Value{
-		Value: FUTEX_UNLOCK_PI,
-		Name:  "FUTEX_UNLOCK_PI",
-	},
-	&Value{
-		Value: FUTEX_TRYLOCK_PI,
-		Name:  "FUTEX_TRYLOCK_PI",
-	},
-	&Value{
-		Value: FUTEX_WAIT_BITSET,
-		Name:  "FUTEX_WAIT_BITSET",
-	},
-	&Value{
-		Value: FUTEX_WAKE_BITSET,
-		Name:  "FUTEX_WAKE_BITSET",
-	},
-	&Value{
-		Value: FUTEX_WAIT_REQUEUE_PI,
-		Name:  "FUTEX_WAIT_REQUEUE_PI",
-	},
-	&Value{
-		Value: FUTEX_CMP_REQUEUE_PI,
-		Name:  "FUTEX_CMP_REQUEUE_PI",
-	},
+	&Value{Value: FUTEX_WAIT, Name: "FUTEX_WAIT"},
+	&Value{Value: FUTEX_WAKE, Name: "FUTEX_WAKE"},
+	&Value{Value: FUTEX_FD, Name: "FUTEX_FD"},
+	&Value{Value: FUTEX_REQUEUE, Name: "FUTEX_REQUEUE"},
+	&Value{Value: FUTEX_CMP_REQUEUE, Name: "FUTEX_CMP_REQUEUE"},
+	&Value{Value: FUTEX_WAKE_OP, Name: "FUTEX_WAKE_OP"},
+	&Value{Value: FUTEX_LOCK_PI, Name: "FUTEX_LOCK_PI"},
+	&Value{Value: FUTEX_UNLOCK_PI, Name: "FUTEX_UNLOCK_PI"},
+	&Value{Value: FUTEX_TRYLOCK_PI, Name: "FUTEX_TRYLOCK_PI"},
+	&Value{Value: FUTEX_WAIT_BITSET, Name: "FUTEX_WAIT_BITSET"},
+	&Value{Value: FUTEX_WAKE_BITSET, Name: "FUTEX_WAKE_BITSET"},
+	&Value{Value: FUTEX_WAIT_REQUEUE_PI, Name: "FUTEX_WAIT_REQUEUE_PI"},
+	&Value{Value: FUTEX_CMP_REQUEUE_PI, Name: "FUTEX_CMP_REQUEUE_PI"},
 }
 
 func Futex(op uint64) Flags {
@@ -808,56 +760,17 @@ func Futex(op uint64) Flags {
 
 // MadviseFlagSet are madvise(2) posible flags.
 var MadviseFlagSet = FlagSet{
-	&BitFlag{
-		Value: syscall.MADV_DOFORK,
-		Name:  "MADV_DOFORK",
-	},
-	&BitFlag{
-		Value: syscall.MADV_DONTFORK,
-		Name:  "MADV_DONTFORK",
-	},
-	&BitFlag{
-		Value: syscall.MADV_DONTNEED,
-		Name:  "MADV_DONTNEED",
-	},
-	&BitFlag{
-		Value: syscall.MADV_HUGEPAGE,
-		Name:  "MADV_HUGEPAGE",
-	},
-	&BitFlag{
-		Value: syscall.MADV_HWPOISON,
-		Name:  "MADV_HWPOISON",
-	},
-	&BitFlag{
-		Value: syscall.MADV_MERGEABLE,
-		Name:  "MADV_MERGEABLE",
-	},
-	&BitFlag{
-		Value: syscall.MADV_NOHUGEPAGE,
-		Name:  "MADV_NOHUGEPAGE",
-	},
-	&Value{
-		Value: syscall.MADV_NORMAL,
-		Name:  "MADV_NORMAL",
-	},
-	&BitFlag{
-		Value: syscall.MADV_RANDOM,
-		Name:  "MADV_RANDOM",
-	},
-	&BitFlag{
-		Value: syscall.MADV_REMOVE,
-		Name:  "MADV_REMOVE",
-	},
-	&BitFlag{
-		Value: syscall.MADV_SEQUENTIAL,
-		Name:  "MADV_SEQUENTIAL",
-	},
-	&BitFlag{
-		Value: syscall.MADV_UNMERGEABLE,
-		Name:  "MADV_UNMERGEABLE",
-	},
-	&BitFlag{
-		Value: syscall.MADV_WILLNEED,
-		Name:  "MADV_WILLNEED",
-	},
+	&BitFlag{Value: syscall.MADV_DOFORK, Name: "MADV_DOFORK"},
+	&BitFlag{Value: syscall.MADV_DONTFORK, Name: "MADV_DONTFORK"},
+	&BitFlag{Value: syscall.MADV_DONTNEED, Name: "MADV_DONTNEED"},
+	&BitFlag{Value: syscall.MADV_HUGEPAGE, Name: "MADV_HUGEPAGE"},
+	&BitFlag{Value: syscall.MADV_HWPOISON, Name: "MADV_HWPOISON"},
+	&BitFlag{Value: syscall.MADV_MERGEABLE, Name: "MADV_MERGEABLE"},
+	&BitFlag{Value: syscall.MADV_NOHUGEPAGE, Name: "MADV_NOHUGEPAGE"},
+	&Value{Value: syscall.MADV_NORMAL, Name: "MADV_NORMAL"},
+	&BitFlag{Value: syscall.MADV_RANDOM, Name: "MADV_RANDOM"},
+	&BitFlag{Value: syscall.MADV_REMOVE, Name: "MADV_REMOVE"},
+	&BitFlag{Value: syscall.MADV_SEQUENTIAL, Name: "MADV_SEQUENTIAL"},
+	&BitFlag{Value: syscall.MADV_UNMERGEABLE, Name: "MADV_UNMERGEABLE"},
+	&BitFlag{Value: syscall.MADV_WILLNEED, Name: "MADV_WILLNEED"},
 }

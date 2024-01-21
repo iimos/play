@@ -108,318 +108,93 @@ func Open(val uint64) Flags {
 
 // SocketFamily are the possible socket(2) families.
 var SocketFamily = FlagSet{
-	&Value{
-		Value: unix.AF_UNSPEC,
-		Name:  "AF_UNSPEC",
-	},
-	&Value{
-		Value: unix.AF_UNIX,
-		Name:  "AF_UNIX",
-	},
-	&Value{
-		Value: unix.AF_INET,
-		Name:  "AF_INET",
-	},
-	&Value{
-		Value: unix.AF_AX25,
-		Name:  "AF_AX25",
-	},
-	&Value{
-		Value: unix.AF_IPX,
-		Name:  "AF_IPX",
-	},
-	&Value{
-		Value: unix.AF_APPLETALK,
-		Name:  "AF_APPLETALK",
-	},
-	&Value{
-		Value: unix.AF_NETROM,
-		Name:  "AF_NETROM",
-	},
-	&Value{
-		Value: unix.AF_BRIDGE,
-		Name:  "AF_BRIDGE",
-	},
-	&Value{
-		Value: unix.AF_ATMPVC,
-		Name:  "AF_ATMPVC",
-	},
-	&Value{
-		Value: unix.AF_X25,
-		Name:  "AF_X25",
-	},
-	&Value{
-		Value: unix.AF_INET6,
-		Name:  "AF_INET6",
-	},
-	&Value{
-		Value: unix.AF_ROSE,
-		Name:  "AF_ROSE",
-	},
-	&Value{
-		Value: unix.AF_DECnet,
-		Name:  "AF_DECnet",
-	},
-	&Value{
-		Value: unix.AF_NETBEUI,
-		Name:  "AF_NETBEUI",
-	},
-	&Value{
-		Value: unix.AF_SECURITY,
-		Name:  "AF_SECURITY",
-	},
-	&Value{
-		Value: unix.AF_KEY,
-		Name:  "AF_KEY",
-	},
-	&Value{
-		Value: unix.AF_NETLINK,
-		Name:  "AF_NETLINK",
-	},
-	&Value{
-		Value: unix.AF_PACKET,
-		Name:  "AF_PACKET",
-	},
-	&Value{
-		Value: unix.AF_ASH,
-		Name:  "AF_ASH",
-	},
-	&Value{
-		Value: unix.AF_ECONET,
-		Name:  "AF_ECONET",
-	},
-	&Value{
-		Value: unix.AF_ATMSVC,
-		Name:  "AF_ATMSVC",
-	},
-	&Value{
-		Value: unix.AF_RDS,
-		Name:  "AF_RDS",
-	},
-	&Value{
-		Value: unix.AF_SNA,
-		Name:  "AF_SNA",
-	},
-	&Value{
-		Value: unix.AF_IRDA,
-		Name:  "AF_IRDA",
-	},
-	&Value{
-		Value: unix.AF_PPPOX,
-		Name:  "AF_PPPOX",
-	},
-	&Value{
-		Value: unix.AF_WANPIPE,
-		Name:  "AF_WANPIPE",
-	},
-	&Value{
-		Value: unix.AF_LLC,
-		Name:  "AF_LLC",
-	},
-	&Value{
-		Value: unix.AF_IB,
-		Name:  "AF_IB",
-	},
-	&Value{
-		Value: unix.AF_MPLS,
-		Name:  "AF_MPLS",
-	},
-	&Value{
-		Value: unix.AF_CAN,
-		Name:  "AF_CAN",
-	},
-	&Value{
-		Value: unix.AF_TIPC,
-		Name:  "AF_TIPC",
-	},
-	&Value{
-		Value: unix.AF_BLUETOOTH,
-		Name:  "AF_BLUETOOTH",
-	},
-	&Value{
-		Value: unix.AF_IUCV,
-		Name:  "AF_IUCV",
-	},
-	&Value{
-		Value: unix.AF_RXRPC,
-		Name:  "AF_RXRPC",
-	},
-	&Value{
-		Value: unix.AF_ISDN,
-		Name:  "AF_ISDN",
-	},
-	&Value{
-		Value: unix.AF_PHONET,
-		Name:  "AF_PHONET",
-	},
-	&Value{
-		Value: unix.AF_IEEE802154,
-		Name:  "AF_IEEE802154",
-	},
-	&Value{
-		Value: unix.AF_CAIF,
-		Name:  "AF_CAIF",
-	},
-	&Value{
-		Value: unix.AF_ALG,
-		Name:  "AF_ALG",
-	},
-	&Value{
-		Value: unix.AF_NFC,
-		Name:  "AF_NFC",
-	},
-	&Value{
-		Value: unix.AF_VSOCK,
-		Name:  "AF_VSOCK",
-	},
+	&Value{Value: unix.AF_UNSPEC, Name: "AF_UNSPEC"},
+	&Value{Value: unix.AF_UNIX, Name: "AF_UNIX"},
+	&Value{Value: unix.AF_INET, Name: "AF_INET"},
+	&Value{Value: unix.AF_AX25, Name: "AF_AX25"},
+	&Value{Value: unix.AF_IPX, Name: "AF_IPX"},
+	&Value{Value: unix.AF_APPLETALK, Name: "AF_APPLETALK"},
+	&Value{Value: unix.AF_NETROM, Name: "AF_NETROM"},
+	&Value{Value: unix.AF_BRIDGE, Name: "AF_BRIDGE"},
+	&Value{Value: unix.AF_ATMPVC, Name: "AF_ATMPVC"},
+	&Value{Value: unix.AF_X25, Name: "AF_X25"},
+	&Value{Value: unix.AF_INET6, Name: "AF_INET6"},
+	&Value{Value: unix.AF_ROSE, Name: "AF_ROSE"},
+	&Value{Value: unix.AF_DECnet, Name: "AF_DECnet"},
+	&Value{Value: unix.AF_NETBEUI, Name: "AF_NETBEUI"},
+	&Value{Value: unix.AF_SECURITY, Name: "AF_SECURITY"},
+	&Value{Value: unix.AF_KEY, Name: "AF_KEY"},
+	&Value{Value: unix.AF_NETLINK, Name: "AF_NETLINK"},
+	&Value{Value: unix.AF_PACKET, Name: "AF_PACKET"},
+	&Value{Value: unix.AF_ASH, Name: "AF_ASH"},
+	&Value{Value: unix.AF_ECONET, Name: "AF_ECONET"},
+	&Value{Value: unix.AF_ATMSVC, Name: "AF_ATMSVC"},
+	&Value{Value: unix.AF_RDS, Name: "AF_RDS"},
+	&Value{Value: unix.AF_SNA, Name: "AF_SNA"},
+	&Value{Value: unix.AF_IRDA, Name: "AF_IRDA"},
+	&Value{Value: unix.AF_PPPOX, Name: "AF_PPPOX"},
+	&Value{Value: unix.AF_WANPIPE, Name: "AF_WANPIPE"},
+	&Value{Value: unix.AF_LLC, Name: "AF_LLC"},
+	&Value{Value: unix.AF_IB, Name: "AF_IB"},
+	&Value{Value: unix.AF_MPLS, Name: "AF_MPLS"},
+	&Value{Value: unix.AF_CAN, Name: "AF_CAN"},
+	&Value{Value: unix.AF_TIPC, Name: "AF_TIPC"},
+	&Value{Value: unix.AF_BLUETOOTH, Name: "AF_BLUETOOTH"},
+	&Value{Value: unix.AF_IUCV, Name: "AF_IUCV"},
+	&Value{Value: unix.AF_RXRPC, Name: "AF_RXRPC"},
+	&Value{Value: unix.AF_ISDN, Name: "AF_ISDN"},
+	&Value{Value: unix.AF_PHONET, Name: "AF_PHONET"},
+	&Value{Value: unix.AF_IEEE802154, Name: "AF_IEEE802154"},
+	&Value{Value: unix.AF_CAIF, Name: "AF_CAIF"},
+	&Value{Value: unix.AF_ALG, Name: "AF_ALG"},
+	&Value{Value: unix.AF_NFC, Name: "AF_NFC"},
+	&Value{Value: unix.AF_VSOCK, Name: "AF_VSOCK"},
 }
 
 // SocketType are the possible socket(2) types.
 var SocketType = FlagSet{
-	&Value{
-		Value: unix.SOCK_STREAM,
-		Name:  "SOCK_STREAM",
-	},
-	&Value{
-		Value: unix.SOCK_DGRAM,
-		Name:  "SOCK_DGRAM",
-	},
-	&Value{
-		Value: unix.SOCK_RAW,
-		Name:  "SOCK_RAW",
-	},
-	&Value{
-		Value: unix.SOCK_RDM,
-		Name:  "SOCK_RDM",
-	},
-	&Value{
-		Value: unix.SOCK_SEQPACKET,
-		Name:  "SOCK_SEQPACKET",
-	},
-	&Value{
-		Value: unix.SOCK_DCCP,
-		Name:  "SOCK_DCCP",
-	},
-	&Value{
-		Value: unix.SOCK_PACKET,
-		Name:  "SOCK_PACKET",
-	},
+	&Value{Value: unix.SOCK_STREAM, Name: "SOCK_STREAM"},
+	&Value{Value: unix.SOCK_DGRAM, Name: "SOCK_DGRAM"},
+	&Value{Value: unix.SOCK_RAW, Name: "SOCK_RAW"},
+	&Value{Value: unix.SOCK_RDM, Name: "SOCK_RDM"},
+	&Value{Value: unix.SOCK_SEQPACKET, Name: "SOCK_SEQPACKET"},
+	&Value{Value: unix.SOCK_DCCP, Name: "SOCK_DCCP"},
+	&Value{Value: unix.SOCK_PACKET, Name: "SOCK_PACKET"},
 }
 
 // SocketFlagSet are the possible socket(2) flags.
 var SocketFlagSet = FlagSet{
-	&BitFlag{
-		Value: unix.SOCK_CLOEXEC,
-		Name:  "SOCK_CLOEXEC",
-	},
-	&BitFlag{
-		Value: unix.SOCK_NONBLOCK,
-		Name:  "SOCK_NONBLOCK",
-	},
+	&BitFlag{Value: unix.SOCK_CLOEXEC, Name: "SOCK_CLOEXEC"},
+	&BitFlag{Value: unix.SOCK_NONBLOCK, Name: "SOCK_NONBLOCK"},
 }
 
 // ipProtocol are the possible socket(2) types for INET and INET6 sockets.
 var ipProtocol = FlagSet{
-	&Value{
-		Value: unix.IPPROTO_IP,
-		Name:  "IPPROTO_IP",
-	},
-	&Value{
-		Value: unix.IPPROTO_ICMP,
-		Name:  "IPPROTO_ICMP",
-	},
-	&Value{
-		Value: unix.IPPROTO_IGMP,
-		Name:  "IPPROTO_IGMP",
-	},
-	&Value{
-		Value: unix.IPPROTO_IPIP,
-		Name:  "IPPROTO_IPIP",
-	},
-	&Value{
-		Value: unix.IPPROTO_TCP,
-		Name:  "IPPROTO_TCP",
-	},
-	&Value{
-		Value: unix.IPPROTO_EGP,
-		Name:  "IPPROTO_EGP",
-	},
-	&Value{
-		Value: unix.IPPROTO_PUP,
-		Name:  "IPPROTO_PUP",
-	},
-	&Value{
-		Value: unix.IPPROTO_UDP,
-		Name:  "IPPROTO_UDP",
-	},
-	&Value{
-		Value: unix.IPPROTO_IDP,
-		Name:  "IPPROTO_IDP",
-	},
-	&Value{
-		Value: unix.IPPROTO_TP,
-		Name:  "IPPROTO_TP",
-	},
-	&Value{
-		Value: unix.IPPROTO_DCCP,
-		Name:  "IPPROTO_DCCP",
-	},
-	&Value{
-		Value: unix.IPPROTO_IPV6,
-		Name:  "IPPROTO_IPV6",
-	},
-	&Value{
-		Value: unix.IPPROTO_RSVP,
-		Name:  "IPPROTO_RSVP",
-	},
-	&Value{
-		Value: unix.IPPROTO_GRE,
-		Name:  "IPPROTO_GRE",
-	},
-	&Value{
-		Value: unix.IPPROTO_ESP,
-		Name:  "IPPROTO_ESP",
-	},
-	&Value{
-		Value: unix.IPPROTO_AH,
-		Name:  "IPPROTO_AH",
-	},
-	&Value{
-		Value: unix.IPPROTO_MTP,
-		Name:  "IPPROTO_MTP",
-	},
-	&Value{
-		Value: unix.IPPROTO_BEETPH,
-		Name:  "IPPROTO_BEETPH",
-	},
-	&Value{
-		Value: unix.IPPROTO_ENCAP,
-		Name:  "IPPROTO_ENCAP",
-	},
-	&Value{
-		Value: unix.IPPROTO_PIM,
-		Name:  "IPPROTO_PIM",
-	},
-	&Value{
-		Value: unix.IPPROTO_COMP,
-		Name:  "IPPROTO_COMP",
-	},
-	&Value{
-		Value: unix.IPPROTO_SCTP,
-		Name:  "IPPROTO_SCTP",
-	},
-	&Value{
-		Value: unix.IPPROTO_UDPLITE,
-		Name:  "IPPROTO_UDPLITE",
-	},
-	&Value{
-		Value: unix.IPPROTO_MPLS,
-		Name:  "IPPROTO_MPLS",
-	},
-	&Value{
-		Value: unix.IPPROTO_RAW,
-		Name:  "IPPROTO_RAW",
-	},
+	&Value{Value: unix.IPPROTO_IP, Name: "IPPROTO_IP"},
+	&Value{Value: unix.IPPROTO_ICMP, Name: "IPPROTO_ICMP"},
+	&Value{Value: unix.IPPROTO_IGMP, Name: "IPPROTO_IGMP"},
+	&Value{Value: unix.IPPROTO_IPIP, Name: "IPPROTO_IPIP"},
+	&Value{Value: unix.IPPROTO_TCP, Name: "IPPROTO_TCP"},
+	&Value{Value: unix.IPPROTO_EGP, Name: "IPPROTO_EGP"},
+	&Value{Value: unix.IPPROTO_PUP, Name: "IPPROTO_PUP"},
+	&Value{Value: unix.IPPROTO_UDP, Name: "IPPROTO_UDP"},
+	&Value{Value: unix.IPPROTO_IDP, Name: "IPPROTO_IDP"},
+	&Value{Value: unix.IPPROTO_TP, Name: "IPPROTO_TP"},
+	&Value{Value: unix.IPPROTO_DCCP, Name: "IPPROTO_DCCP"},
+	&Value{Value: unix.IPPROTO_IPV6, Name: "IPPROTO_IPV6"},
+	&Value{Value: unix.IPPROTO_RSVP, Name: "IPPROTO_RSVP"},
+	&Value{Value: unix.IPPROTO_GRE, Name: "IPPROTO_GRE"},
+	&Value{Value: unix.IPPROTO_ESP, Name: "IPPROTO_ESP"},
+	&Value{Value: unix.IPPROTO_AH, Name: "IPPROTO_AH"},
+	&Value{Value: unix.IPPROTO_MTP, Name: "IPPROTO_MTP"},
+	&Value{Value: unix.IPPROTO_BEETPH, Name: "IPPROTO_BEETPH"},
+	&Value{Value: unix.IPPROTO_ENCAP, Name: "IPPROTO_ENCAP"},
+	&Value{Value: unix.IPPROTO_PIM, Name: "IPPROTO_PIM"},
+	&Value{Value: unix.IPPROTO_COMP, Name: "IPPROTO_COMP"},
+	&Value{Value: unix.IPPROTO_SCTP, Name: "IPPROTO_SCTP"},
+	&Value{Value: unix.IPPROTO_UDPLITE, Name: "IPPROTO_UDPLITE"},
+	&Value{Value: unix.IPPROTO_MPLS, Name: "IPPROTO_MPLS"},
+	&Value{Value: unix.IPPROTO_RAW, Name: "IPPROTO_RAW"},
 }
 
 // SocketProtocol are the possible socket(2) protocols for each protocol family.
@@ -427,90 +202,27 @@ var SocketProtocol = map[int32]FlagSet{
 	unix.AF_INET:  ipProtocol,
 	unix.AF_INET6: ipProtocol,
 	unix.AF_NETLINK: {
-		&Value{
-			Value: unix.NETLINK_ROUTE,
-			Name:  "NETLINK_ROUTE",
-		},
-		&Value{
-			Value: unix.NETLINK_UNUSED,
-			Name:  "NETLINK_UNUSED",
-		},
-		&Value{
-			Value: unix.NETLINK_USERSOCK,
-			Name:  "NETLINK_USERSOCK",
-		},
-		&Value{
-			Value: unix.NETLINK_FIREWALL,
-			Name:  "NETLINK_FIREWALL",
-		},
-		&Value{
-			Value: unix.NETLINK_SOCK_DIAG,
-			Name:  "NETLINK_SOCK_DIAG",
-		},
-		&Value{
-			Value: unix.NETLINK_NFLOG,
-			Name:  "NETLINK_NFLOG",
-		},
-		&Value{
-			Value: unix.NETLINK_XFRM,
-			Name:  "NETLINK_XFRM",
-		},
-		&Value{
-			Value: unix.NETLINK_SELINUX,
-			Name:  "NETLINK_SELINUX",
-		},
-		&Value{
-			Value: unix.NETLINK_ISCSI,
-			Name:  "NETLINK_ISCSI",
-		},
-		&Value{
-			Value: unix.NETLINK_AUDIT,
-			Name:  "NETLINK_AUDIT",
-		},
-		&Value{
-			Value: unix.NETLINK_FIB_LOOKUP,
-			Name:  "NETLINK_FIB_LOOKUP",
-		},
-		&Value{
-			Value: unix.NETLINK_CONNECTOR,
-			Name:  "NETLINK_CONNECTOR",
-		},
-		&Value{
-			Value: unix.NETLINK_NETFILTER,
-			Name:  "NETLINK_NETFILTER",
-		},
-		&Value{
-			Value: unix.NETLINK_IP6_FW,
-			Name:  "NETLINK_IP6_FW",
-		},
-		&Value{
-			Value: unix.NETLINK_DNRTMSG,
-			Name:  "NETLINK_DNRTMSG",
-		},
-		&Value{
-			Value: unix.NETLINK_KOBJECT_UEVENT,
-			Name:  "NETLINK_KOBJECT_UEVENT",
-		},
-		&Value{
-			Value: unix.NETLINK_GENERIC,
-			Name:  "NETLINK_GENERIC",
-		},
-		&Value{
-			Value: unix.NETLINK_SCSITRANSPORT,
-			Name:  "NETLINK_SCSITRANSPORT",
-		},
-		&Value{
-			Value: unix.NETLINK_ECRYPTFS,
-			Name:  "NETLINK_ECRYPTFS",
-		},
-		&Value{
-			Value: unix.NETLINK_RDMA,
-			Name:  "NETLINK_RDMA",
-		},
-		&Value{
-			Value: unix.NETLINK_CRYPTO,
-			Name:  "NETLINK_CRYPTO",
-		},
+		&Value{Value: unix.NETLINK_ROUTE, Name: "NETLINK_ROUTE"},
+		&Value{Value: unix.NETLINK_UNUSED, Name: "NETLINK_UNUSED"},
+		&Value{Value: unix.NETLINK_USERSOCK, Name: "NETLINK_USERSOCK"},
+		&Value{Value: unix.NETLINK_FIREWALL, Name: "NETLINK_FIREWALL"},
+		&Value{Value: unix.NETLINK_SOCK_DIAG, Name: "NETLINK_SOCK_DIAG"},
+		&Value{Value: unix.NETLINK_NFLOG, Name: "NETLINK_NFLOG"},
+		&Value{Value: unix.NETLINK_XFRM, Name: "NETLINK_XFRM"},
+		&Value{Value: unix.NETLINK_SELINUX, Name: "NETLINK_SELINUX"},
+		&Value{Value: unix.NETLINK_ISCSI, Name: "NETLINK_ISCSI"},
+		&Value{Value: unix.NETLINK_AUDIT, Name: "NETLINK_AUDIT"},
+		&Value{Value: unix.NETLINK_FIB_LOOKUP, Name: "NETLINK_FIB_LOOKUP"},
+		&Value{Value: unix.NETLINK_CONNECTOR, Name: "NETLINK_CONNECTOR"},
+		&Value{Value: unix.NETLINK_NETFILTER, Name: "NETLINK_NETFILTER"},
+		&Value{Value: unix.NETLINK_IP6_FW, Name: "NETLINK_IP6_FW"},
+		&Value{Value: unix.NETLINK_DNRTMSG, Name: "NETLINK_DNRTMSG"},
+		&Value{Value: unix.NETLINK_KOBJECT_UEVENT, Name: "NETLINK_KOBJECT_UEVENT"},
+		&Value{Value: unix.NETLINK_GENERIC, Name: "NETLINK_GENERIC"},
+		&Value{Value: unix.NETLINK_SCSITRANSPORT, Name: "NETLINK_SCSITRANSPORT"},
+		&Value{Value: unix.NETLINK_ECRYPTFS, Name: "NETLINK_ECRYPTFS"},
+		&Value{Value: unix.NETLINK_RDMA, Name: "NETLINK_RDMA"},
+		&Value{Value: unix.NETLINK_CRYPTO, Name: "NETLINK_CRYPTO"},
 	},
 }
 
@@ -573,100 +285,31 @@ type MessageHeader64 struct {
 
 // MmapProt are mmap(2) memory protection modes.
 var MmapProt = FlagSet{
-	&Value{
-		Value: syscall.PROT_NONE,
-		Name:  "PROT_NONE",
-	},
-	&BitFlag{
-		Value: syscall.PROT_EXEC,
-		Name:  "PROT_EXEC",
-	},
-	&BitFlag{
-		Value: syscall.PROT_GROWSDOWN,
-		Name:  "PROT_GROWSDOWN",
-	},
-	&BitFlag{
-		Value: syscall.PROT_GROWSUP,
-		Name:  "PROT_GROWSUP",
-	},
-	&BitFlag{
-		Value: syscall.PROT_READ,
-		Name:  "PROT_READ",
-	},
-	&BitFlag{
-		Value: syscall.PROT_WRITE,
-		Name:  "PROT_WRITE",
-	},
+	&Value{Value: syscall.PROT_NONE, Name: "PROT_NONE"},
+	&BitFlag{Value: syscall.PROT_EXEC, Name: "PROT_EXEC"},
+	&BitFlag{Value: syscall.PROT_GROWSDOWN, Name: "PROT_GROWSDOWN"},
+	&BitFlag{Value: syscall.PROT_GROWSUP, Name: "PROT_GROWSUP"},
+	&BitFlag{Value: syscall.PROT_READ, Name: "PROT_READ"},
+	&BitFlag{Value: syscall.PROT_WRITE, Name: "PROT_WRITE"},
 }
 
 // MmapFlagSet is the set of mmap(2) flags.
 var MmapFlagSet = FlagSet{
-	&BitFlag{
-		Value: syscall.MAP_32BIT,
-		Name:  "MAP_32BIT",
-	},
-	&BitFlag{
-		Value: syscall.MAP_ANON,
-		Name:  "MAP_ANON",
-	},
-	&BitFlag{
-		Value: syscall.MAP_ANONYMOUS,
-		Name:  "MAP_ANONYMOUS",
-	},
-	&BitFlag{
-		Value: syscall.MAP_DENYWRITE,
-		Name:  "MAP_DENYWRITE",
-	},
-	&BitFlag{
-		Value: syscall.MAP_EXECUTABLE,
-		Name:  "MAP_EXECUTABLE",
-	},
-	&Value{
-		Value: syscall.MAP_FILE,
-		Name:  "MAP_FILE",
-	},
-	&BitFlag{
-		Value: syscall.MAP_FIXED,
-		Name:  "MAP_FIXED",
-	},
-	&BitFlag{
-		Value: syscall.MAP_GROWSDOWN,
-		Name:  "MAP_GROWSDOWN",
-	},
-	&BitFlag{
-		Value: syscall.MAP_HUGETLB,
-		Name:  "MAP_HUGETLB",
-	},
-	&BitFlag{
-		Value: syscall.MAP_LOCKED,
-		Name:  "MAP_LOCKED",
-	},
-	&BitFlag{
-		Value: syscall.MAP_NONBLOCK,
-		Name:  "MAP_NONBLOCK",
-	},
-	&BitFlag{
-		Value: syscall.MAP_NORESERVE,
-		Name:  "MAP_NORESERVE",
-	},
-	&BitFlag{
-		Value: syscall.MAP_POPULATE,
-		Name:  "MAP_POPULATE",
-	},
-	&BitFlag{
-		Value: syscall.MAP_PRIVATE,
-		Name:  "MAP_PRIVATE",
-	},
-	&BitFlag{
-		Value: syscall.MAP_SHARED,
-		Name:  "MAP_SHARED",
-	},
-	&BitFlag{
-		Value: syscall.MAP_STACK,
-		Name:  "MAP_STACK",
-	},
-	&BitFlag{
-		Value: syscall.MAP_TYPE,
-		Name:  "MAP_TYPE",
-	},
+	&BitFlag{Value: syscall.MAP_32BIT, Name: "MAP_32BIT"},
+	&BitFlag{Value: syscall.MAP_ANON, Name: "MAP_ANON"},
+	&BitFlag{Value: syscall.MAP_ANONYMOUS, Name: "MAP_ANONYMOUS"},
+	&BitFlag{Value: syscall.MAP_DENYWRITE, Name: "MAP_DENYWRITE"},
+	&BitFlag{Value: syscall.MAP_EXECUTABLE, Name: "MAP_EXECUTABLE"},
+	&Value{Value: syscall.MAP_FILE, Name: "MAP_FILE"},
+	&BitFlag{Value: syscall.MAP_FIXED, Name: "MAP_FIXED"},
+	&BitFlag{Value: syscall.MAP_GROWSDOWN, Name: "MAP_GROWSDOWN"},
+	&BitFlag{Value: syscall.MAP_HUGETLB, Name: "MAP_HUGETLB"},
+	&BitFlag{Value: syscall.MAP_LOCKED, Name: "MAP_LOCKED"},
+	&BitFlag{Value: syscall.MAP_NONBLOCK, Name: "MAP_NONBLOCK"},
+	&BitFlag{Value: syscall.MAP_NORESERVE, Name: "MAP_NORESERVE"},
+	&BitFlag{Value: syscall.MAP_POPULATE, Name: "MAP_POPULATE"},
+	&BitFlag{Value: syscall.MAP_PRIVATE, Name: "MAP_PRIVATE"},
+	&BitFlag{Value: syscall.MAP_SHARED, Name: "MAP_SHARED"},
+	&BitFlag{Value: syscall.MAP_STACK, Name: "MAP_STACK"},
+	&BitFlag{Value: syscall.MAP_TYPE, Name: "MAP_TYPE"},
 }

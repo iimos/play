@@ -196,6 +196,9 @@ const (
 
 	// Signal is a process signal.
 	Signal
+
+	// StackT is a signal stack descriptor.
+	StackT
 )
 
 // defaultFormat is the syscall argument Format to use if the actual Format is

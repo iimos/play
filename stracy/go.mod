@@ -1,6 +1,6 @@
 module github.com/iimos/play/stracy
 
-go 1.19
+go 1.21
 
 replace github.com/hugelgupf/go-strace => /proj/src/github.com/hugelgupf/go-strace
 

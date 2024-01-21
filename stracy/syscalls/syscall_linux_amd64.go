@@ -156,7 +156,7 @@ var syscalls = SyscallMap{
 	unix.SYS_RT_SIGTIMEDWAIT:        makeSyscallInfo("rt_sigtimedwait", Hex, Hex, Hex, Timespec, Hex),
 	unix.SYS_RT_SIGQUEUEINFO:        makeSyscallInfo("rt_sigqueueinfo", Hex, Hex, Hex, Hex),
 	unix.SYS_RT_SIGSUSPEND:          makeSyscallInfo("rt_sigsuspend", Hex, Hex),
-	unix.SYS_SIGALTSTACK:            makeSyscallInfo("sigaltstack", Hex, Hex, Hex),
+	unix.SYS_SIGALTSTACK:            makeSyscallInfo("sigaltstack", Hex, StackT, StackT),
 	unix.SYS_UTIME:                  makeSyscallInfo("utime", Hex, Path, Utimbuf),
 	unix.SYS_MKNOD:                  makeSyscallInfo("mknod", Hex, Path, Mode, Hex),
 	unix.SYS_USELIB:                 makeSyscallInfo("uselib", Hex, Hex),

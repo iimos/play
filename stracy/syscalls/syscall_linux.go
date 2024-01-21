@@ -154,6 +154,35 @@ func stringVector(t strace.Task, addr strace.Addr) string {
 	return fmt.Sprintf("%q", vs)
 }
 
+func readStruct[T any](t strace.Task, addr strace.Addr) (*T, error) {
+	if addr == 0 {
+		return nil, nil
+	}
+	var x T
+	if _, err := t.Read(addr, &x); err != nil {
+		return nil, fmt.Errorf("%#x (error decoding: %s)", addr, err)
+	}
+	return &x, nil
+}
+
+// stack_t
+type Stackt struct {
+	Ss_sp    uint64
+	Ss_flags int32
+	Ss_size  uint64
+}
+
+func stack_t(t strace.Task, addr strace.Addr) any {
+	st, err := readStruct[Stackt](t, addr)
+	if err != nil {
+		return err.Error()
+	}
+	if st == nil {
+		return Arg{Type: "stack_t", Value: nil}
+	}
+	return Arg{Type: "stack_t", Value: *st}
+}
+
 func rusage(t strace.Task, addr strace.Addr) string {
 	if addr == 0 {
 		return "null"
@@ -323,13 +352,10 @@ func ArgumentSimple(t strace.Task, format Type, arg strace.SyscallArgument, maxi
 	case ItimerType:
 		return abi.ItimerTypes.Parse(uint64(arg.Int()))
 	case MMapProt:
-		// return flags(mapProtFlags[:], t, int(arg.Int()))
 		return abi.MmapProt.Parse(uint64(arg.Int()))
 	case MMapFlags:
-		// return flags(mapFlags[:], t, int(arg.Int()))
 		return abi.MmapFlagSet.Parse(uint64(arg.Int()))
 	case MADVFlags:
-		// return flags(madvFlags[:], t, int(arg.Int()))
 		return abi.MadviseFlagSet.Parse(uint64(arg.Int()))
 	case Signal:
 		return SignalString(unix.Signal(arg.Int()))
@@ -383,6 +409,8 @@ func ArgumentSimple(t strace.Task, format Type, arg strace.SyscallArgument, maxi
 		return rusage(t, arg.Pointer())
 	case CPUSet:
 		return cpuSet(t, arg.Pointer())
+	case StackT:
+		return stack_t(t, arg.Pointer())
 	}
 	return "0x" + strconv.FormatUint(arg.Uint64(), 16)
 }

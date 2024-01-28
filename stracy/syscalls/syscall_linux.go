@@ -74,7 +74,7 @@ func timespec(t strace.Task, addr strace.Addr) string {
 	// return fmt.Sprintf("%#x {sec=%v nsec=%v}", addr, tim.Sec, tim.Nsec)
 }
 
-func timeval(t strace.Task, addr strace.Addr) interface{} {
+func timeval(t strace.Task, addr strace.Addr) any {
 	if addr == 0 {
 		return nil
 	}
@@ -87,7 +87,7 @@ func timeval(t strace.Task, addr strace.Addr) interface{} {
 	return tim
 }
 
-func utimbuf(t strace.Task, addr strace.Addr) interface{} {
+func utimbuf(t strace.Task, addr strace.Addr) any {
 	if addr == 0 {
 		return nil
 	}
@@ -105,7 +105,7 @@ func fileMode(mode uint32) string {
 	return fmt.Sprintf("%#09o", mode&0x1ff)
 }
 
-func stat(t strace.Task, addr strace.Addr) interface{} {
+func stat(t strace.Task, addr strace.Addr) any {
 	if addr == 0 {
 		return nil
 	}
@@ -118,7 +118,7 @@ func stat(t strace.Task, addr strace.Addr) interface{} {
 	return Arg{
 		Type:  "stat",
 		Value: stat,
-		Formated: map[string]interface{}{
+		Formated: map[string]any{
 			"Mode": fs.FileMode(stat.Mode).String(),
 			"Size": units.BytesSize(float64(stat.Size)),
 		},
@@ -195,7 +195,7 @@ func rusage(t strace.Task, addr strace.Addr) string {
 	return fmt.Sprintf("%+v", ru)
 }
 
-func cpuSet(t strace.Task, addr strace.Addr) interface{} {
+func cpuSet(t strace.Task, addr strace.Addr) any {
 	if addr == 0 {
 		return nil
 	}
@@ -268,8 +268,8 @@ func flags(specs []flagSpec, t strace.Task, bits int) Arg {
 // ArgumentsStrings fills arguments for a system call. If an argument
 // cannot be interpreted, then a hex value will be used. Note that
 // a full output slice will always be provided, that is len(return) == len(args).
-func ArgumentsStrings(si SyscallInfo, t strace.Task, args strace.SyscallArguments, rval strace.SyscallArgument, maximumBlobSize uint) []interface{} {
-	output := make([]interface{}, len(si.ArgTypes))
+func ArgumentsStrings(si SyscallInfo, t strace.Task, args strace.SyscallArguments, rval strace.SyscallArgument, maximumBlobSize uint) []any {
+	output := make([]any, len(si.ArgTypes))
 	for i, format := range si.ArgTypes {
 		if i >= len(args) {
 			break
@@ -308,7 +308,7 @@ func ArgumentsStrings(si SyscallInfo, t strace.Task, args strace.SyscallArgument
 	return output
 }
 
-func ArgumentSimple(t strace.Task, format Type, arg strace.SyscallArgument, maximumBlobSize uint) interface{} {
+func ArgumentSimple(t strace.Task, format Type, arg strace.SyscallArgument, maximumBlobSize uint) any {
 	switch format {
 	// Available on syscall enter:
 	// case SendMsgHdr:

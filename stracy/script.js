@@ -107,28 +107,39 @@ function renderString(str) {
 }
 
 function renderStruct(obj, formated, header) {
-    header = header || "{...}"
-    let popupHtml = renderStructPopup(obj, formated)
+    let empty = false
+    if (!header) {
+        if (obj === null || obj === undefined) {
+            header = "null"
+            empty = true
+        } else if (Object.keys(obj).length === 0) {
+            header = "{}"
+            empty = true
+        } else {
+            header = "{...}"
+        }
+    }
+
+    const popupHtml = renderStructPopup(obj, formated)
     const container = el('strace_struct')
     const head = el('strace_struct_header')
     head.textContent = header
     container.append(head)
-    tippy(container, {
-        // trigger: 'click',
-        content: popupHtml,
-        // appendTo: container,
-        appendTo: () => document.body,
-        allowHTML: true,
-        interactive: true,
-        placement: 'bottom-start',
-        offset: [0, 0],
-        arrow: false,
-    })
+
+    if (!empty) {
+        tippy(container, {
+            // trigger: 'click',
+            content: popupHtml,
+            // appendTo: container,
+            appendTo: () => document.body,
+            allowHTML: true,
+            interactive: true,
+            placement: 'bottom-start',
+            offset: [0, 0],
+            arrow: false,
+        })
+    }
     return container
-    // return `<div class="strace_struct">
-    //     <div class="strace_struct_header">${escapeHtml(header)}</div>
-    //     ${popupHtml}
-    // </div>`
 }
 
 function renderStructPopup(obj, formated) {

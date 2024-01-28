@@ -48,6 +48,9 @@ function renderArg(arg) {
         case "stack_t":
             child = renderStruct(arg.Value, arg.Formated)
             break
+        case "msghdr":
+            child = renderStruct(arg.Value, arg.Formated)
+            break
         default:
             html = renderAnything(arg.Value, arg.Formated)
             break

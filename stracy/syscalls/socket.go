@@ -157,25 +157,37 @@ func cmsghdr(t strace.Task, addr strace.Addr, length uint64, maxBytes uint64) st
 	return fmt.Sprintf("%#x %s", addr, strings.Join(strs, ", "))
 }
 
-func msghdr(t strace.Task, addr strace.Addr, printContent bool, maxBytes uint64) string {
-	var msg abi.MessageHeader64
-	if _, err := t.Read(addr, &msg); err != nil {
-		return fmt.Sprintf("%#x (error decoding msghdr: %v)", addr, err)
+func msghdr(t strace.Task, addr strace.Addr, printContent bool, maxBytes uint64) any {
+	msg, err := readStruct[abi.MessageHeader64](t, addr)
+	if err != nil {
+		return err.Error()
+	}
+	if msg == nil {
+		return Arg{Type: "msghdr", Value: nil}
+	}
+	return Arg{
+		Type:  "msghdr",
+		Value: *msg,
+		Formated: map[string]interface{}{
+			"Name":    fmt.Sprintf("%#x", msg.Name),
+			"Control": cmsghdr(t, strace.Addr(msg.Control), msg.ControlLen, maxBytes),
+			"Iov":     iovecs(t, strace.Addr(msg.Iov), int(msg.IovLen), printContent, maxBytes), //todo: fix
+		},
 	}
 
-	s := fmt.Sprintf(
-		"%#x {name=%#x, namelen=%d, iovecs=%s",
-		addr,
-		msg.Name,
-		msg.NameLen,
-		iovecs(t, strace.Addr(msg.Iov), int(msg.IovLen), printContent, maxBytes),
-	)
-	if printContent {
-		s = fmt.Sprintf("%s, control={%s}", s, cmsghdr(t, strace.Addr(msg.Control), msg.ControlLen, maxBytes))
-	} else {
-		s = fmt.Sprintf("%s, control=%#x, control_len=%d", s, msg.Control, msg.ControlLen)
-	}
-	return fmt.Sprintf("%s, flags=%d}", s, msg.Flags)
+	// s := fmt.Sprintf(
+	// 	"%#x {name=%#x, namelen=%d, iovecs=%s",
+	// 	addr,
+	// 	msg.Name,
+	// 	msg.NameLen,
+	// 	iovecs(t, strace.Addr(msg.Iov), int(msg.IovLen), printContent, maxBytes),
+	// )
+	// if printContent {
+	// 	s = fmt.Sprintf("%s, control={%s}", s, cmsghdr(t, strace.Addr(msg.Control), msg.ControlLen, maxBytes))
+	// } else {
+	// 	s = fmt.Sprintf("%s, control=%#x, control_len=%d", s, msg.Control, msg.ControlLen)
+	// }
+	// return fmt.Sprintf("%s, flags=%d}", s, msg.Flags)
 }
 
 func sockAddr(t strace.Task, addr strace.Addr, length uint32) string {

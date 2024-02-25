@@ -760,56 +760,17 @@ func Futex(op uint64) Flags {
 
 // MadviseFlagSet are madvise(2) posible flags.
 var MadviseFlagSet = FlagSet{
-	&BitFlag{
-		Value: syscall.MADV_DOFORK,
-		Name:  "MADV_DOFORK",
-	},
-	&BitFlag{
-		Value: syscall.MADV_DONTFORK,
-		Name:  "MADV_DONTFORK",
-	},
-	&BitFlag{
-		Value: syscall.MADV_DONTNEED,
-		Name:  "MADV_DONTNEED",
-	},
-	&BitFlag{
-		Value: syscall.MADV_HUGEPAGE,
-		Name:  "MADV_HUGEPAGE",
-	},
-	&BitFlag{
-		Value: syscall.MADV_HWPOISON,
-		Name:  "MADV_HWPOISON",
-	},
-	&BitFlag{
-		Value: syscall.MADV_MERGEABLE,
-		Name:  "MADV_MERGEABLE",
-	},
-	&BitFlag{
-		Value: syscall.MADV_NOHUGEPAGE,
-		Name:  "MADV_NOHUGEPAGE",
-	},
-	&Value{
-		Value: syscall.MADV_NORMAL,
-		Name:  "MADV_NORMAL",
-	},
-	&BitFlag{
-		Value: syscall.MADV_RANDOM,
-		Name:  "MADV_RANDOM",
-	},
-	&BitFlag{
-		Value: syscall.MADV_REMOVE,
-		Name:  "MADV_REMOVE",
-	},
-	&BitFlag{
-		Value: syscall.MADV_SEQUENTIAL,
-		Name:  "MADV_SEQUENTIAL",
-	},
-	&BitFlag{
-		Value: syscall.MADV_UNMERGEABLE,
-		Name:  "MADV_UNMERGEABLE",
-	},
-	&BitFlag{
-		Value: syscall.MADV_WILLNEED,
-		Name:  "MADV_WILLNEED",
-	},
+	&BitFlag{Value: syscall.MADV_DOFORK, Name: "MADV_DOFORK"},
+	&BitFlag{Value: syscall.MADV_DONTFORK, Name: "MADV_DONTFORK"},
+	&BitFlag{Value: syscall.MADV_DONTNEED, Name: "MADV_DONTNEED"},
+	&BitFlag{Value: syscall.MADV_HUGEPAGE, Name: "MADV_HUGEPAGE"},
+	&BitFlag{Value: syscall.MADV_HWPOISON, Name: "MADV_HWPOISON"},
+	&BitFlag{Value: syscall.MADV_MERGEABLE, Name: "MADV_MERGEABLE"},
+	&BitFlag{Value: syscall.MADV_NOHUGEPAGE, Name: "MADV_NOHUGEPAGE"},
+	&Value{Value: syscall.MADV_NORMAL, Name: "MADV_NORMAL"},
+	&BitFlag{Value: syscall.MADV_RANDOM, Name: "MADV_RANDOM"},
+	&BitFlag{Value: syscall.MADV_REMOVE, Name: "MADV_REMOVE"},
+	&BitFlag{Value: syscall.MADV_SEQUENTIAL, Name: "MADV_SEQUENTIAL"},
+	&BitFlag{Value: syscall.MADV_UNMERGEABLE, Name: "MADV_UNMERGEABLE"},
+	&BitFlag{Value: syscall.MADV_WILLNEED, Name: "MADV_WILLNEED"},
 }

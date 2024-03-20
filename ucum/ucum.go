@@ -6,6 +6,10 @@ import (
 )
 
 type Unit struct {
+	Code      string
+	Kind      string
+	Metric    bool
+	Magnitude float32
 }
 
 func Parse(unit []byte) (Unit, error) {

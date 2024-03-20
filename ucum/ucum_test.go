@@ -21,6 +21,10 @@ func TestParse(t *testing.T) {
 			want:  Unit{},
 		},
 		{
+			input: "{}",
+			want:  Unit{},
+		},
+		{
 			input: "kg10/2",
 			want:  Unit{},
 		},
@@ -46,6 +50,14 @@ func TestParse(t *testing.T) {
 		},
 		{
 			input: "ng/(24.h)",
+			want:  Unit{},
+		},
+		{
+			input: "g/h/m2",
+			want:  Unit{},
+		},
+		{
+			input: "((kg)/(m.(s)))",
 			want:  Unit{},
 		},
 	}

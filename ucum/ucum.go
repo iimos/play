@@ -10,7 +10,7 @@ type Unit struct {
 
 func Parse(unit []byte) (Unit, error) {
 	p := newParser(unit)
-	expr := p.readExpr()
+	expr := p.readExpr(false)
 
 	fmt.Printf("%q = ", string(unit))
 	printExpr(expr)
@@ -38,11 +38,12 @@ func printExpr(expr []any) {
 
 // Example: 3.km2 = component{ multiplier: 3, magnitude: 1000, unit: "m", exponent: 2}
 type component struct {
-	magnitude  float32 // prefix as a number
-	unit       []byte
-	exponent   int
-	multiplier int
-	annotation []byte
+	magnitude     float32 // prefix as a number
+	unit          []byte
+	exponent      int
+	multiplier    int
+	annotation    []byte
+	hasAnnotation bool // to support empty annotations
 }
 
 func (c component) String() string {
@@ -53,7 +54,7 @@ func (c component) String() string {
 	if c.exponent != 1 {
 		return s + "^" + strconv.Itoa(c.exponent)
 	}
-	if len(c.annotation) > 0 {
+	if c.hasAnnotation {
 		return s + "{" + string(c.annotation) + "}"
 	}
 	return s
@@ -64,6 +65,7 @@ type parser struct {
 	head    int
 	tail    int
 	results []any
+	error   error
 }
 
 func newParser(unit []byte) *parser {
@@ -76,9 +78,9 @@ func newParser(unit []byte) *parser {
 
 type operation byte
 
-func (p *parser) readExpr() []any {
+func (p *parser) readExpr(insideBrackets bool) []any {
 	expr := make([]any, 0)
-	for p.head < p.tail {
+	for p.head < p.tail && p.error == nil {
 		t := p.buf[p.head]
 		switch t {
 		case '.':
@@ -89,11 +91,15 @@ func (p *parser) readExpr() []any {
 			p.head++
 		case '(':
 			p.head++
-			subexpr := p.readExpr()
+			subexpr := p.readExpr(true)
 			expr = append(expr, subexpr)
-			p.skipByte(')')
 		case ')':
-			return expr
+			if insideBrackets {
+				p.head++
+				return expr
+			}
+			p.reportError("unexpected ')'")
+			return nil
 		default:
 			if c, ok := p.readTerm(); ok {
 				expr = append(expr, c)
@@ -107,6 +113,7 @@ func (p *parser) readTerm() (component, bool) {
 	if p.head == p.tail {
 		return component{}, false
 	}
+	orig := p.head
 	c := component{
 		magnitude:  1,
 		exponent:   1,
@@ -114,14 +121,21 @@ func (p *parser) readTerm() (component, bool) {
 	}
 	c.magnitude = p.readPrefix()
 	c.unit = p.readUnit()
+	if len(c.unit) == 0 && c.magnitude != 1 {
+		// we have interpreted the unit as a prefix, so roll head back and reread unit
+		p.head = orig
+		c.magnitude = 1
+		c.unit = p.readUnit()
+	}
 	if exp, ok := p.tryReadExponent(); ok {
 		if len(c.unit) > 0 {
 			c.exponent = exp
 		} else {
+			// exponent without unit is just a number
 			c.multiplier = exp
 		}
 	}
-	c.annotation = p.readAnnotation()
+	c.annotation, c.hasAnnotation = p.readAnnotation()
 	return c, true
 }
 
@@ -222,6 +236,8 @@ func (p *parser) readPrefix() float32 {
 	c1 := p.readByte()
 	c2 := p.readByte()
 
+	// todo: "dar" must be parsed as deci-are
+
 	// read the longest prefix first
 	if n, ok := prefix2magnitude[256*int(c1)+int(c2)]; ok {
 		return n
@@ -256,8 +272,11 @@ func (p *parser) tryReadExponent() (exp int, ok bool) {
 	}
 }
 
-func (p *parser) yield(x any) {
-	p.results = append(p.results, x)
+func (p *parser) reportError(msg string) {
+	if p.error != nil {
+		return
+	}
+	p.error = fmt.Errorf("%s, at position %d", msg, p.head)
 }
 
 func (p *parser) readDigits() (num int) {
@@ -281,13 +300,13 @@ func safeIntToMultiple10() int {
 	return 0xffffffffffffffff/10 - 1
 }
 
-func (p *parser) readAnnotation() []byte {
+func (p *parser) readAnnotation() (annot []byte, found bool) {
 	if p.head == p.tail {
-		return nil
+		return nil, false
 	}
 
 	if p.buf[p.head] != '{' {
-		return nil
+		return nil, false
 	}
 
 	from := p.head + 1
@@ -295,12 +314,12 @@ func (p *parser) readAnnotation() []byte {
 		if p.buf[p.head] == '}' {
 			ret := p.buf[from:p.head]
 			p.head++
-			return ret
+			return ret, true
 		}
 		p.head++
 	}
-	// todo error
-	return nil
+	p.reportError("unterminated annotation, \"}\" expected")
+	return nil, false
 }
 
 func (p *parser) readByte() byte {
@@ -313,12 +332,13 @@ func (p *parser) readByte() byte {
 }
 
 func (p *parser) unreadByte() {
-	p.head--
+	if p.error == nil {
+		p.head--
+	}
 }
 
 func (p *parser) skipByte(c byte) {
 	if p.readByte() != c {
-		// error
-		panic(fmt.Errorf("expected %c, got %c", c, p.buf[p.head-1]))
+		p.reportError(fmt.Sprintf("expect %c", c))
 	}
 }

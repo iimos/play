@@ -2,156 +2,193 @@ package ucum
 
 import (
 	"fmt"
+	"math/big"
 	"strconv"
 )
 
 type Unit struct {
+	components []component
+}
+
+type Atom struct {
 	Code      string
 	Kind      string
+	Magnitude float64
 	Metric    bool
-	Magnitude float32
 }
 
 func Parse(unit []byte) (Unit, error) {
 	p := newParser(unit)
-	expr := p.readExpr(false)
+	p.readTerm(false, 1)
+	if p.error != nil {
+		return Unit{}, p.error
+	}
 
 	fmt.Printf("%q = ", string(unit))
-	printExpr(expr)
+	printExpr(p.coef, p.results)
 	fmt.Print("\n")
 
-	return Unit{}, nil
+	return Unit{
+		components: p.results,
+	}, nil
 }
 
-func printExpr(expr []any) {
-	for _, x := range expr {
-		switch c := x.(type) {
-		case operation:
-			fmt.Printf("%s ", string(c))
-		case []any:
-			fmt.Print("(")
-			printExpr(c)
-			fmt.Print(") ")
-		case component:
-			fmt.Printf("%s ", c.String())
-		default:
-			panic(fmt.Sprintf("unknown type %T", c))
-		}
-	}
-}
-
-// Example: 3.km2 = component{ multiplier: 3, magnitude: 1000, unit: "m", exponent: 2}
+// Example: 3.km2 = component{ multiplier: 3, atom: Atom{Code:"km", ...}, exponent: 2}
 type component struct {
-	magnitude     float32 // prefix as a number
-	unit          []byte
+	atom          Atom
 	exponent      int
-	multiplier    int
 	annotation    []byte
 	hasAnnotation bool // to support empty annotations
 }
 
-func (c component) String() string {
-	s := magnitude2prefix[c.magnitude] + string(c.unit)
-	if c.multiplier > 1 {
-		return strconv.Itoa(c.multiplier) + s
-	}
-	if c.exponent != 1 {
-		return s + "^" + strconv.Itoa(c.exponent)
-	}
-	if c.hasAnnotation {
-		return s + "{" + string(c.annotation) + "}"
-	}
-	return s
+type groupKey struct {
+	atom       *Atom
+	annotation string
 }
 
 type parser struct {
-	buf     []byte
-	head    int
-	tail    int
-	results []any
-	error   error
+	buf        []byte
+	head       int
+	tail       int
+	results    []component
+	components map[groupKey]int // <unit atom, annotation> -> exponent
+	coef       *big.Rat
+	error      error
 }
 
 func newParser(unit []byte) *parser {
 	return &parser{
-		buf:  unit,
-		head: 0,
-		tail: len(unit),
+		buf:     unit,
+		head:    0,
+		tail:    len(unit),
+		results: make([]component, 0),
+		coef:    big.NewRat(1, 1),
 	}
 }
 
-type operation byte
-
-func (p *parser) readExpr(insideBrackets bool) []any {
-	expr := make([]any, 0)
+func (p *parser) readTerm(insideBrackets bool, termExponent int) {
+	componentExponent := 1
 	for p.head < p.tail && p.error == nil {
-		t := p.buf[p.head]
-		switch t {
+		p.readComponent(termExponent * componentExponent)
+
+		if p.head == p.tail {
+			break
+		}
+
+		c := p.buf[p.head]
+		switch c {
 		case '.':
-			expr = append(expr, operation('.'))
+			componentExponent = 1
 			p.head++
 		case '/':
-			expr = append(expr, operation('/'))
+			componentExponent = -1
 			p.head++
-		case '(':
-			p.head++
-			subexpr := p.readExpr(true)
-			expr = append(expr, subexpr)
 		case ')':
 			if insideBrackets {
 				p.head++
-				return expr
+				return
 			}
-			p.reportError("unexpected ')'")
-			return nil
+			p.reportError(p.head, `unexpected ")"`)
+			return
 		default:
-			if c, ok := p.readTerm(); ok {
-				expr = append(expr, c)
-			}
+			p.reportError(p.head, `unexpected symbol "%c"`, c)
 		}
 	}
-	return expr
 }
 
-func (p *parser) readTerm() (component, bool) {
+func (p *parser) readComponent(exponent int) {
 	if p.head == p.tail {
+		p.reportError(p.head, `unexpected end of unit`)
+		return
+	}
+
+	t := p.buf[p.head]
+	if t == '(' {
+		p.head++
+		p.readTerm(true, exponent)
+		return
+	}
+	if c, ok := p.readAnnotatable(exponent); ok {
+		p.results = append(p.results, c)
+		return
+	}
+	p.reportError(p.head, `unexpected symbol "%c"`, t)
+	return
+}
+
+func (p *parser) readAnnotatable(exponent int) (component, bool) {
+	origHead := p.head
+	if p.head == p.tail {
+		p.reportError(p.head, `unexpected end of unit`)
 		return component{}, false
 	}
-	orig := p.head
+
 	c := component{
-		magnitude:  1,
-		exponent:   1,
-		multiplier: 1,
+		exponent: exponent,
 	}
-	c.magnitude = p.readPrefix()
-	c.unit = p.readUnit()
-	if len(c.unit) == 0 && c.magnitude != 1 {
-		// we have interpreted the unit as a prefix, so roll head back and reread unit
-		p.head = orig
-		c.magnitude = 1
-		c.unit = p.readUnit()
-	}
-	if exp, ok := p.tryReadExponent(); ok {
-		if len(c.unit) > 0 {
-			c.exponent = exp
-		} else {
-			// exponent without unit is just a number
-			c.multiplier = exp
+	var (
+		multiplier           int64 = 1
+		atomOk, multiplierOk bool
+	)
+
+	atom, atomOk := p.readAtom()
+	if atomOk {
+		c.atom = atom
+		if exp, ok := p.tryReadExponent(); ok {
+			c.exponent *= exp
+		}
+	} else {
+		// exponent without unit is just a number
+		if num, ok := p.readDigits(1); ok {
+			multiplierOk = true
+			multiplier = int64(num)
 		}
 	}
 	c.annotation, c.hasAnnotation = p.readAnnotation()
+
+	if !multiplierOk && !atomOk && !c.hasAnnotation {
+		p.reportError(origHead, `unexpected symbol "%c"`, p.buf[origHead])
+		return component{}, false
+	}
+
+	var coef *big.Rat
+	switch true {
+	case atomOk:
+		coef = floatToRational(c.atom.Magnitude)
+		c.atom.Magnitude = 1
+	case multiplierOk:
+		coef = new(big.Rat).SetFrac64(multiplier, 1)
+	}
+	if atomOk || multiplierOk {
+		pow(coef, c.exponent)
+		p.coef.Mul(p.coef, coef) // combine global coefficient with local one
+		//fmt.Printf("coef=%s p.coef=%s\n", coef, p.coef)
+	}
+
 	return c, true
 }
 
-func (p *parser) readUnit() []byte {
+func pow(base *big.Rat, exp int) {
+	if exp < 0 {
+		base = base.Inv(base)
+		exp = -exp
+	} else if exp == 0 {
+		base.SetFrac64(0, 1)
+	}
+	for i := exp; i > 1; i-- {
+		base.Mul(base, base)
+	}
+}
 
-	// 3) A terminal unit symbol can not consist of only digits (‘ 0’–‘9’) because those digit strings
+func (p *parser) readAtom() (Atom, bool) {
+
+	// 3) A terminal unit symbol can not consist of only digits (‘0’–‘9’) because those digit strings
 	//    are interpreted as positive integer numbers. However, a symbol “10*” is allowed because it ends
 	//    with a non-digit allowed to be part of a symbol.
 
 	from := p.head
 
-	// skip digits at the beginning of the unit
+	// skip digits at the beginning of the unit atom
 	for p.head < p.tail {
 		switch p.buf[p.head] {
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
@@ -172,88 +209,17 @@ loop:
 		p.head++
 	}
 
-	// if the unit contains only digits, it is a number and not a unit so roll back
+	// if the unit atom contains only digits, it is a number and not a unit so roll back
 	if endOfDigits == p.head {
 		p.head = from
-		return nil
+		return Atom{}, false
 	}
 
-	return p.buf[from:p.head]
-}
-
-var prefix2magnitude = map[int]float32{
-	'Y':           1e24,
-	'Z':           1e21,
-	'E':           1e18,
-	'P':           1e15,
-	'T':           1e12,
-	'G':           1e9,
-	'M':           1e6,
-	'k':           1e3,
-	'h':           1e2,
-	256*'d' + 'a': 1e1,
-	'd':           1e-1,
-	'c':           1e-2,
-	'm':           1e-3,
-	'u':           1e-6,
-	'n':           1e-9,
-	'p':           1e-12,
-	'f':           1e-15,
-	'a':           1e-18,
-	'z':           1e-21,
-	'y':           1e-24,
-	256*'K' + 'i': 1024,
-	256*'M' + 'i': 1048576,
-	256*'G' + 'i': 1073741824,
-	256*'T' + 'i': 1099511627776,
-}
-
-var magnitude2prefix = map[float32]string{
-	1e24:          "Y",
-	1e21:          "Z",
-	1e18:          "E",
-	1e15:          "P",
-	1e12:          "T",
-	1e9:           "G",
-	1e6:           "M",
-	1e3:           "k",
-	1e2:           "h",
-	1e1:           "da",
-	1e-1:          "d",
-	1e-2:          "c",
-	1e-3:          "m",
-	1e-6:          "u",
-	1e-9:          "n",
-	1e-12:         "p",
-	1e-15:         "f",
-	1e-18:         "a",
-	1e-21:         "z",
-	1e-24:         "y",
-	1024:          "Ki",
-	1048576:       "Mi",
-	1073741824:    "Gi",
-	1099511627776: "Ti",
-}
-
-func (p *parser) readPrefix() float32 {
-	orig := p.head
-	c1 := p.readByte()
-	c2 := p.readByte()
-
-	// todo: "dar" must be parsed as deci-are
-
-	// read the longest prefix first
-	if n, ok := prefix2magnitude[256*int(c1)+int(c2)]; ok {
-		return n
+	unit, ok := ucumAtoms[string(p.buf[from:p.head])]
+	if !ok {
+		p.reportError(from, "unknown unit %q", string(p.buf[from:p.head]))
 	}
-	if n, ok := prefix2magnitude[int(c1)]; ok {
-		if c2 > 0 {
-			p.unreadByte()
-		}
-		return n
-	}
-	p.head = orig
-	return 1
+	return unit, true
 }
 
 func (p *parser) tryReadExponent() (exp int, ok bool) {
@@ -265,36 +231,40 @@ func (p *parser) tryReadExponent() (exp int, ok bool) {
 	switch t {
 	case '+':
 		p.head++
-		return p.readDigits(), true
+		return p.readDigits(1)
 	case '-':
 		p.head++
-		return -1 * p.readDigits(), true
+		return p.readDigits(-1)
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-		return p.readDigits(), true
+		return p.readDigits(1)
 	default:
 		return 0, false
 	}
 }
 
-func (p *parser) reportError(msg string) {
+func (p *parser) reportError(position int, msg string, args ...any) {
 	if p.error != nil {
 		return
 	}
-	p.error = fmt.Errorf("%s, at position %d", msg, p.head)
+	if len(args) > 0 {
+		msg = fmt.Sprintf(msg, args...)
+	}
+	p.error = fmt.Errorf("ucum: %s at position %d", msg, position)
 }
 
-func (p *parser) readDigits() (num int) {
+func (p *parser) readDigits(sign int) (num int, ok bool) {
 	for p.head < p.tail {
 		d := p.buf[p.head]
 		switch d {
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			num = 10*num + int(d-'0')
+			ok = true
 			p.head++
 			continue
 		}
 		break
 	}
-	return num
+	return sign * num, ok
 }
 
 func safeIntToMultiple10() int {
@@ -322,7 +292,7 @@ func (p *parser) readAnnotation() (annot []byte, found bool) {
 		}
 		p.head++
 	}
-	p.reportError("unterminated annotation, \"}\" expected")
+	p.reportError(p.head, "unterminated annotation, \"}\" expected")
 	return nil, false
 }
 
@@ -343,6 +313,20 @@ func (p *parser) unreadByte() {
 
 func (p *parser) skipByte(c byte) {
 	if p.readByte() != c {
-		p.reportError(fmt.Sprintf("expect %c", c))
+		p.reportError(p.head, "expect %c", c)
 	}
+}
+
+func floatToRational(f float64) *big.Rat {
+	isInt := float64(int64(f)) == f
+	if isInt {
+		return big.NewRat(int64(f), 1)
+	}
+	f *= 1e24
+	isInt = float64(int64(f)) == f
+	if !isInt {
+		panic("can't convert float to big.Rat")
+	}
+	big1e24 := new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil) // 1e24
+	return new(big.Rat).SetFrac(big.NewInt(int64(f)), big1e24)
 }

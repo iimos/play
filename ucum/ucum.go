@@ -7,7 +7,13 @@ import (
 )
 
 type Unit struct {
-	components []component
+	orig       string
+	components map[componentKey]int // <unit atom, annotation> -> exponent
+	coef       *big.Rat
+}
+
+func (u *Unit) String() string {
+	return u.orig
 }
 
 type Atom struct {
@@ -23,26 +29,15 @@ func Parse(unit []byte) (Unit, error) {
 	if p.error != nil {
 		return Unit{}, p.error
 	}
-
-	fmt.Printf("%q = ", string(unit))
-	printExpr(p.coef, p.results)
-	fmt.Print("\n")
-
 	return Unit{
-		components: p.results,
+		orig:       string(unit),
+		components: p.components,
+		coef:       p.coef,
 	}, nil
 }
 
-// Example: 3.km2 = component{ multiplier: 3, atom: Atom{Code:"km", ...}, exponent: 2}
-type component struct {
-	atom          Atom
-	exponent      int
-	annotation    []byte
-	hasAnnotation bool // to support empty annotations
-}
-
-type groupKey struct {
-	atom       *Atom
+type componentKey struct {
+	atomCode   string
 	annotation string
 }
 
@@ -50,122 +45,126 @@ type parser struct {
 	buf        []byte
 	head       int
 	tail       int
-	results    []component
-	components map[groupKey]int // <unit atom, annotation> -> exponent
+	components map[componentKey]int // <unit atom, annotation> -> exponent
 	coef       *big.Rat
 	error      error
 }
 
 func newParser(unit []byte) *parser {
 	return &parser{
-		buf:     unit,
-		head:    0,
-		tail:    len(unit),
-		results: make([]component, 0),
-		coef:    big.NewRat(1, 1),
+		buf:        unit,
+		head:       0,
+		tail:       len(unit),
+		components: make(map[componentKey]int),
+		coef:       big.NewRat(1, 1),
 	}
 }
 
+//// https://ucum.org/ucum#section-Syntax-Rules
+//func (p *parser) readMainTerm() {
+//	b := p.readByte()
+//	switch {
+//	case '/':
+//		p.readTerm(false, -1)
+//	}
+//}
+
+// https://ucum.org/ucum#section-Syntax-Rules
 func (p *parser) readTerm(insideBrackets bool, termExponent int) {
+	start := p.head
 	componentExponent := 1
-	for p.head < p.tail && p.error == nil {
-		p.readComponent(termExponent * componentExponent)
-
-		if p.head == p.tail {
-			break
-		}
-
-		c := p.buf[p.head]
-		switch c {
-		case '.':
-			componentExponent = 1
-			p.head++
-		case '/':
+	for p.error == nil {
+		// The division operator can be used as a binary and unary operator, i.e. a leading solidus will invert the unit that directly follows it.
+		if p.head == start && p.head < p.tail && p.buf[p.head] == '/' {
 			componentExponent = -1
 			p.head++
+		}
+
+		p.readComponent(termExponent * componentExponent)
+
+		b := p.readByte()
+		switch b {
+		case '.':
+			componentExponent = 1
+		case '/':
+			componentExponent = -1
 		case ')':
 			if insideBrackets {
-				p.head++
 				return
 			}
+			p.unreadByte(b)
 			p.reportError(p.head, `unexpected ")"`)
 			return
+		case 0: // EOF
+			if insideBrackets {
+				p.reportError(-1, `unexpected end, missing ")"`)
+			}
+			return
 		default:
-			p.reportError(p.head, `unexpected symbol "%c"`, c)
+			p.unreadByte(b)
+			p.reportError(p.head, `unexpected symbol "%c"`, b)
 		}
 	}
 }
 
+// https://ucum.org/ucum#section-Syntax-Rules
 func (p *parser) readComponent(exponent int) {
-	if p.head == p.tail {
-		p.reportError(p.head, `unexpected end of unit`)
-		return
-	}
-
-	t := p.buf[p.head]
-	if t == '(' {
-		p.head++
+	b := p.readByte()
+	switch b {
+	case '(':
 		p.readTerm(true, exponent)
 		return
-	}
-	if c, ok := p.readAnnotatable(exponent); ok {
-		p.results = append(p.results, c)
+	case 0: // EOF
+		p.reportError(-1, `unexpected end`)
 		return
+	default:
+		p.unreadByte(b)
+		p.readAnnotatable(exponent)
 	}
-	p.reportError(p.head, `unexpected symbol "%c"`, t)
-	return
 }
 
-func (p *parser) readAnnotatable(exponent int) (component, bool) {
+// https://ucum.org/ucum#section-Syntax-Rules
+func (p *parser) readAnnotatable(exponent int) {
 	origHead := p.head
 	if p.head == p.tail {
-		p.reportError(p.head, `unexpected end of unit`)
-		return component{}, false
+		p.reportError(p.head, `unexpected end`)
+		return
 	}
 
-	c := component{
-		exponent: exponent,
-	}
-	var (
-		multiplier           int64 = 1
-		atomOk, multiplierOk bool
-	)
+	coef := big.NewRat(1, 1)
+	multiplierOk := false
 
 	atom, atomOk := p.readAtom()
 	if atomOk {
-		c.atom = atom
 		if exp, ok := p.tryReadExponent(); ok {
-			c.exponent *= exp
+			exponent *= exp
 		}
+		coef = floatToRational(atom.Magnitude)
 	} else {
 		// exponent without unit is just a number
 		if num, ok := p.readDigits(1); ok {
 			multiplierOk = true
-			multiplier = int64(num)
+			coef = new(big.Rat).SetFrac64(int64(num), 1)
 		}
 	}
-	c.annotation, c.hasAnnotation = p.readAnnotation()
 
-	if !multiplierOk && !atomOk && !c.hasAnnotation {
+	annotation := p.readAnnotation()
+
+	if !multiplierOk && !atomOk && len(annotation) == 0 {
 		p.reportError(origHead, `unexpected symbol "%c"`, p.buf[origHead])
-		return component{}, false
+		return
 	}
 
-	var coef *big.Rat
-	switch true {
-	case atomOk:
-		coef = floatToRational(c.atom.Magnitude)
-		c.atom.Magnitude = 1
-	case multiplierOk:
-		coef = new(big.Rat).SetFrac64(multiplier, 1)
-	}
-	if atomOk || multiplierOk {
-		pow(coef, c.exponent)
-		p.coef.Mul(p.coef, coef) // combine global coefficient with local one
-		//fmt.Printf("coef=%s p.coef=%s\n", coef, p.coef)
-	}
+	pow(coef, exponent)
+	p.coef.Mul(p.coef, coef) // combine global coefficient with local one
 
-	return c, true
+	if atomOk || len(annotation) > 0 {
+		key := componentKey{
+			atomCode:   atom.Code,
+			annotation: string(annotation),
+		}
+		p.components[key] += exponent
+	}
 }
 
 func pow(base *big.Rat, exp int) {
@@ -175,8 +174,9 @@ func pow(base *big.Rat, exp int) {
 	} else if exp == 0 {
 		base.SetFrac64(0, 1)
 	}
+	cpy := new(big.Rat).Set(base)
 	for i := exp; i > 1; i-- {
-		base.Mul(base, base)
+		base.Mul(base, cpy)
 	}
 }
 
@@ -223,33 +223,32 @@ loop:
 }
 
 func (p *parser) tryReadExponent() (exp int, ok bool) {
-	if p.head == p.tail {
-		return 0, false
-	}
-
-	t := p.buf[p.head]
-	switch t {
+	b := p.readByte()
+	switch b {
 	case '+':
-		p.head++
 		return p.readDigits(1)
 	case '-':
-		p.head++
 		return p.readDigits(-1)
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		p.unreadByte(b)
 		return p.readDigits(1)
 	default:
+		p.unreadByte(b)
 		return 0, false
 	}
 }
 
 func (p *parser) reportError(position int, msg string, args ...any) {
-	if p.error != nil {
-		return
+	if p.error == nil {
+		if len(args) > 0 {
+			msg = fmt.Sprintf(msg, args...)
+		}
+		if position >= 0 {
+			p.error = fmt.Errorf("ucum: %s at position %d", msg, position)
+		} else {
+			p.error = fmt.Errorf("ucum: %s", msg)
+		}
 	}
-	if len(args) > 0 {
-		msg = fmt.Sprintf(msg, args...)
-	}
-	p.error = fmt.Errorf("ucum: %s at position %d", msg, position)
 }
 
 func (p *parser) readDigits(sign int) (num int, ok bool) {
@@ -274,26 +273,24 @@ func safeIntToMultiple10() int {
 	return 0xffffffffffffffff/10 - 1
 }
 
-func (p *parser) readAnnotation() (annot []byte, found bool) {
-	if p.head == p.tail {
-		return nil, false
+// https://ucum.org/ucum#section-Syntax-Rules
+func (p *parser) readAnnotation() []byte {
+	from := p.head
+
+	if b := p.readByte(); b != '{' {
+		p.unreadByte(b)
+		return nil
 	}
 
-	if p.buf[p.head] != '{' {
-		return nil, false
-	}
-
-	from := p.head + 1
-	for p.head < p.tail {
-		if p.buf[p.head] == '}' {
-			ret := p.buf[from:p.head]
-			p.head++
-			return ret, true
+	for {
+		switch p.readByte() {
+		case '}':
+			return p.buf[from:p.head]
+		case 0: // EOF
+			p.reportError(p.head, "unterminated annotation, \"}\" expected")
+			return nil
 		}
-		p.head++
 	}
-	p.reportError(p.head, "unterminated annotation, \"}\" expected")
-	return nil, false
 }
 
 func (p *parser) readByte() byte {
@@ -305,8 +302,8 @@ func (p *parser) readByte() byte {
 	return b
 }
 
-func (p *parser) unreadByte() {
-	if p.error == nil {
+func (p *parser) unreadByte(c byte) {
+	if p.error == nil && c != 0 { // c == 0 means EOF
 		p.head--
 	}
 }

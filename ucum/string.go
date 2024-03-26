@@ -1,39 +1,54 @@
 package ucum
 
 import (
-	"fmt"
+	"golang.org/x/exp/maps"
 	"math/big"
 	"slices"
+	"strings"
 )
 
-func printExpr(coef *big.Rat, expr []component) {
-	if coef.Cmp(big.NewRat(1, 1)) != 0 {
-		fmt.Print(coef.RatString())
-		fmt.Print("⋅")
+func (u *Unit) CanonicalString() string {
+	if len(u.components) == 0 {
+		return u.coef.RatString()
 	}
-	for i, c := range expr {
-		if c.atom.Code != "" {
-			if i > 0 {
-				fmt.Print("⋅")
-			}
-			fmt.Printf(c.String())
+
+	var ret string
+	if u.coef != nil && u.coef.Cmp(big.NewRat(1, 1)) != 0 {
+		ret += u.coef.RatString()
+		ret += "⋅"
+	}
+
+	keys := maps.Keys(u.components)
+	slices.SortFunc(keys, func(a, b componentKey) int {
+		exponentsDiff := u.components[b] - u.components[a]
+		if exponentsDiff != 0 {
+			return exponentsDiff
 		}
+		c := strings.Compare(a.atomCode, b.atomCode)
+		if c != 0 {
+			return c
+		}
+		return strings.Compare(a.annotation, b.annotation)
+	})
+
+	for i, key := range keys {
+		if i > 0 {
+			ret += "⋅"
+		}
+		exponent := u.components[key]
+		ret += componentString(key.atomCode, exponent, key.annotation)
 	}
+	return ret
 }
 
-// String returns the UTF-8 string representation of the expression.
-func (c component) String() string {
-	ret := make([]rune, 0, len(c.atom.Code)+len(c.annotation)+2)
-	ret = append(ret, []rune(c.atom.Code)...)
-
-	if c.exponent != 1 {
-		ret = appendExponent(ret, c.exponent)
+// componentString returns the UTF-8 string representation of the expression component.
+func componentString(atomCode string, exponent int, annotation string) string {
+	ret := make([]rune, 0, len(atomCode)+len(annotation)+2) // +2 for exponent
+	ret = append(ret, []rune(atomCode)...)
+	if exponent != 1 {
+		ret = appendExponent(ret, exponent)
 	}
-	if c.hasAnnotation {
-		ret = append(ret, '{')
-		ret = append(ret, []rune(string(c.annotation))...)
-		ret = append(ret, '}')
-	}
+	ret = append(ret, []rune(annotation)...)
 	return string(ret)
 }
 

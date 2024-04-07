@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/iimos/play/ucum/internal/xmlparser"
 	"log"
 	"net/http"
 	"os"
@@ -16,27 +17,14 @@ func main() {
 	}
 	defer resp.Body.Close()
 
-	data := parse(resp.Body)
+	data := xmlparser.Parse(resp.Body)
 	gen := Generator{
-		packageName: "ucum",
+		packageName: "data",
 	}
 	gen.Generate(data)
 	gocode := gen.Format()
 
-	if err = os.WriteFile("./gen.go", gocode, 0644); err != nil {
+	if err = os.WriteFile("./internal/data/atoms.gen.go", gocode, 0644); err != nil {
 		log.Fatalf("writing output: %s", err)
 	}
-}
-
-type UCUMData struct {
-	Units []Unit
-}
-
-type Unit struct {
-	Code string
-	// FullCode is a code with a prefix.
-	FullCode  string
-	Kind      string
-	Metric    bool
-	Magnitude float64
 }

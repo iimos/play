@@ -1,7 +1,7 @@
 // Code generated; DO NOT EDIT.
-package ucum
+package data
 
-var ucumAtoms = map[string]Atom{
+var Atoms = map[string]Atom{
 	"m":               {Code: "m", Kind: "length", Metric: true, Magnitude: 1},
 	"Ym":              {Code: "m", Kind: "length", Metric: true, Magnitude: 1e+24},
 	"Zm":              {Code: "m", Kind: "length", Metric: true, Magnitude: 1e+21},

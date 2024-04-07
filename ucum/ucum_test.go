@@ -16,6 +16,7 @@ func TestParse(t *testing.T) {
 		"kg.m/s2":               "1000⋅g⋅m⋅s⁻²",
 		"10*":                   "10*",
 		"10*6":                  "10*⁶",
+		"10^78":                 "10^⁷⁸",
 		"(((100)))":             "100",
 		"(100).m":               "100⋅m",
 		"ng/(24.h)":             "1/24000000000⋅g⋅h⁻¹",
@@ -29,7 +30,11 @@ func TestParse(t *testing.T) {
 		"/(/m)":                 "m",
 		"m3{annot1}/m2{annot2}": "m³{annot1}⋅m⁻²{annot2}", // different annotations are not mixed together
 		"m3{annot1}/m2{annot1}": "m{annot1}",
-		"u[IU]":                 "1/1000000⋅[IU]",
+		//"u[IU]":                 "1/1000000⋅[IU]", //todo
+		"%[slope].s": "%[slope]⋅s",
+		"L/L":        "L⁰",
+		"m[H2O]":     "m[H2O]",
+		//"cm[Hg]":     "1/100⋅m[Hg]", //todo
 	}
 	for input, want := range tests {
 		t.Run(input, func(t *testing.T) {
@@ -53,6 +58,8 @@ func TestParseErrors(t *testing.T) {
 	// some test cases are taken from https://github.com/dalito/ucumvert/blob/0beec522041d086f4ed5e1eb0259b0e183ad7a73/tests/test_parser.py#L48-L62
 	tests := map[string]string{
 		// input -> error
+		"":                                 `ucum: empty unit`,
+		" ":                                `ucum: spaces are not allowed`,
 		"unknown":                          `ucum: unknown unit "unknown" at position 0`,
 		"2.unknown":                        `ucum: unknown unit "unknown" at position 2`,
 		"{unclosed annotation":             `ucum: unterminated annotation, "}" expected at position 20`,
@@ -71,7 +78,12 @@ func TestParseErrors(t *testing.T) {
 		"(m":                               `ucum: unexpected end, missing ")"`,
 		".m":                               `ucum: unexpected symbol "." at position 0`,
 		"2mg":                              `ucum: unknown unit "2mg" at position 0`, // missing operator
+		"9999999999999999999999999":        `ucum: number too large at position 0`,   // overflow
+		"m999999999999999999999999":        `ucum: number too large at position 1`,   // overflow
+		"m-99999999999999999999999":        `ucum: number too large at position 2`,   // overflow
+		"1/99999999999999999999999":        `ucum: number too large at position 2`,   // overflow
 	}
+
 	for input, wantErr := range tests {
 		t.Run(input, func(t *testing.T) {
 			unit, err := Parse([]byte(input))

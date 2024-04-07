@@ -1,13 +1,29 @@
-package main
+package xmlparser
 
 import (
 	"encoding/xml"
 	"golang.org/x/exp/maps"
 	"io"
 	"log"
+	"math/big"
+	"strconv"
 )
 
-func parse(reader io.Reader) UCUMData {
+type UCUMData struct {
+	Units []Unit
+	XML   XMLRoot
+}
+
+type Unit struct {
+	Code string
+	// FullCode is a code with a prefix.
+	FullCode  string
+	Kind      string
+	Metric    bool
+	Magnitude float64
+}
+
+func Parse(reader io.Reader) UCUMData {
 	decoder := xml.NewDecoder(reader)
 	decoder.Strict = true
 	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
@@ -32,12 +48,12 @@ func parse(reader io.Reader) UCUMData {
 	}
 
 	units := make([]Unit, 0, len(data.Units))
-	unitsDedup := make(map[string]struct{}, len(data.Units))
+	unitsMap := make(map[string]Unit, len(data.Units))
 	addUnit := func(u Unit) {
-		if _, exists := unitsDedup[u.FullCode]; exists {
+		if _, exists := unitsMap[u.FullCode]; exists {
 			log.Fatalf("duplicate unit: %v", u.FullCode)
 		}
-		unitsDedup[u.FullCode] = struct{}{}
+		unitsMap[u.FullCode] = u
 		units = append(units, u)
 	}
 
@@ -55,7 +71,7 @@ func parse(reader io.Reader) UCUMData {
 				FullCode:  pref.Code + u.Code,
 				Kind:      u.Property,
 				Metric:    true,
-				Magnitude: pref.Value.Value,
+				Magnitude: f64rat(pref.Value.Value),
 			})
 		}
 	}
@@ -75,7 +91,7 @@ func parse(reader io.Reader) UCUMData {
 					FullCode:  pref.Code + u.Code,
 					Kind:      u.Property,
 					Metric:    true,
-					Magnitude: pref.Value.Value,
+					Magnitude: f64rat(pref.Value.Value),
 				})
 			}
 		}
@@ -89,7 +105,24 @@ func parse(reader io.Reader) UCUMData {
 	//fmt.Printf("units: (%d) %#v\n", len(unitsMap), unitsMap["m"])
 	return UCUMData{
 		Units: units,
+		XML:   *data,
 	}
+}
+
+func f64(s string) float64 {
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		panic(err)
+	}
+	return f
+}
+
+func f64rat(rat *big.Rat) float64 {
+	f, exact := rat.Float64()
+	if !exact {
+		//log.Fatalf("not exact: %v", f) // todo
+	}
+	return f
 }
 
 type XMLRoot struct {
@@ -130,7 +163,13 @@ type XMLUnit struct {
 }
 
 type XMLValue struct {
-	Unit   string  `xml:"Unit,attr"`
-	UnitUC string  `xml:"UNIT,attr"`
-	Value  float64 `xml:"value,attr"`
+	Unit     string      `xml:"Unit,attr"`
+	Value    *big.Rat    `xml:"value,attr"`
+	Function XMLFunction `xml:"function"`
+}
+
+type XMLFunction struct {
+	Name  string  `xml:"name,attr"`
+	Value float64 `xml:"value,attr"`
+	Unit  string  `xml:"Unit,attr"`
 }

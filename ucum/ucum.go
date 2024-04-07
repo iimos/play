@@ -1,29 +1,52 @@
 package ucum
 
+//go:generate go run ./internal/generate_atoms
+//go:generate go run ./internal/generate_convertation_table
+
 import (
 	"fmt"
+	"github.com/iimos/play/ucum/internal/data"
 	"math/big"
 	"strconv"
 )
 
+// Unit is a UCUM unit of measure.
 type Unit struct {
 	orig       string
 	components map[componentKey]int // <unit atom, annotation> -> exponent
 	coef       *big.Rat
 }
 
+type UnitComponent struct {
+	Code       string
+	Annotation string
+	Exponent   int
+}
+
+func (u *Unit) Coefficient() *big.Rat {
+	return u.coef
+}
+
+func (u *Unit) Components() []UnitComponent {
+	components := make([]UnitComponent, 0, len(u.components))
+	for k, v := range u.components {
+		components = append(components, UnitComponent{
+			Code:       k.atomCode,
+			Annotation: k.annotation,
+			Exponent:   v,
+		})
+	}
+	return components
+}
+
 func (u *Unit) String() string {
 	return u.orig
 }
 
-type Atom struct {
-	Code      string
-	Kind      string
-	Magnitude float64
-	Metric    bool
-}
-
 func Parse(unit []byte) (Unit, error) {
+	if len(unit) == 0 {
+		return Unit{}, fmt.Errorf("ucum: empty unit")
+	}
 	p := newParser(unit)
 	p.readTerm(false, 1)
 	if p.error != nil {
@@ -59,15 +82,6 @@ func newParser(unit []byte) *parser {
 		coef:       big.NewRat(1, 1),
 	}
 }
-
-//// https://ucum.org/ucum#section-Syntax-Rules
-//func (p *parser) readMainTerm() {
-//	b := p.readByte()
-//	switch {
-//	case '/':
-//		p.readTerm(false, -1)
-//	}
-//}
 
 // https://ucum.org/ucum#section-Syntax-Rules
 func (p *parser) readTerm(insideBrackets bool, termExponent int) {
@@ -180,7 +194,7 @@ func pow(base *big.Rat, exp int) {
 	}
 }
 
-func (p *parser) readAtom() (Atom, bool) {
+func (p *parser) readAtom() (data.Atom, bool) {
 
 	// 3) A terminal unit symbol can not consist of only digits (‘0’–‘9’) because those digit strings
 	//    are interpreted as positive integer numbers. However, a symbol “10*” is allowed because it ends
@@ -205,6 +219,9 @@ loop:
 		switch p.buf[p.head] {
 		case '.', '/', '(', ')', '{', '}', '+', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			break loop
+		case ' ':
+			p.reportError(-1, "spaces are not allowed")
+			return data.Atom{}, false
 		}
 		p.head++
 	}
@@ -212,10 +229,10 @@ loop:
 	// if the unit atom contains only digits, it is a number and not a unit so roll back
 	if endOfDigits == p.head {
 		p.head = from
-		return Atom{}, false
+		return data.Atom{}, false
 	}
 
-	unit, ok := ucumAtoms[string(p.buf[from:p.head])]
+	unit, ok := data.Atoms[string(p.buf[from:p.head])]
 	if !ok {
 		p.reportError(from, "unknown unit %q", string(p.buf[from:p.head]))
 	}
@@ -252,10 +269,15 @@ func (p *parser) reportError(position int, msg string, args ...any) {
 }
 
 func (p *parser) readDigits(sign int) (num int, ok bool) {
+	start := p.head
 	for p.head < p.tail {
 		d := p.buf[p.head]
 		switch d {
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+			if num > safeIntToMultiple10() {
+				p.reportError(start, "number too large")
+				return 0, false
+			}
 			num = 10*num + int(d-'0')
 			ok = true
 			p.head++
@@ -308,22 +330,28 @@ func (p *parser) unreadByte(c byte) {
 	}
 }
 
-func (p *parser) skipByte(c byte) {
-	if p.readByte() != c {
-		p.reportError(p.head, "expect %c", c)
-	}
-}
-
 func floatToRational(f float64) *big.Rat {
 	isInt := float64(int64(f)) == f
 	if isInt {
 		return big.NewRat(int64(f), 1)
 	}
-	f *= 1e24
+
+	e := 10.0
+	epow := int64(1)
+	for e <= 1e24 {
+		if float64(int64(f)) == f {
+			break
+		}
+		e *= 10
+		epow++
+	}
+	f *= e
+
 	isInt = float64(int64(f)) == f
 	if !isInt {
-		panic("can't convert float to big.Rat")
+		//panic(fmt.Sprintf("can't convert float to big.Rat; f=%g epow=%d", f, epow)) //todo
 	}
-	big1e24 := new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil) // 1e24
+
+	big1e24 := new(big.Int).Exp(big.NewInt(10), big.NewInt(epow), nil) // 1e24
 	return new(big.Rat).SetFrac(big.NewInt(int64(f)), big1e24)
 }

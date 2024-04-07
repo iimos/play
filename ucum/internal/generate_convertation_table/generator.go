@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/iimos/play/ucum/internal/xmlparser"
 	"go/format"
 	"log"
 )
@@ -19,11 +20,11 @@ func (g *Generator) Printf(format string, args ...interface{}) {
 	}
 }
 
-func (g *Generator) Generate(data UCUMData) {
+func (g *Generator) Generate(data xmlparser.UCUMData) {
 	g.Printf("// Code generated; DO NOT EDIT.\n")
 	g.Printf("package %s\n", g.packageName)
 	g.Printf("\n")
-	g.Printf("var ucumAtoms = map[string]Atom{\n")
+	g.Printf("var Conv = map[string]Atom{\n")
 	for _, unit := range data.Units {
 		g.Printf("%q: {Code: %q, Kind: %q, Metric: %t, Magnitude: %100g},\n", unit.FullCode, unit.Code, unit.Kind, unit.Metric, unit.Magnitude)
 	}

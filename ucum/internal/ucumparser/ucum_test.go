@@ -1,4 +1,4 @@
-package ucum
+package ucumparser
 
 import (
 	"reflect"
@@ -31,9 +31,10 @@ func TestParse(t *testing.T) {
 		"m3{annot1}/m2{annot2}": "m³{annot1}⋅m⁻²{annot2}", // different annotations are not mixed together
 		"m3{annot1}/m2{annot1}": "m{annot1}",
 		//"u[IU]":                 "1/1000000⋅[IU]", //todo
-		"%[slope].s": "%[slope]⋅s",
-		"L/L":        "L⁰",
-		"m[H2O]":     "m[H2O]",
+		"%[slope].s":      "%[slope]⋅s",
+		"L/L":             "L⁰",
+		"m[H2O]":          "m[H2O]",
+		"m[H2O].[in_i]/m": "[in_i]⋅m[H2O]⋅m⁻¹",
 		//"cm[Hg]":     "1/100⋅m[Hg]", //todo
 	}
 	for input, want := range tests {
@@ -82,6 +83,9 @@ func TestParseErrors(t *testing.T) {
 		"m999999999999999999999999":        `ucum: number too large at position 1`,   // overflow
 		"m-99999999999999999999999":        `ucum: number too large at position 2`,   // overflow
 		"1/99999999999999999999999":        `ucum: number too large at position 2`,   // overflow
+		"m[H2O":                            `ucum: unclosed square bracket at position 1`,
+		"[":                                `ucum: unclosed square bracket at position 0`,
+		"]":                                `ucum: unknown unit "]" at position 0`,
 	}
 
 	for input, wantErr := range tests {

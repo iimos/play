@@ -1,4 +1,4 @@
-package ucum
+package ucumparser
 
 import (
 	"golang.org/x/exp/maps"
@@ -8,35 +8,35 @@ import (
 )
 
 func (u *Unit) CanonicalString() string {
-	if len(u.components) == 0 {
-		return u.coef.RatString()
+	if len(u.Components) == 0 {
+		return u.Coeff.RatString()
 	}
 
 	var ret string
-	if u.coef != nil && u.coef.Cmp(big.NewRat(1, 1)) != 0 {
-		ret += u.coef.RatString()
+	if u.Coeff != nil && u.Coeff.Cmp(big.NewRat(1, 1)) != 0 {
+		ret += u.Coeff.RatString()
 		ret += "⋅"
 	}
 
-	keys := maps.Keys(u.components)
-	slices.SortFunc(keys, func(a, b componentKey) int {
-		exponentsDiff := u.components[b] - u.components[a]
+	keys := maps.Keys(u.Components)
+	slices.SortFunc(keys, func(a, b ComponentKey) int {
+		exponentsDiff := u.Components[b] - u.Components[a]
 		if exponentsDiff != 0 {
 			return exponentsDiff
 		}
-		c := strings.Compare(a.atomCode, b.atomCode)
+		c := strings.Compare(a.AtomCode, b.AtomCode)
 		if c != 0 {
 			return c
 		}
-		return strings.Compare(a.annotation, b.annotation)
+		return strings.Compare(a.Annotation, b.Annotation)
 	})
 
 	for i, key := range keys {
 		if i > 0 {
 			ret += "⋅"
 		}
-		exponent := u.components[key]
-		ret += componentString(key.atomCode, exponent, key.annotation)
+		exponent := u.Components[key]
+		ret += componentString(key.AtomCode, exponent, key.Annotation)
 	}
 	return ret
 }

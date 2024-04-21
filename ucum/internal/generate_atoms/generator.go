@@ -21,12 +21,19 @@ func (g *Generator) Printf(format string, args ...interface{}) {
 }
 
 func (g *Generator) Generate(data xmlparser.UCUMData) {
+	//for _, p := range data.XML.Prefixes {
+	//	_ = p
+	//}
 	g.Printf("// Code generated; DO NOT EDIT.\n")
 	g.Printf("package %s\n", g.packageName)
+	g.Printf("import \"math/big\"\n")
+	g.Printf("\n")
+	g.Printf("var prefixes = [...]big.Rat{}\n")
 	g.Printf("\n")
 	g.Printf("var Atoms = map[string]Atom{\n")
 	for _, unit := range data.Units {
-		g.Printf("%q: {Code: %q, Kind: %q, Metric: %t, Magnitude: %100g},\n", unit.FullCode, unit.Code, unit.Kind, unit.Metric, unit.Magnitude)
+		g.Printf("%q: {Code: %q, Kind: %q, Metric: %t, Magnitude: parseBigRat(%q)},\n",
+			unit.FullCode, unit.Code, unit.Kind, unit.Metric, unit.Magnitude.String())
 	}
 	g.Printf("}\n")
 }

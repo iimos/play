@@ -128,7 +128,7 @@ func (p *parser) readAnnotatable(exponent int) {
 		if exp, ok := p.tryReadExponent(); ok {
 			exponent *= exp
 		}
-		coef = floatToRational(atom.Magnitude)
+		coef.Set(atom.Magnitude)
 	} else {
 		// exponent without unit is just a number
 		if num, ok := p.readDigits(1); ok {

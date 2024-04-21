@@ -30,12 +30,16 @@ func TestParse(t *testing.T) {
 		"/(/m)":                 "m",
 		"m3{annot1}/m2{annot2}": "m³{annot1}⋅m⁻²{annot2}", // different annotations are not mixed together
 		"m3{annot1}/m2{annot1}": "m{annot1}",
-		//"u[IU]":                 "1/1000000⋅[IU]", //todo
-		"%[slope].s":      "%[slope]⋅s",
-		"L/L":             "L⁰",
-		"m[H2O]":          "m[H2O]",
-		"m[H2O].[in_i]/m": "[in_i]⋅m[H2O]⋅m⁻¹",
-		//"cm[Hg]":     "1/100⋅m[Hg]", //todo
+		"u[IU]":                 "1/1000000⋅[IU]",
+		"mg":                    "1/1000⋅g",
+		"TiBy":                  "1099511627776⋅By",
+		"YBy":                   "1000000000000000000000000⋅By",
+		"yBy":                   "1/1000000000000000000000000⋅By",
+		"%[slope].s":            "%[slope]⋅s",
+		"L/L":                   "L⁰",
+		"m[H2O]":                "m[H2O]",
+		"m[H2O].[in_i]/m":       "[in_i]⋅m[H2O]⋅m⁻¹",
+		"cm[Hg]":                "1/100⋅m[Hg]",
 	}
 	for input, want := range tests {
 		t.Run(input, func(t *testing.T) {

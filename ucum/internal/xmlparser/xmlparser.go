@@ -20,7 +20,7 @@ type Unit struct {
 	FullCode  string
 	Kind      string
 	Metric    bool
-	Magnitude float64
+	Magnitude *big.Rat
 }
 
 func Parse(reader io.Reader) UCUMData {
@@ -63,7 +63,7 @@ func Parse(reader io.Reader) UCUMData {
 			FullCode:  u.Code,
 			Kind:      u.Property,
 			Metric:    true, // base units are always metric
-			Magnitude: 1,
+			Magnitude: big.NewRat(1, 1),
 		})
 		for _, pref := range data.Prefixes {
 			addUnit(Unit{
@@ -71,7 +71,7 @@ func Parse(reader io.Reader) UCUMData {
 				FullCode:  pref.Code + u.Code,
 				Kind:      u.Property,
 				Metric:    true,
-				Magnitude: f64rat(pref.Value.Value),
+				Magnitude: pref.Value.Value,
 			})
 		}
 	}
@@ -82,7 +82,7 @@ func Parse(reader io.Reader) UCUMData {
 			FullCode:  u.Code,
 			Kind:      u.Property,
 			Metric:    u.Metric == "yes",
-			Magnitude: 1,
+			Magnitude: big.NewRat(1, 1),
 		})
 		if u.Metric == "yes" {
 			for _, pref := range data.Prefixes {
@@ -91,7 +91,7 @@ func Parse(reader io.Reader) UCUMData {
 					FullCode:  pref.Code + u.Code,
 					Kind:      u.Property,
 					Metric:    true,
-					Magnitude: f64rat(pref.Value.Value),
+					Magnitude: pref.Value.Value,
 				})
 			}
 		}

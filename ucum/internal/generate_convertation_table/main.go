@@ -7,12 +7,18 @@ import (
 	"log"
 	"math/big"
 	"net/http"
+	"slices"
+	"strings"
 	"time"
 )
 
 const url = "https://raw.githubusercontent.com/ucum-org/ucum/main/ucum-essence.xml"
 
 func main() {
+	//xx := ucumparser.Parse("")
+	//fmt.Printf("%s = %s\n", xx.String(), xx.CanonicalString())
+	//return
+
 	resp, err := (&http.Client{Timeout: 10 * time.Second}).Get(url)
 	if err != nil {
 		log.Fatal(err)
@@ -21,34 +27,62 @@ func main() {
 
 	data := xmlparser.Parse(resp.Body)
 
-	conv := make(map[string]ucumparser.Unit, len(data.XML.Units))
+	conv := make(map[string]*ucumparser.Unit, len(data.XML.Units))
 
 	for _, xu := range data.XML.Units {
 		if xu.Value.Function == (xmlparser.XMLFunction{}) {
-			u, err := ucumparser.Parse([]byte(xu.Value.Unit))
-			if err != nil {
+			u, err2 := ucumparser.Parse([]byte(xu.Value.Unit))
+			if err2 != nil {
 				log.Fatalf("ucum.Parse(%s): %s", xu.Value.Unit, err)
 			}
 			u.Coeff.Mul(u.Coeff, xu.Value.Value)
-			conv[xu.Code] = u
+			conv[xu.Code] = &u
 		}
 	}
 
-	for code, u := range conv {
-		cpy := make(map[ucumparser.ComponentKey]int, len(u.Components))
-		for key, exp := range u.Components {
-			u2, ok := conv[key.AtomCode]
-			if !ok || isOne(u2) {
-				cpy[key] += exp
-			} else {
-				u.Coeff.Mul(u.Coeff, pow(u2.Coeff, exp))
-				for key2, exp2 := range u2.Components {
-					cpy[key2] += exp * exp2
+	//xx := conv["[gr]"]
+	//fmt.Printf("%s = %s\n", xx.String(), xx.CanonicalString())
+	//return
+
+	// Expand every unit until all unit consists only of primitive ones.
+	for {
+		nothingDone := true
+		for name, u := range conv {
+			cpy := make(map[ucumparser.ComponentKey]int, len(u.Components))
+			for key, exp := range u.Components {
+				u2, ok := conv[key.AtomCode]
+				if !ok || isOne(u2) {
+					cpy[key] += exp
+				} else {
+					nothingDone = false
+					u.Coeff.Mul(u.Coeff, pow(u2.Coeff, exp))
+					for key2, exp2 := range u2.Components {
+						cpy[key2] += exp * exp2
+					}
 				}
 			}
+			fmt.Printf("%s = %s\n", name, u.CanonicalString())
+			u.Components = cpy
 		}
-		u.Components = cpy
-		fmt.Printf("%s = %s\n", code, u.CanonicalString())
+		if nothingDone {
+			break
+		}
+	}
+
+	type pair struct {
+		name string
+		unit *ucumparser.Unit
+	}
+	unitsSimplified := make([]pair, 0, len(conv))
+	for name, unit := range conv {
+		unitsSimplified = append(unitsSimplified, pair{name, unit})
+	}
+	slices.SortFunc(unitsSimplified, func(a, b pair) int {
+		return strings.Compare(a.name, b.name)
+	})
+
+	for _, p := range unitsSimplified {
+		fmt.Printf("%s = %s\n", p.name, p.unit.CanonicalString())
 	}
 
 	//gen := Generator{
@@ -62,7 +96,7 @@ func main() {
 	//}
 }
 
-func isOne(u ucumparser.Unit) bool {
+func isOne(u *ucumparser.Unit) bool {
 	if len(u.Components) != 0 {
 		return false
 	}

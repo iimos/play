@@ -6,6 +6,7 @@ import (
 	"github.com/iimos/play/ucum/internal/xmlparser"
 	"go/format"
 	"log"
+	"math/big"
 )
 
 type Generator struct {
@@ -27,13 +28,14 @@ func (g *Generator) Generate(data xmlparser.UCUMData) {
 	g.Printf("// Code generated; DO NOT EDIT.\n")
 	g.Printf("package %s\n", g.packageName)
 	g.Printf("import \"math/big\"\n")
+	g.Printf("import \"github.com/iimos/play/ucum/internal/types\"\n")
 	g.Printf("\n")
 	g.Printf("var prefixes = [...]big.Rat{}\n")
 	g.Printf("\n")
-	g.Printf("var Atoms = map[string]Atom{\n")
+	g.Printf("var Atoms = map[string]types.Atom{\n")
 	for _, unit := range data.Units {
-		g.Printf("%q: {Code: %q, Kind: %q, Metric: %t, Magnitude: parseBigRat(%q)},\n",
-			unit.FullCode, unit.Code, unit.Kind, unit.Metric, unit.Magnitude.String())
+		g.Printf("%q: {Code: %q, Kind: %q, Metric: %t, Magnitude: %s},\n",
+			unit.FullCode, unit.Code, unit.Kind, unit.Metric, gocodeRat(unit.Magnitude))
 	}
 	g.Printf("}\n")
 }
@@ -47,4 +49,9 @@ func (g *Generator) Format() []byte {
 		return g.buf.Bytes()
 	}
 	return src
+}
+
+func gocodeRat(r *big.Rat) string {
+	a, b := r.Num(), r.Denom()
+	return fmt.Sprintf("(&big.Rat{}).SetFrac((&big.Int{}).SetBytes(%#v), (&big.Int{}).SetBytes(%#v))", a.Bytes(), b.Bytes())
 }

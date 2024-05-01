@@ -1,4 +1,4 @@
-package ucumparser
+package types
 
 import (
 	"golang.org/x/exp/maps"

@@ -1,18 +1,24 @@
 package main
 
 import (
-	"fmt"
+	"github.com/iimos/play/ucum/internal/types"
 	"github.com/iimos/play/ucum/internal/ucumparser"
 	"github.com/iimos/play/ucum/internal/xmlparser"
 	"log"
 	"math/big"
 	"net/http"
+	"os"
 	"slices"
 	"strings"
 	"time"
 )
 
 const url = "https://raw.githubusercontent.com/ucum-org/ucum/main/ucum-essence.xml"
+
+type namedUnit struct {
+	name string
+	unit *types.Unit
+}
 
 func main() {
 	//xx := ucumparser.Parse("")
@@ -27,7 +33,7 @@ func main() {
 
 	data := xmlparser.Parse(resp.Body)
 
-	conv := make(map[string]*ucumparser.Unit, len(data.XML.Units))
+	conv := make(map[string]*types.Unit, len(data.XML.Units))
 
 	for _, xu := range data.XML.Units {
 		if xu.Value.Function == (xmlparser.XMLFunction{}) {
@@ -47,8 +53,8 @@ func main() {
 	// Expand every unit until all unit consists only of primitive ones.
 	for {
 		nothingDone := true
-		for name, u := range conv {
-			cpy := make(map[ucumparser.ComponentKey]int, len(u.Components))
+		for _, u := range conv {
+			cpy := make(map[types.ComponentKey]int, len(u.Components))
 			for key, exp := range u.Components {
 				u2, ok := conv[key.AtomCode]
 				if !ok || isOne(u2) {
@@ -61,7 +67,7 @@ func main() {
 					}
 				}
 			}
-			fmt.Printf("%s = %s\n", name, u.CanonicalString())
+			//fmt.Printf("%s = %s\n", name, u.CanonicalString())
 			u.Components = cpy
 		}
 		if nothingDone {
@@ -69,34 +75,38 @@ func main() {
 		}
 	}
 
-	type pair struct {
-		name string
-		unit *ucumparser.Unit
-	}
-	unitsSimplified := make([]pair, 0, len(conv))
+	unitsSimplified := make([]namedUnit, 0, len(conv))
 	for name, unit := range conv {
-		unitsSimplified = append(unitsSimplified, pair{name, unit})
+		unitsSimplified = append(unitsSimplified, namedUnit{name, unit})
 	}
-	slices.SortFunc(unitsSimplified, func(a, b pair) int {
+	slices.SortFunc(unitsSimplified, func(a, b namedUnit) int {
 		return strings.Compare(a.name, b.name)
 	})
 
-	for _, p := range unitsSimplified {
-		fmt.Printf("%s = %s\n", p.name, p.unit.CanonicalString())
-	}
+	//baseUnitsSet := make(map[string]struct{})
+	//for _, p := range unitsSimplified {
+	//	//fmt.Printf("%s = %s\n", p.name, p.unit.CanonicalString())
+	//	//fmt.Printf("%s\n", gocodeUnit(p.unit))
+	//	for comp, _ := range p.unit.Components {
+	//		baseUnitsSet[comp.AtomCode] = struct{}{}
+	//	}
+	//}
+	//baseUnits := maps.Keys(baseUnitsSet)
+	//slices.Sort(baseUnits)
+	//fmt.Printf("\nBase units: %#v\n", baseUnits)
 
-	//gen := Generator{
-	//	packageName: "data",
-	//}
-	//gen.Generate(data)
-	//gocode := gen.Format()
-	//
-	//if err = os.WriteFile("./internal/data/conv.gen.go", gocode, 0644); err != nil {
-	//	log.Fatalf("writing output: %s", err)
-	//}
+	gen := Generator{
+		packageName: "data",
+		units:       unitsSimplified,
+	}
+	gen.Generate()
+	gocode := gen.Format()
+	if err = os.WriteFile("./internal/data/conv.gen.go", gocode, 0644); err != nil {
+		log.Fatalf("writing output: %s", err)
+	}
 }
 
-func isOne(u *ucumparser.Unit) bool {
+func isOne(u *types.Unit) bool {
 	if len(u.Components) != 0 {
 		return false
 	}

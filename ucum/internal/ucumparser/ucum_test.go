@@ -1,6 +1,7 @@
 package ucumparser
 
 import (
+	"github.com/iimos/play/ucum/internal/types"
 	"reflect"
 	"testing"
 )
@@ -52,8 +53,8 @@ func TestParse(t *testing.T) {
 			if gotCanonical != want {
 				t.Errorf("Parse(%q) = %s, want %s", input, gotCanonical, want)
 			}
-			if unit.String() != input {
-				t.Errorf("unit.String() = %q, want %q", unit.String(), input)
+			if unit.Orig != input {
+				t.Errorf("unit.Orig = %q, want %q", unit.Orig, input)
 			}
 		})
 	}
@@ -103,7 +104,7 @@ func TestParseErrors(t *testing.T) {
 				t.Errorf("Parse() error = %q, want %q", err, wantErr)
 				return
 			}
-			if !reflect.DeepEqual(unit, Unit{}) {
+			if !reflect.DeepEqual(unit, types.Unit{}) {
 				t.Errorf("Parse() returned error with nonempty Unit: %#v", unit)
 			}
 		})

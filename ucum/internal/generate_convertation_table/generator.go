@@ -3,14 +3,16 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/iimos/play/ucum/internal/xmlparser"
+	"github.com/iimos/play/ucum/internal/types"
 	"go/format"
 	"log"
+	"math/big"
 )
 
 type Generator struct {
 	buf         bytes.Buffer
 	packageName string
+	units       []namedUnit
 }
 
 func (g *Generator) Printf(format string, args ...interface{}) {
@@ -20,13 +22,16 @@ func (g *Generator) Printf(format string, args ...interface{}) {
 	}
 }
 
-func (g *Generator) Generate(data xmlparser.UCUMData) {
+func (g *Generator) Generate() {
 	g.Printf("// Code generated; DO NOT EDIT.\n")
 	g.Printf("package %s\n", g.packageName)
+	g.Printf("import \"math/big\"\n")
+	g.Printf("import \"github.com/iimos/play/ucum/internal/types\"\n")
 	g.Printf("\n")
-	g.Printf("var Conv = map[string]Atom{\n")
-	for _, unit := range data.Units {
-		g.Printf("%q: {Code: %q, Kind: %q, Metric: %t, Magnitude: %100g},\n", unit.FullCode, unit.Code, unit.Kind, unit.Metric, unit.Magnitude)
+	g.Printf("var Conv = map[string]*types.Unit{\n")
+	for _, u := range g.units {
+		g.Printf("// %s = %s\n", u.name, u.unit.CanonicalString())
+		g.Printf("%q: %s,\n", u.name, gocodeUnit(u.unit))
 	}
 	g.Printf("}\n")
 }
@@ -41,3 +46,18 @@ func (g *Generator) Format() []byte {
 	}
 	return src
 }
+
+func gocodeUnit(u *types.Unit) string {
+	return fmt.Sprintf("&types.Unit{Coeff: %s, Components: %#v}", gocodeRat(u.Coeff), u.Components)
+}
+
+func gocodeRat(r *big.Rat) string {
+	a, b := r.Num(), r.Denom()
+	return fmt.Sprintf("(&big.Rat{}).SetFrac((&big.Int{}).SetBytes(%#v), (&big.Int{}).SetBytes(%#v))", a.Bytes(), b.Bytes())
+}
+
+// verified:
+// min = 60⋅s
+// m[H2O] = 9806650⋅g⋅m⁻¹⋅s⁻²
+// [in_us] = 100/3937⋅m
+// [gr] = 6479891/100000000⋅g

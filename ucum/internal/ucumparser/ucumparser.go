@@ -3,47 +3,32 @@ package ucumparser
 import (
 	"fmt"
 	"github.com/iimos/play/ucum/internal/data"
+	"github.com/iimos/play/ucum/internal/types"
 	"math/big"
 	"strconv"
 )
 
-// Unit is a UCUM unit of measure.
-type Unit struct {
-	orig       string
-	Components map[ComponentKey]int // <unit atom, annotation> -> exponent
-	Coeff      *big.Rat
-}
-
-func (u *Unit) String() string {
-	return u.orig
-}
-
-func Parse(unit []byte) (Unit, error) {
+func Parse(unit []byte) (types.Unit, error) {
 	if len(unit) == 0 {
-		return Unit{}, fmt.Errorf("ucum: empty unit")
+		return types.Unit{}, fmt.Errorf("ucum: empty unit")
 	}
 	p := newParser(unit)
 	p.readTerm(false, 1)
 	if p.error != nil {
-		return Unit{}, p.error
+		return types.Unit{}, p.error
 	}
-	return Unit{
-		orig:       string(unit),
+	return types.Unit{
+		Orig:       string(unit),
 		Components: p.components,
 		Coeff:      p.coef,
 	}, nil
-}
-
-type ComponentKey struct {
-	AtomCode   string
-	Annotation string
 }
 
 type parser struct {
 	buf        []byte
 	head       int
 	tail       int
-	components map[ComponentKey]int // <unit atom, annotation> -> exponent
+	components map[types.ComponentKey]int // <unit atom, annotation> -> exponent
 	coef       *big.Rat
 	error      error
 }
@@ -53,7 +38,7 @@ func newParser(unit []byte) *parser {
 		buf:        unit,
 		head:       0,
 		tail:       len(unit),
-		components: make(map[ComponentKey]int),
+		components: make(map[types.ComponentKey]int),
 		coef:       big.NewRat(1, 1),
 	}
 }
@@ -124,6 +109,9 @@ func (p *parser) readAnnotatable(exponent int) {
 	multiplierOk := false
 
 	atom, atomOk := p.readAtom()
+	if p.error != nil {
+		return
+	}
 	if atomOk {
 		if exp, ok := p.tryReadExponent(); ok {
 			exponent *= exp
@@ -139,6 +127,7 @@ func (p *parser) readAnnotatable(exponent int) {
 
 	annotation := p.readAnnotation()
 
+	// if nothing meaningful was found it's an error
 	if !multiplierOk && !atomOk && len(annotation) == 0 {
 		p.reportError(origHead, `unexpected symbol "%c"`, p.buf[origHead])
 		return
@@ -148,7 +137,7 @@ func (p *parser) readAnnotatable(exponent int) {
 	p.coef.Mul(p.coef, coef) // combine global coefficient with local one
 
 	if atomOk || len(annotation) > 0 {
-		key := ComponentKey{
+		key := types.ComponentKey{
 			AtomCode:   atom.Code,
 			Annotation: string(annotation),
 		}
@@ -169,11 +158,11 @@ func pow(base *big.Rat, exp int) {
 	}
 }
 
-func (p *parser) readAtom() (data.Atom, bool) {
+func (p *parser) readAtom() (types.Atom, bool) {
 
-	// 3) A terminal unit symbol can not consist of only digits (‘0’–‘9’) because those digit strings
-	//    are interpreted as positive integer numbers. However, a symbol “10*” is allowed because it ends
-	//    with a non-digit allowed to be part of a symbol.
+	// A terminal unit symbol can not consist of only digits (‘0’–‘9’) because those digit strings
+	// are interpreted as positive integer numbers. However, a symbol “10*” is allowed because it ends
+	// with a non-digit allowed to be part of a symbol.
 
 	from := p.head
 
@@ -199,7 +188,7 @@ loop:
 			continue
 		case ' ':
 			p.reportError(-1, "spaces are not allowed")
-			return data.Atom{}, false
+			return types.Atom{}, false
 		}
 		p.head++
 	}
@@ -207,7 +196,7 @@ loop:
 	// if the unit atom contains only digits, it is a number and not a unit so roll back
 	if endOfDigits == p.head {
 		p.head = from
-		return data.Atom{}, false
+		return types.Atom{}, false
 	}
 
 	unit, ok := data.Atoms[string(p.buf[from:p.head])]
@@ -319,30 +308,4 @@ func (p *parser) unreadByte(c byte) {
 	if p.error == nil && c != 0 { // c == 0 means EOF
 		p.head--
 	}
-}
-
-func floatToRational(f float64) *big.Rat {
-	isInt := float64(int64(f)) == f
-	if isInt {
-		return big.NewRat(int64(f), 1)
-	}
-
-	e := 10.0
-	epow := int64(1)
-	for e <= 1e24 {
-		if float64(int64(f)) == f {
-			break
-		}
-		e *= 10
-		epow++
-	}
-	f *= e
-
-	isInt = float64(int64(f)) == f
-	if !isInt {
-		//panic(fmt.Sprintf("can't convert float to big.Rat; f=%g epow=%d", f, epow)) //todo
-	}
-
-	big1e24 := new(big.Int).Exp(big.NewInt(10), big.NewInt(epow), nil) // 1e24
-	return new(big.Rat).SetFrac(big.NewInt(int64(f)), big1e24)
 }

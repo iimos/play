@@ -1,48 +1,51 @@
 package ucum
 
 import (
-	"github.com/iimos/play/ucum/internal/data"
-	"github.com/iimos/play/ucum/internal/types"
+	"fmt"
 	"math/big"
 )
 
-func Normilize(unit Unit) (Unit, error) {
-	norm, err := normilize(unit.u)
-	if err != nil {
-		return Unit{}, err
-	}
-	return Unit{u: norm}, nil
+type Converter struct {
+	ratio big.Rat
 }
 
-func normilize(unit types.Unit) (types.Unit, error) {
-	ret := types.Unit{
-		Coeff:      (&big.Rat{}).Set(unit.Coeff),
-		Components: make(map[types.ComponentKey]int, len(unit.Components)),
+func NewConverter(from, to Unit) (*Converter, error) {
+	a := Normalize(from).u
+	b := Normalize(to).u
+	if len(a.Components) != len(b.Components) {
+		return nil, fmt.Errorf("ucum: %q is not convertible to %q", from.String(), to.String())
 	}
-	for key, exponent := range unit.Components {
-		if key.AtomCode == "" {
-			k := types.ComponentKey{AtomCode: "1"}
-			ret.Components[k] += exponent
-			continue
-		}
 
-		normed, ok := data.Conv[key.AtomCode]
-		if !ok {
-			k := types.ComponentKey{AtomCode: key.AtomCode} // strip annotation
-			ret.Components[k] += exponent
-			//return types.Unit{}, fmt.Errorf("unknown unit %q", key.AtomCode)
-			continue
+	ratio := new(big.Rat).SetInt(bigOne)
+	for key, expA := range a.Components {
+		expB, exists := b.Components[key] // normalized units are stripped from annotations, so we can look up directly by key
+		if !exists {
+			return nil, fmt.Errorf("ucum: %q is not convertible to %q", from.String(), to.String())
 		}
-
-		ret.Coeff = ret.Coeff.Mul(ret.Coeff, normed.Coeff)
-
-		for key2, exponent2 := range unit.Components {
-			//if _, exists := ret.Components[key2]; exists {
-			ret.Components[key2] += exponent + exponent2
-			//} else {
-			//	ret.Components[key2] = exponent * exponent2
-			//}
-		}
+		ratio.Mul(ratio, big.NewRat(int64(expB), int64(expA)))
 	}
-	return ret, nil
+	ratio.Mul(ratio, b.Coeff)
+	ratio.Quo(ratio, a.Coeff)
+	return &Converter{ratio: *ratio}, nil
+}
+
+var (
+	bigZero = big.NewInt(0)
+	bigOne  = big.NewInt(1)
+)
+
+func (c *Converter) Conv(val *big.Int) (converted *big.Int, exact bool) {
+	ret := new(big.Int).Mul(val, c.ratio.Num())
+	if c.ratio.IsInt() {
+		return ret, true
+	}
+	_, rem := ret.QuoRem(val, c.ratio.Denom(), new(big.Int))
+	return ret, rem.Cmp(bigZero) == 0
+}
+
+func Conv(val *big.Int, from, to Unit) (*big.Int, error) {
+	if from.u.Orig != "" && from.u.Orig == to.u.Orig {
+		return (&big.Int{}).Set(val), nil
+	}
+	return nil, nil
 }

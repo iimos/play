@@ -18,7 +18,8 @@ func TestParse(t *testing.T) {
 		"10*":                   "10*",
 		"10*6":                  "10*⁶",
 		"10^78":                 "10^⁷⁸",
-		"(((100)))":             "100",
+		"((((((((100))))))))":   "100",
+		"((((((((100)))))))).2": "200",
 		"(100).m":               "100⋅m",
 		"ng/(24.h)":             "1/24000000000⋅g⋅h⁻¹",
 		"g/h/m2":                "g⋅h⁻¹⋅m⁻²",
@@ -41,6 +42,7 @@ func TestParse(t *testing.T) {
 		"m[H2O]":                "m[H2O]",
 		"m[H2O].[in_i]/m":       "[in_i]⋅m[H2O]⋅m⁻¹",
 		"cm[Hg]":                "1/100⋅m[Hg]",
+		"kCel":                  "1000⋅Cel", // special units are allowed to have prefix
 	}
 	for input, want := range tests {
 		t.Run(input, func(t *testing.T) {

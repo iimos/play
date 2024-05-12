@@ -55,9 +55,3 @@ func gocodeRat(r *big.Rat) string {
 	a, b := r.Num(), r.Denom()
 	return fmt.Sprintf("(&big.Rat{}).SetFrac((&big.Int{}).SetBytes(%#v), (&big.Int{}).SetBytes(%#v))", a.Bytes(), b.Bytes())
 }
-
-// verified:
-// min = 60⋅s
-// m[H2O] = 9806650⋅g⋅m⁻¹⋅s⁻²
-// [in_us] = 100/3937⋅m
-// [gr] = 6479891/100000000⋅g

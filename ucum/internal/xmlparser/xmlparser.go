@@ -168,6 +168,10 @@ type XMLValue struct {
 	Function XMLFunction `xml:"function"`
 }
 
+func (v *XMLValue) IsFunctional() bool {
+	return v.Function != XMLFunction{}
+}
+
 type XMLFunction struct {
 	Name  string  `xml:"name,attr"`
 	Value float64 `xml:"value,attr"`

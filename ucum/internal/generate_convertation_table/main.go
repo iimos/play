@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/iimos/play/ucum/internal/types"
 	"github.com/iimos/play/ucum/internal/ucumparser"
 	"github.com/iimos/play/ucum/internal/xmlparser"
@@ -36,13 +37,16 @@ func main() {
 	conv := make(map[string]*types.Unit, len(data.XML.Units))
 
 	for _, xu := range data.XML.Units {
-		if xu.Value.Function == (xmlparser.XMLFunction{}) {
+		if !xu.Value.IsFunctional() {
 			u, err2 := ucumparser.Parse([]byte(xu.Value.Unit))
 			if err2 != nil {
 				log.Fatalf("ucum.Parse(%s): %s", xu.Value.Unit, err)
 			}
 			u.Coeff.Mul(u.Coeff, xu.Value.Value)
 			conv[xu.Code] = &u
+		} else {
+			fn := xu.Value.Function
+			fmt.Printf("Func: %s(%g %s); IsSpecial=%s\n", fn.Name, fn.Value, fn.Unit, xu.IsSpecial)
 		}
 	}
 

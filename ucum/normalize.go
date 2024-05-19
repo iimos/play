@@ -6,6 +6,7 @@ import (
 	"math/big"
 )
 
+// Normalize builds a normalized version of the given unit. Normalized unit consists of a base units only.
 func Normalize(unit Unit) Unit {
 	return Unit{u: normalize(unit.u)}
 }

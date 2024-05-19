@@ -5,11 +5,14 @@ import (
 	"math/big"
 )
 
-type Converter struct {
-	ratio big.Rat
+// PairConverter makes conversion between two UCUM units.
+type PairConverter struct {
+	ratio      big.Rat
+	ratioFloat float64
 }
 
-func NewConverter(from, to Unit) (*Converter, error) {
+// NewPairConverter creates a new PairConverter.
+func NewPairConverter(from, to Unit) (*PairConverter, error) {
 	a := Normalize(from).u
 	b := Normalize(to).u
 	if len(a.Components) != len(b.Components) {
@@ -22,11 +25,15 @@ func NewConverter(from, to Unit) (*Converter, error) {
 		if !exists {
 			return nil, fmt.Errorf("ucum: %q is not convertible to %q", from.String(), to.String())
 		}
-		ratio.Mul(ratio, big.NewRat(int64(expB), int64(expA)))
+		ratio.Mul(ratio, big.NewRat(int64(expA), int64(expB)))
 	}
-	ratio.Mul(ratio, b.Coeff)
-	ratio.Quo(ratio, a.Coeff)
-	return &Converter{ratio: *ratio}, nil
+	ratio.Mul(ratio, a.Coeff)
+	ratio.Quo(ratio, b.Coeff)
+	ratioFloat, _ := ratio.Float64()
+	return &PairConverter{
+		ratio:      *ratio,
+		ratioFloat: ratioFloat,
+	}, nil
 }
 
 var (
@@ -34,7 +41,7 @@ var (
 	bigOne  = big.NewInt(1)
 )
 
-func (c *Converter) Conv(val *big.Int) (converted *big.Int, exact bool) {
+func (c *PairConverter) ConvBigInt(val *big.Int) (converted *big.Int, exact bool) {
 	ret := new(big.Int).Mul(val, c.ratio.Num())
 	if c.ratio.IsInt() {
 		return ret, true
@@ -43,9 +50,22 @@ func (c *Converter) Conv(val *big.Int) (converted *big.Int, exact bool) {
 	return ret, rem.Cmp(bigZero) == 0
 }
 
-func Conv(val *big.Int, from, to Unit) (*big.Int, error) {
+func (c *PairConverter) ConvRat(val *big.Rat) *big.Rat {
+	return new(big.Rat).Mul(&c.ratio, val)
+}
+
+func (c *PairConverter) ConvFloat64(val float64) float64 {
+	return c.ratioFloat * val
+}
+
+func ConvBigInt(from, to Unit, val *big.Int) (result *big.Int, exact bool, err error) {
 	if from.u.Orig != "" && from.u.Orig == to.u.Orig {
-		return (&big.Int{}).Set(val), nil
+		return (&big.Int{}).Set(val), true, nil
 	}
-	return nil, nil
+	converter, err := NewPairConverter(from, to)
+	if err != nil {
+		return nil, false, err
+	}
+	result, exact = converter.ConvBigInt(val)
+	return result, exact, nil
 }

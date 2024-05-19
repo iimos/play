@@ -4,9 +4,9 @@ package ucum
 //go:generate go run ./internal/generate_convertation_table
 
 import (
+	"fmt"
 	"github.com/iimos/play/ucum/internal/types"
 	"github.com/iimos/play/ucum/internal/ucumparser"
-	"math/big"
 )
 
 // Unit is a UCUM unit of measure.
@@ -15,6 +15,7 @@ type Unit struct {
 }
 
 func (u *Unit) String() string {
+	//todo: what if Orig==""?
 	return u.u.Orig
 }
 
@@ -26,37 +27,36 @@ func Parse(unit []byte) (Unit, error) {
 	return Unit{u: u}, nil
 }
 
-type Converter struct{}
-
-func NewConverter(from, to Unit) (*Converter, error) {
-	return nil, nil
-}
-
-func Conv(val *big.Int, from, to Unit) (*big.Int, error) {
-	if from.u.Orig != "" && from.u.Orig == to.u.Orig {
-		return (&big.Int{}).Set(val), nil
+func MustParse(unit []byte) Unit {
+	u, err := Parse(unit)
+	if err != nil {
+		panic(err)
 	}
-	return nil, nil
+	return u
 }
 
-//type UnitComponent struct {
-//	Code       string
-//	Annotation string
-//	Exponent   int
-//}
-//
-//func (u *Unit) Coefficient() *big.Rat {
-//	return u.Coeff
-//}
-//
-//func (u *Unit) Components() []UnitComponent {
-//	components := make([]UnitComponent, 0, len(u.Components))
-//	for k, v := range u.Components {
-//		components = append(components, UnitComponent{
-//			Code:       k.atomCode,
-//			Annotation: k.annotation,
-//			Exponent:   v,
-//		})
-//	}
-//	return components
-//}
+// MarshalJSON implements the json.Marshaler interface.
+func (u *Unit) MarshalJSON() ([]byte, error) {
+	str := "\"" + u.String() + "\""
+	return []byte(str), nil
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (u *Unit) UnmarshalJSON(bytes []byte) error {
+	if string(bytes) == "null" {
+		return nil
+	}
+	unit, err := Parse(unquote(bytes))
+	if err != nil {
+		return fmt.Errorf("ucum: error decoding string '%s': %s", string(bytes), err)
+	}
+	*u = unit
+	return nil
+}
+
+func unquote(bytes []byte) []byte {
+	if len(bytes) >= 2 && bytes[0] == '"' && bytes[len(bytes)-1] == '"' {
+		return bytes[1 : len(bytes)-1]
+	}
+	return bytes
+}

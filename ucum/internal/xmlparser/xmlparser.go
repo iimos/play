@@ -117,14 +117,6 @@ func f64(s string) float64 {
 	return f
 }
 
-func f64rat(rat *big.Rat) float64 {
-	f, exact := rat.Float64()
-	if !exact {
-		//log.Fatalf("not exact: %v", f) // todo
-	}
-	return f
-}
-
 type XMLRoot struct {
 	Version      string        `xml:"version,attr"`
 	Revision     string        `xml:"revision,attr"`

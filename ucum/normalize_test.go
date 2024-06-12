@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestNormilize(t *testing.T) {
+func TestNormalize(t *testing.T) {
 	tests := map[string]string{
 		"1":                "1",
 		"100":              "100",
@@ -20,6 +20,7 @@ func TestNormilize(t *testing.T) {
 		"[gr]":             "6479891/100000000⋅g",
 		"360.3600.''/[pi]": "2⋅rad",
 		"2.Cel":            "2⋅Cel", // special units are not normalizable
+		"2.kCel/3":         "2000/3⋅Cel",
 	}
 	for input, want := range tests {
 		t.Run(input, func(t *testing.T) {

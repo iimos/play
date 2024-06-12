@@ -37,11 +37,12 @@ func TestParse(t *testing.T) {
 		"TiBy":                  "1099511627776⋅By",
 		"YBy":                   "1000000000000000000000000⋅By",
 		"yBy":                   "1/1000000000000000000000000⋅By",
-		"%[slope].s":            "%[slope]⋅s",
 		"L/L":                   "L⁰",
 		"m[H2O]":                "m[H2O]",
 		"m[H2O].[in_i]/m":       "[in_i]⋅m[H2O]⋅m⁻¹",
 		"cm[Hg]":                "1/100⋅m[Hg]",
+		"%[slope]":              "%[slope]",
+		"10.[m/s2/Hz^(1/2)]":    "10⋅[m/s2/Hz^(1/2)]",
 		"kCel":                  "1000⋅Cel", // special units are allowed to have prefix
 	}
 	for input, want := range tests {
@@ -93,6 +94,8 @@ func TestParseErrors(t *testing.T) {
 		"m[H2O":                            `ucum: unclosed square bracket at position 1`,
 		"[":                                `ucum: unclosed square bracket at position 0`,
 		"]":                                `ucum: unknown unit "]" at position 0`,
+		"%[slope].m":                       `ucum: invalid unit: non-ratio unit '%[slope]' cannot be combined with other units`,
+		"Cel/s":                            `ucum: invalid unit: non-ratio unit 'Cel' cannot be combined with other units`,
 	}
 
 	for input, wantErr := range tests {

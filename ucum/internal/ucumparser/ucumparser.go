@@ -17,11 +17,15 @@ func Parse(unit []byte) (types.Unit, error) {
 	if p.error != nil {
 		return types.Unit{}, p.error
 	}
-	return types.Unit{
+	u := types.Unit{
 		Orig:       string(unit),
 		Components: p.components,
 		Coeff:      p.coef,
-	}, nil
+	}
+	if err := validate(u); err != nil {
+		return types.Unit{}, err
+	}
+	return u, nil
 }
 
 type parser struct {

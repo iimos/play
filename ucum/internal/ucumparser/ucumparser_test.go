@@ -96,6 +96,8 @@ func TestParseErrors(t *testing.T) {
 		"]":                                `ucum: unknown unit "]" at position 0`,
 		"%[slope].m":                       `ucum: invalid unit: non-ratio unit '%[slope]' cannot be combined with other units`,
 		"Cel/s":                            `ucum: invalid unit: non-ratio unit 'Cel' cannot be combined with other units`,
+		"Cel2":                             `ucum: invalid unit: non-ratio unit 'Cel' cannot be raised to a power`,
+		"Cel-1":                            `ucum: invalid unit: non-ratio unit 'Cel' cannot be raised to a power`,
 	}
 
 	for input, wantErr := range tests {

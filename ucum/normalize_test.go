@@ -19,6 +19,7 @@ func TestNormalize(t *testing.T) {
 		"[in_us]":          "100/3937⋅m",
 		"[gr]":             "6479891/100000000⋅g",
 		"360.3600.''/[pi]": "2⋅rad",
+		"180.deg/[pi]":     "rad",
 		"2.Cel":            "2⋅Cel", // special units are not normalizable
 		"2.kCel/3":         "2000/3⋅Cel",
 	}

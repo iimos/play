@@ -4,6 +4,7 @@ package ucum
 //go:generate go run ./internal/generate_convertation_table
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/iimos/play/ucum/internal/types"
 	"github.com/iimos/play/ucum/internal/ucumparser"
@@ -13,6 +14,16 @@ import (
 type Unit struct {
 	u types.Unit
 }
+
+var (
+	// todo
+	//_ fmt.Formatter            = &Unit{}
+	//_ fmt.Scanner              = &Unit{}
+	_ fmt.Stringer     = &Unit{}
+	_ json.Marshaler   = &Unit{}
+	_ json.Unmarshaler = &Unit{}
+	//_ encoding.TextUnmarshaler = &Unit{}
+)
 
 func (u *Unit) String() string {
 	//todo: what if Orig==""?

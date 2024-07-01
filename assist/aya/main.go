@@ -67,7 +67,8 @@ func main() {
 		fmt.Println("============================================================")
 
 		prompt = resp + "Give me the program code. I want to see only code! No comments, no explanations, be strictly to the point^ I just want to copypaste your answer to python and run it! I cant spend my time tuning it."
-		resp, err = generate(ctx, ollama, opts, "codellama", "You are highly experienced python programmer.", "Here is a task from your boss: "+prompt)
+		//resp, err = generate(ctx, ollama, opts, "codellama", "You are highly experienced python programmer.", "Here is a task from your boss: "+prompt)
+		resp, err = generate(ctx, ollama, opts, "codellama", genPrompt(), "User: [INST] "+prompt+" [/INST]\nAssistant: [PYTHON]")
 		if err != nil {
 			log.Println(err)
 			os.Exit(1)

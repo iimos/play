@@ -23,8 +23,14 @@ type PairConverter interface {
 func NewPairConverter(from, to Unit) (PairConverter, error) {
 	a := Normalize(from).u
 	b := Normalize(to).u
+
 	if len(a.Components) != len(b.Components) {
-		return nil, fmt.Errorf("ucum: %q cannot be converted to %q", from.String(), to.String())
+		// Special units are not normalizable so if number of components doesn't match it might be that units are special
+		specConv, ok := newSpecialConverter(a, b)
+		if !ok {
+			return nil, fmt.Errorf("ucum: %q cannot be converted to %q", from.String(), to.String())
+		}
+		return specConv, nil
 	}
 
 	for key, expA := range a.Components {
@@ -54,28 +60,22 @@ func NewPairConverter(from, to Unit) (PairConverter, error) {
 // newSpecialConverter creates convertor for special units.
 // It assumes that the special units are already normalized.
 func newSpecialConverter(from, to types.Unit) (PairConverter, bool) {
-	if len(from.Components) != 1 || len(from.Components) != len(to.Components) {
-		return nil, false
+	specialConv := func(u types.Unit) (conv data.SpecialUnitConv, ok bool) {
+		if len(u.Components) != 1 {
+			return data.SpecialUnitConv{}, false
+		}
+		for key, exp := range u.Components {
+			if exp != 1 {
+				// special units cannot be raised to a power
+				return data.SpecialUnitConv{}, false
+			}
+			conv, ok = data.SpecialUnits[key.AtomCode]
+			return conv, ok
+		}
+		return data.SpecialUnitConv{}, false
 	}
 
-	var (
-		fromAtom, toAtom       string
-		fromCompExp, toCompExp int
-	)
-	for key, exp := range from.Components {
-		fromAtom, fromCompExp = key.AtomCode, exp
-		break
-	}
-	for key, exp := range to.Components {
-		toAtom, toCompExp = key.AtomCode, exp
-		break
-	}
-
-	if fromCompExp != toCompExp {
-		return nil, false
-	}
-
-	if fromConv, ok := data.SpecialUnits[fromAtom]; ok {
+	if fromConv, ok := specialConv(from); ok {
 		interm := MustParse([]byte(fromConv.Unit))
 		toConv, err := NewPairConverter(interm, Unit{u: to})
 		if err != nil {
@@ -89,7 +89,7 @@ func newSpecialConverter(from, to types.Unit) (PairConverter, bool) {
 		}, true
 	}
 
-	if toConv, ok := data.SpecialUnits[toAtom]; ok {
+	if toConv, ok := specialConv(to); ok {
 		interm := MustParse([]byte(toConv.Unit))
 		fromConv, err := NewPairConverter(Unit{u: from}, interm)
 		if err != nil {

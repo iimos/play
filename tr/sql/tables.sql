@@ -1,0 +1,90 @@
+CREATE TABLE tr.candles (
+      time     DateTime CODEC(DoubleDelta(1), LZ4), -- Начало свечки
+      ticker   LowCardinality(String),
+      open     Float32,
+      close    Float32,
+      high     Float32,
+      low      Float32,
+      value    Float64, -- Объем в рублях
+      volume   UInt64   -- Объем в лотах
+) ENGINE = MergeTree()
+PARTITION BY Date(time)
+ORDER BY (ticker, time);
+
+CREATE TABLE tr.supercandles (
+      time          DateTime CODEC(DoubleDelta(1), LZ4),
+      secid         LowCardinality(String),
+
+      -- tradestats
+      pr_open            Float32,
+      pr_high            Float32,
+      pr_low             Float32,
+      pr_close           Float32,
+      pr_std             Float32,
+      vol                UInt32,
+      val                Float32,
+      trades             UInt32,
+      pr_vwap            Float32,
+      pr_change          Float32,
+      trades_b           UInt32,
+      trades_s           UInt32,
+      val_b              Float32,
+      val_s              Float32,
+      vol_b              UInt64,
+      vol_s              UInt64,
+      disb               Float32,
+      pr_vwap_b          Float32,
+      pr_vwap_s          Float32,
+      sec_pr_open        UInt32,
+      sec_pr_high        UInt32,
+      sec_pr_low         UInt32,
+      sec_pr_close       UInt32,
+
+      -- obstats
+      spread_bbo         Float32,
+      spread_lv10        Float32,
+      spread_1mio        Float32,
+      levels_b           UInt32,
+      levels_s           UInt32,
+--       vol_b              UInt64,
+--       vol_s              UInt64,
+--       val_b              UInt64,
+--       val_s              UInt64,
+      imbalance_vol_bbo  Float32,
+      imbalance_val_bbo  Float32,
+      imbalance_vol      Float32,
+      imbalance_val      Float32,
+      vwap_b             Float32,
+      vwap_s             Float32,
+      vwap_b_1mio        Float32,
+      vwap_s_1mio        Float32,
+
+      -- orderstats
+      put_orders_b       UInt32,
+      put_orders_s       UInt32,
+      put_val_b          Float32,
+      put_val_s          Float32,
+      put_vol_b          UInt32,
+      put_vol_s          UInt32,
+      put_vwap_b         Float32,
+      put_vwap_s         Float32,
+      put_vol            UInt32,
+      put_val            Float32,
+      put_orders         UInt32,
+      cancel_orders_b    UInt32,
+      cancel_orders_s    UInt32,
+      cancel_val_b       Float32,
+      cancel_val_s       Float32,
+      cancel_vol_b       UInt32,
+      cancel_vol_s       UInt64,
+      cancel_vwap_b      Float32,
+      cancel_vwap_s      Float32,
+      cancel_vol         UInt64,
+      cancel_val         Float32,
+      cancel_orders      UInt64
+) ENGINE = MergeTree()
+PARTITION BY Date(time)
+ORDER BY (secid, time);
+
+
+

@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type ObStat struct {
+type EqObStat struct {
 	Time            time.Time `json:"time" csv:"time"`
 	SecID           string    `json:"secid" csv:"secid"`
 	SpreadBbo       float64   `json:"spread_bbo" csv:"spread_bbo"`
@@ -27,17 +27,17 @@ type ObStat struct {
 	VwapS1mio       float64   `json:"vwap_s_1mio" csv:"vwap_s_1mio"`
 }
 
-var _ FillerFrom = (*ObStat)(nil)
+var _ FillerFrom = (*EqObStat)(nil)
 
-func (o *ObStat) IsEmpty() bool {
+func (o *EqObStat) IsEmpty() bool {
 	if o == nil {
 		return true
 	}
-	empty := ObStat{Time: o.Time, SecID: o.SecID}
+	empty := EqObStat{Time: o.Time, SecID: o.SecID}
 	return *o == empty
 }
 
-func (o *ObStat) FillFrom(columns []string, data []any) error {
+func (o *EqObStat) FillFrom(columns []string, data []any) error {
 	var tradedate, tradetime string
 	for i, cell := range data {
 		if cell == nil {

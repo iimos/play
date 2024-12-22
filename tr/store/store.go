@@ -1,79 +1,73 @@
 package store
 
 import (
-	"context"
-	"fmt"
-
-	"github.com/apache/arrow/go/v16/arrow"
-	"github.com/apache/arrow/go/v16/arrow/memory"
-
-	"github.com/polarsignals/frostdb"
-	"github.com/polarsignals/frostdb/query"
-	"github.com/polarsignals/frostdb/query/logicalplan"
+	"github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"os"
+	"time"
+	_ "time/tzdata"
 )
 
-func Test() (err error) {
-	// Create a new column store
-	columnstore, err := frostdb.New(frostdb.WithStoragePath("~/tr_db"))
+var ClickhouseURL = "127.0.0.1:9000"
+
+var TimezoneMSK *time.Location
+
+func init() {
+	tz, err := time.LoadLocation("Europe/Moscow")
 	if err != nil {
-		return err
+		panic(err)
 	}
-	defer func() {
-		err = columnstore.Close()
-	}()
+	TimezoneMSK = tz
 
-	// Open up a database in the column store
-	database, _ := columnstore.DB(context.Background(), "simple_db")
-
-	type Simple struct {
-		Names map[string]string `frostdb:",asc"`
-		Value int64
+	if u := os.Getenv("CLICKHOUSE_URL"); u != "" {
+		ClickhouseURL = u
 	}
+}
 
-	table, _ := frostdb.NewGenericTable[Simple](database, "simple_table", memory.DefaultAllocator)
+type Store struct {
+	conn driver.Conn
+}
 
-	// Create values to insert into the database these first rows havel dynamic label names of 'firstname' and 'surname'
-	frederic := Simple{
-		Names: map[string]string{
-			"first_name": "Frederic",
-			"surname":    "Brancz",
+func New() (*Store, error) {
+	conn, err := clickhouse.Open(&clickhouse.Options{
+		Addr: []string{ClickhouseURL},
+		Auth: clickhouse.Auth{
+			Database: "tr",
 		},
-		Value: 100,
-	}
-
-	thor := Simple{
-		Names: map[string]string{
-			"first_name": "Thor",
-			"surname":    "Hansen",
+		Settings: clickhouse.Settings{"max_execution_time": 60},
+		Compression: &clickhouse.Compression{
+			Method: clickhouse.CompressionLZ4,
 		},
-		Value: 99,
-	}
-	_, _ = table.Write(context.Background(), frederic, thor)
-
-	// Now we can insert rows that have middle names into our dynamic column
-	matthias := Simple{
-		Names: map[string]string{
-			"first_name":  "Matthias",
-			"middle_name": "Oliver Rainer",
-			"surname":     "Loibl",
+		DialTimeout:          30 * time.Second,
+		MaxOpenConns:         5,
+		MaxIdleConns:         5,
+		ConnMaxLifetime:      time.Duration(10) * time.Minute,
+		ConnOpenStrategy:     clickhouse.ConnOpenInOrder,
+		BlockBufferSize:      10,
+		MaxCompressionBuffer: 10240,
+		ClientInfo: clickhouse.ClientInfo{ // optional, please see Client info section in the README.md
+			Products: []struct {
+				Name    string
+				Version string
+			}{
+				{Name: "tr", Version: "0.1"},
+			},
 		},
-		Value: 101,
-	}
-	_, _ = table.Write(context.Background(), matthias)
-
-	// Create a new query engine to retrieve data and print the results
-	engine := query.NewEngine(memory.DefaultAllocator, database.TableProvider())
-	q := engine.ScanTable("simple_table").
-		Project(logicalplan.DynCol("names")). // We don't know all dynamic columns at query time, but we want all of them to be returned.
-		Filter(
-			logicalplan.Col("names.first_name").Eq(logicalplan.Literal("Frederic")),
-		)
-	err = q.Execute(context.Background(), func(ctx context.Context, r arrow.Record) error {
-		fmt.Println(r)
-		return nil
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &Store{conn: conn}, nil
+}
+
+func (s *Store) Close() error {
+	return s.conn.Close()
+}
+
+func coalesce[T any](x *T) *T {
+	if x == nil {
+		var empty T
+		return &empty
+	}
+	return x
 }

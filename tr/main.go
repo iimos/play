@@ -19,6 +19,8 @@ import (
 // https://iss.moex.com/iss/datashop/algopack/eq/tradestats/ROSN?date=2024-09-02
 // https://iss.moex.com/iss/datashop/algopack/eq/orderstats/?date=2024-10-02
 // https://iss.moex.com/iss/datashop/algopack/eq/obstats?date=2024-09-02
+// https://www.moex.com/algopackvisual/supercandles?ticker=GAZP - UI https://teletype.in/@timredz/megaalerts
+// https://futuresgraph.ru
 
 func main() {
 	if len(os.Args) < 2 {
@@ -31,8 +33,12 @@ func main() {
 	var err error
 
 	switch cmd {
-	case "load-supercandles":
-		err = supercandles.Load(ctx)
+	case "load-supereq":
+		err = supercandles.LoadStocks(ctx)
+	case "load-superfo":
+		err = supercandles.LoadFutures(ctx)
+	case "load-superfx":
+		err = supercandles.LoadCurrencies(ctx)
 	case "load-candles":
 		err = candles.Load(ctx)
 	case "test":

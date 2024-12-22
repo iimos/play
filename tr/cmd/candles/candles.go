@@ -47,8 +47,8 @@ func Load(ctx context.Context) error {
 
 	iss := gomoex.NewISSClient(&http.Client{Timeout: 10 * time.Second})
 
-	start := must(time.Parse(time.DateOnly, "2024-04-01"))
-	end := must(time.Parse(time.DateOnly, "2024-10-06"))
+	start := must(time.Parse(time.DateOnly, "2024-01-01"))
+	end := must(time.Parse(time.DateOnly, "2024-11-15"))
 
 	for ticker, tdesc := range tickers {
 		for d := end; d.Compare(start) >= 0; d = d.AddDate(0, 0, -1) {

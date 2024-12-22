@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type TradeStat struct {
+type EqTradeStat struct {
 	Time       time.Time `json:"time" csv:"time"`
 	SecID      string    `json:"secid" csv:"secid"`
 	PrOpen     float64   `json:"pr_open" csv:"pr_open"`
@@ -33,17 +33,17 @@ type TradeStat struct {
 	SecPrClose int32     `json:"sec_pr_close" csv:"sec_pr_close"`
 }
 
-var _ FillerFrom = (*TradeStat)(nil)
+var _ FillerFrom = (*EqTradeStat)(nil)
 
-func (t *TradeStat) IsEmpty() bool {
+func (t *EqTradeStat) IsEmpty() bool {
 	if t == nil {
 		return true
 	}
-	empty := TradeStat{Time: t.Time, SecID: t.SecID}
+	empty := EqTradeStat{Time: t.Time, SecID: t.SecID}
 	return *t == empty
 }
 
-func (t *TradeStat) FillFrom(columns []string, data []any) error {
+func (t *EqTradeStat) FillFrom(columns []string, data []any) error {
 	var tradedate, tradetime string
 	for i, cell := range data {
 		if cell == nil {

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For clang-tidy.
 set(BUILD_SHARED_LIBS OFF) # We expect external libraries to be linked statically.
-set(CMAKE_CXX_STANDARD 17) # Compile as C++17.
+set(CMAKE_CXX_STANDARD 20) # Compile as C++17.
 set(CMAKE_CXX_STANDARD_REQUIRED ON) # Require C++17 support.
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/third_party/")
 
@@ -11,6 +11,8 @@ project(Play
 )
 
 include(cmake/CPM.cmake)
+
+CPMAddPackage("gh:fmtlib/fmt#11.1.1")
 
 CPMAddPackage(
         NAME Poco
@@ -49,29 +51,7 @@ CPMAddPackage(
         "BUILD_SHARED_LIBS OFF" "BOOST_INCLUDE_LIBRARIES container\\\;stacktrace" # Note the escapes!
 )
 
-find_package(Protobuf REQUIRED)
-include_directories(${Protobuf_INCLUDE_DIRS})
-
-CPMAddPackage("gh:pganalyze/libpg_query#17-6.0.0")
-# libpg_query has no CMakeLists.txt so build it ourselves
-file(GLOB LIBPG_QUERY_SOURCES
-        "${libpg_query_SOURCE_DIR}/src/*.c"
-        "${libpg_query_SOURCE_DIR}/src/*.cc"
-        "${libpg_query_SOURCE_DIR}/src/postgres/*.c"
-        "${libpg_query_SOURCE_DIR}/src/postgres/*.cc"
-        "${libpg_query_SOURCE_DIR}/protobuf/*.c"
-        "${libpg_query_SOURCE_DIR}/protobuf/*.cc"
-)
-add_library(libpg_query STATIC ${LIBPG_QUERY_SOURCES})
-target_include_directories(
-  libpg_query
-  PUBLIC $<BUILD_INTERFACE:${libpg_query_SOURCE_DIR}>
-  PUBLIC $<BUILD_INTERFACE:${libpg_query_SOURCE_DIR}/src/include>
-  PUBLIC $<BUILD_INTERFACE:${libpg_query_SOURCE_DIR}/src/postgres/include>
-  PUBLIC $<BUILD_INTERFACE:${libpg_query_SOURCE_DIR}/vendor>
-  PUBLIC $<BUILD_INTERFACE:${libpg_query_SOURCE_DIR}/protobuf>
-  ${Protobuf_INCLUDE_DIRS}
-)
+include(cmake/libpg_query.cmake)
 
 add_subdirectory(third_party)
 include_directories(third_party)
@@ -90,12 +70,14 @@ add_executable(server
 )
 target_link_libraries(
     server
+        fmt
         argparse
         Poco::Foundation
         Poco::Net
         Poco::Util
         Boost::stacktrace
         libpg_query
+        ${PROTOBUF_C_LIBRARY}
 )
 
 add_executable(shell

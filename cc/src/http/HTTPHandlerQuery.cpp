@@ -1,7 +1,8 @@
 #include "Poco/Net/HTTPServerRequest.h"
 #include "Poco/Net/HTTPServerResponse.h"
 #include "HTTPHandlerQuery.h"
-#include <pg_query.h>
+#include "pg_query.h"
+#include "fmt/core.h"
 
 namespace http
 {
@@ -16,12 +17,12 @@ namespace http
             std::cout << "HTTP body: size=" << size << ", data: " << buffer << std::endl;
         }
 
-        auto result = pg_query_parse("SELECT 1");
-//        if (result.error) {
-//            printf("error: %s at %d\n", result.error->message, result.error->cursorpos);
-//        } else {
-//            printf("%s\n", result.parse_tree);
-//        }
+        auto result = pg_query_parse(buffer);
+        if (result.error) {
+            fmt::println("error: {} at {}\n", result.error->message, result.error->cursorpos);
+        } else {
+            fmt::println("parse_tree: {}", result.parse_tree);
+        }
 
         resp.setContentType("text/txt");
         resp.setStatus(Poco::Net::HTTPResponse::HTTP_OK);

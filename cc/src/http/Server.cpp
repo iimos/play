@@ -1,51 +1,52 @@
-#include "Server.h"
-#include "handlers/Factory.h"
-
 #include <iostream>
+#include <Poco/AutoPtr.h>
+#include <Poco/ConsoleChannel.h>
+#include <Poco/PatternFormatter.h>
+#include <Poco/FormattingChannel.h>
 #include <Poco/Net/HTTPServer.h>
-#include <Poco/Net/ServerSocketImpl.h>
+#include <Poco/Net/ServerSocket.h>
+#include "Server.h"
+#include "HTTPHandlerFactory.h"
 
-namespace
-{
+namespace http {
 
-    class ServerSocketImpl: public Poco::Net::ServerSocketImpl
-    {
-    public:
-        using Poco::Net::SocketImpl::init;
-    };
+    int Server::main(const std::vector<std::string> &args) {
+        // Set up logging
+        Poco::AutoPtr<Poco::ConsoleChannel> consoleChannel(new Poco::ConsoleChannel);
+        Poco::AutoPtr<Poco::PatternFormatter> patternFormatter(new Poco::PatternFormatter);
+        patternFormatter->setProperty("pattern", "[%Y-%m-%d %H:%M:%S] [%p] %t");
+        Poco::AutoPtr<Poco::FormattingChannel> formattingChannel(
+                new Poco::FormattingChannel(patternFormatter, consoleChannel));
+        Poco::Logger &logger = Poco::Logger::get("ServerLogger");
+        logger.setChannel(formattingChannel);
 
-    class Socket: public Poco::Net::Socket
-    {
-    public:
-        Socket(const std::string & address)
-                : Poco::Net::Socket(new ServerSocketImpl())
-        {
-            const Poco::Net::SocketAddress socket_address(address);
-            ServerSocketImpl * socket = static_cast<ServerSocketImpl*>(impl());
-            socket->init(socket_address.af());
-            socket->setReuseAddress(true);
-            socket->setReusePort(false);
-            socket->bind(socket_address, false);
-            socket->listen();
-        }
-    };
+        logger.information("http server: initializing");
 
-} // anonymous namespace
+        Poco::Net::HTTPServerParams::Ptr http_params = new Poco::Net::HTTPServerParams();
+        http_params->setTimeout(std::chrono::seconds(30));
+        http_params->setKeepAlive(true);
+        http_params->setKeepAliveTimeout(std::chrono::seconds(10));
+        http_params->setMaxKeepAliveRequests(10'000);
+        http_params->setMaxQueued(100);
+        http_params->setMaxThreads(4);
 
-int Server::main(const std::vector<std::string>& args)
-{
-    Poco::Net::HTTPServerParams::Ptr parameters = new Poco::Net::HTTPServerParams();
-    parameters->setTimeout(10000);
-    parameters->setMaxQueued(100);
-    parameters->setMaxThreads(4);
+        static const std::string addr = "localhost:8080";
+        const auto socket_addr = Poco::Net::SocketAddress(addr);
+        auto socket = Poco::Net::ServerSocket(socket_addr);
+        socket.setReuseAddress(true);
+        socket.setReusePort(false);
+        socket.setReceiveTimeout(std::chrono::seconds(30));
+        socket.setSendTimeout(std::chrono::seconds(30));
+        socket.listen(/* backlog = */ 64);
 
-    const Poco::Net::ServerSocket socket(Socket("localhost:5849"));
+        auto server = new Poco::Net::HTTPServer(new http::HTTPHandlerFactory(), socket, http_params);
 
-    Poco::Net::HTTPServer server(new handlers::Factory(), socket, parameters);
+        logger.information("http server: listen %s", socket_addr.toString());
+        server->start();
+        waitForTerminationRequest();
 
-    server.start();
-    waitForTerminationRequest();
-    server.stopAll();
-
-    return 0;
+        logger.information("http server: stopping");
+        server->stopAll();
+        return 0;
+    }
 }

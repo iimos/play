@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string>
-#include "linenoise/linenoise.h"
+#include "linenoise.h"
 
 inline bool ends_with(std::string const & value, std::string const & ending) {
     if (ending.size() > value.size()) {
@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
     linenoiseHistorySetMaxLen(1024);
 	linenoiseSetMultiLine(1);
 
-	auto prompt = "shell> ";
+	static auto prompt = "shell> ";
 
 	while (true) {
 		std::string query;
@@ -25,7 +25,8 @@ int main(int argc, char** argv) {
                 return 0;
             }
 			query += line;
-            linenoiseFree(line);
+            // linenoiseFree(line); // почему-то не находится при компиляции поэтому заменил на free
+            free(line);
 			if (ends_with(query, ";")) {
 				break;
 			}

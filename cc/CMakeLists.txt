@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.14)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For clang-tidy.
 set(BUILD_SHARED_LIBS OFF) # We expect external libraries to be linked statically.
-set(CMAKE_CXX_STANDARD 20) # Compile as C++17.
+set(CMAKE_CXX_STANDARD 17) # Compile as C++17.
 set(CMAKE_CXX_STANDARD_REQUIRED ON) # Require C++17 support.
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/third_party/")
 
@@ -13,6 +13,13 @@ project(Play
 include(cmake/CPM.cmake)
 
 CPMAddPackage("gh:fmtlib/fmt#11.1.1")
+CPMAddPackage("gh:gabime/spdlog@1.15.0")
+
+CPMAddPackage("gh:antirez/linenoise#1.0")
+add_library(linenoise STATIC ${linenoise_SOURCE_DIR}/linenoise.c)
+target_include_directories(linenoise SYSTEM PUBLIC ${linenoise_SOURCE_DIR})
+
+include(cmake/libpg_query.cmake)
 
 CPMAddPackage(
         NAME Poco
@@ -21,25 +28,37 @@ CPMAddPackage(
         OPTIONS
         "BUILD_SHARED_LIBS OFF"
         "ENABLE_FOUNDATION ON"
+        "ENABLE_XML OFF"
+        "ENABLE_JSON ON"
         "ENABLE_NET ON"
         "ENABLE_NETSSL OFF"
-        "ENABLE_XML OFF"
-        "ENABLE_DATA_SQLITE OFF"
-        "ENABLE_ENCODINGS OFF"
-        "ENABLE_ENCODINGS_COMPILER OFF"
-        "ENABLE_UTIL ON"
-        "ENABLE_JSON ON"
-        "ENABLE_MONGODB OFF"
-        "ENABLE_REDIS OFF"
-        "ENABLE_PROMETHEUS OFF"
-        "ENABLE_JWT OFF"
         "ENABLE_CRYPTO OFF"
+        "ENABLE_JWT OFF"
         "ENABLE_DATA OFF"
+        "ENABLE_DATA_SQLITE OFF"
+        "ENABLE_DATA_MYSQL OFF"
+        "ENABLE_DATA_POSTGRESQL OFF"
+        "ENABLE_DATA_ODBC OFF"
+        "ENABLE_MONGODB OFF"
+        "ENABLE_PROMETHEUS OFF"
+        "ENABLE_REDIS OFF"
+        "ENABLE_PDF OFF"
+        "ENABLE_UTIL ON"
+        "ENABLE_ZIP OFF"
+        "ENABLE_SEVENZIP OFF"
         "ENABLE_ACTIVERECORD OFF"
         "ENABLE_ACTIVERECORD_COMPILER OFF"
-        "ENABLE_ZIP OFF"
+        "ENABLE_APACHECONNECTOR OFF"
+        "ENABLE_CPPPARSER OFF"
+        "ENABLE_ENCODINGS OFF"
+        "ENABLE_ENCODINGS_COMPILER OFF"
         "ENABLE_PAGECOMPILER OFF"
         "ENABLE_PAGECOMPILER_FILE2PAGE OFF"
+        "ENABLE_POCODOC OFF"
+        "ENABLE_TESTS OFF"
+        "ENABLE_SAMPLES OFF"
+        "ENABLE_LONG_RUNNING_TESTS OFF"
+        "POCO_UNBUNDLED OFF"
 )
 
 CPMAddPackage(
@@ -50,11 +69,6 @@ CPMAddPackage(
         OPTIONS "BOOST_ENABLE_CMAKE ON" "BOOST_SKIP_INSTALL_RULES ON" # Set `OFF` for installation
         "BUILD_SHARED_LIBS OFF" "BOOST_INCLUDE_LIBRARIES container\\\;stacktrace" # Note the escapes!
 )
-
-include(cmake/libpg_query.cmake)
-
-add_subdirectory(third_party)
-include_directories(third_party)
 
 # find_package(Poco REQUIRED COMPONENTS Foundation Util Net XML JSON)
 
@@ -71,7 +85,7 @@ add_executable(server
 target_link_libraries(
     server
         fmt
-        argparse
+        spdlog
         Poco::Foundation
         Poco::Net
         Poco::Util
@@ -85,8 +99,6 @@ add_executable(shell
 )
 target_link_libraries(
     shell
-        argparse
-        utf8proc
         linenoise
         Poco::Foundation
         Poco::Net

@@ -1,26 +1,17 @@
-#include <iostream>
 #include <Poco/AutoPtr.h>
-#include <Poco/ConsoleChannel.h>
-#include <Poco/PatternFormatter.h>
-#include <Poco/FormattingChannel.h>
 #include <Poco/Net/HTTPServer.h>
 #include <Poco/Net/ServerSocket.h>
 #include "Server.h"
 #include "HTTPHandlerFactory.h"
+#include "spdlog/spdlog.h"
 
 namespace http {
 
     int Server::main(const std::vector<std::string> &args) {
         // Set up logging
-        Poco::AutoPtr<Poco::ConsoleChannel> consoleChannel(new Poco::ConsoleChannel);
-        Poco::AutoPtr<Poco::PatternFormatter> patternFormatter(new Poco::PatternFormatter);
-        patternFormatter->setProperty("pattern", "[%Y-%m-%d %H:%M:%S] [%p] %t");
-        Poco::AutoPtr<Poco::FormattingChannel> formattingChannel(
-                new Poco::FormattingChannel(patternFormatter, consoleChannel));
-        Poco::Logger &logger = Poco::Logger::get("ServerLogger");
-        logger.setChannel(formattingChannel);
+        spdlog::set_level(spdlog::level::debug);
 
-        logger.information("http server: initializing");
+        SPDLOG_INFO("http server: initializing");
 
         Poco::Net::HTTPServerParams::Ptr http_params = new Poco::Net::HTTPServerParams();
         http_params->setTimeout(std::chrono::seconds(30));
@@ -41,11 +32,11 @@ namespace http {
 
         auto server = new Poco::Net::HTTPServer(new http::HTTPHandlerFactory(), socket, http_params);
 
-        logger.information("http server: listen %s", socket_addr.toString());
+        SPDLOG_INFO("http server: listen {}", socket_addr.toString());
         server->start();
         waitForTerminationRequest();
 
-        logger.information("http server: stopping");
+        SPDLOG_INFO("http server: stopping");
         server->stopAll();
         return 0;
     }

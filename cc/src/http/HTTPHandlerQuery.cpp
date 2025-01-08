@@ -19,10 +19,15 @@ namespace http
 
         auto result = pg_query_parse(buffer);
         if (result.error) {
-            fmt::println("error: {} at {}\n", result.error->message, result.error->cursorpos);
-        } else {
-            fmt::println("parse_tree: {}", result.parse_tree);
+            fmt::println("error: {} at {}", result.error->message, result.error->cursorpos);
+            resp.setContentType("text/txt");
+            resp.setStatus(Poco::Net::HTTPResponse::HTTP_BAD_REQUEST);
+            resp.send() << buffer << std::endl;
+            return;
         }
+
+        fmt::println("parse_tree: {}", result.parse_tree);
+        pg_query_free_parse_result(result);
 
         resp.setContentType("text/txt");
         resp.setStatus(Poco::Net::HTTPResponse::HTTP_OK);

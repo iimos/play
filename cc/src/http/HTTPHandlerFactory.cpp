@@ -1,3 +1,4 @@
+#include <iostream>
 #include "Poco/Net/HTTPServerRequest.h"
 #include "Poco/Net/HTTPServerResponse.h"
 

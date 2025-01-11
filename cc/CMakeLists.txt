@@ -70,7 +70,13 @@ CPMAddPackage(
         "BUILD_SHARED_LIBS OFF" "BOOST_INCLUDE_LIBRARIES container\\\;stacktrace" # Note the escapes!
 )
 
-# find_package(Poco REQUIRED COMPONENTS Foundation Util Net XML JSON)
+find_package(Protobuf REQUIRED)
+include_directories(${Protobuf_INCLUDE_DIRS})
+
+include(cmake/FindProtobuf-c.cmake)
+if (NOT PROTOBUF_C_FOUND)
+    message(FATAL_ERROR "protobuf-c library not found")
+endif()
 
 add_executable(server
         src/server.cpp

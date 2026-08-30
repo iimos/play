@@ -1,0 +1,31 @@
+урок 1: понятие функции, main, ЗапуститьИгру
+
+урок 2: загрузить и отобразить картинку
+
+урок 3: растянуть картинку, вырезать прямоугольник
+    https://www.leshylabs.com/apps/sstool/
+
+урок 4: анимация и время
+    https://medium.com/a-journey-with-go/go-image-rendering-in-2d-video-games-with-ebiten-912cc2360c4f
+
+    перекллючаем картинку на каждой итерации:
+        step++
+    	if step == 8 {
+    		step = 0
+    	}
+
+     получается слишком быстро, нужно замедлиться, добавляем вспомогательную переменную with
+        t++
+        if t > 10 {
+           	t = 0
+           	step++
+        }
+        if step == 8 {
+       	    step = 0
+        }
+
+урок 5: управление кнопками, if
+урок 6: разворот по курсу
+
+урок 7: звук
+    https://ebitengine.org/en/examples/audio.html

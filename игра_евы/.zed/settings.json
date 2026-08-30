@@ -1,0 +1,18 @@
+// Folder-specific settings
+//
+// For a full list of overridable settings, and general information on folder-specific settings,
+// see the documentation: https://zed.dev/docs/configuring-zed#settings-files
+{
+  "inlay_hints": {
+    "enabled": false,
+    "show_type_hints": false,
+    "show_parameter_hints": false
+  },
+  "features": {
+    "edit_prediction_provider": "none"
+  },
+  "agent": {
+    "enabled": false,
+    "version": "2"
+  }
+}

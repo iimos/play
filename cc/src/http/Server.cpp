@@ -1,14 +1,22 @@
+#include <iostream>
 #include <Poco/AutoPtr.h>
 #include <Poco/Net/HTTPServer.h>
 #include <Poco/Net/ServerSocket.h>
+#include "spdlog/spdlog.h"
+
 #include "Server.h"
 #include "HTTPHandlerFactory.h"
-#include "spdlog/spdlog.h"
+
+struct AAA {
+    std::string first;
+    std::string second;
+// public:
+//     explicit AAA(std::string a, std::string b) : first{a}, second{b} {};
+};
 
 namespace http {
 
     int Server::main(const std::vector<std::string> &args) {
-        // Set up logging
         spdlog::set_level(spdlog::level::debug);
 
         SPDLOG_INFO("http server: initializing");

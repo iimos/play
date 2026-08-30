@@ -3,23 +3,23 @@ package supercandles
 import (
 	"context"
 	"fmt"
-	"github.com/iimos/play/tr/moexalgo"
-	"github.com/iimos/play/tr/store"
-	"golang.org/x/exp/maps"
-	"golang.org/x/sync/errgroup"
 	"os"
 	"runtime"
 	"slices"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/iimos/play/tr/moexalgo"
+	"github.com/iimos/play/tr/store"
+	"golang.org/x/exp/maps"
+	"golang.org/x/sync/errgroup"
 )
 
 func LoadStocks(ctx context.Context) error {
-	user := os.Getenv("MOEX_USER")
-	pwd := os.Getenv("MOEX_PWD")
+	algopackToken := os.Getenv("MOEX_ALGOPACK_TOKEN")
 
-	//moexalgo.Debug = true
+	moexalgo.Debug = true
 
 	storage, err := store.New()
 	if err != nil {
@@ -28,24 +28,18 @@ func LoadStocks(ctx context.Context) error {
 	defer storage.Close()
 
 	moexSess, err := moexalgo.NewSession(moexalgo.Params{
-		Username: user,
-		Password: pwd,
+		Token: algopackToken,
 	})
 	if err != nil {
 		return err
 	}
 
-	start := must(time.Parse(time.DateOnly, "2024-01-01"))
-	end := must(time.Parse(time.DateOnly, "2024-11-15"))
+	start := must(time.Parse(time.DateOnly, "2026-01-01"))
+	end := must(time.Parse(time.DateOnly, "2026-08-29"))
 
 	for d := end; d.Compare(start) >= 0; d = d.AddDate(0, 0, -1) {
-		printMemUsage()
+		// printMemUsage()
 		fmt.Printf("> %s", d.Format(time.DateOnly))
-
-		if d.Weekday() == time.Saturday || d.Weekday() == time.Sunday {
-			fmt.Printf(": WEEKEND\n")
-			continue
-		}
 
 		count, err := storage.CountSuperEqCandlesForDate(ctx, d)
 		if err != nil {
@@ -63,10 +57,11 @@ func LoadStocks(ctx context.Context) error {
 		}
 		fmt.Printf(": FETCHED %d supercandles\n", len(data))
 
-		err = storage.StoreSuperEq(ctx, data)
+		err = storage.StoreSuperEq(context.Background(), data)
 		if err != nil {
 			return err
 		}
+
 		runtime.GC()
 	}
 

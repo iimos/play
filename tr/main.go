@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+
 	"github.com/iimos/play/tr/cmd/candles"
 	"github.com/iimos/play/tr/cmd/supercandles"
 	"github.com/iimos/play/tr/cmd/test"
-	"os"
 )
 
 // https://iss.moex.com/iss/reference/
@@ -20,7 +21,6 @@ import (
 // https://iss.moex.com/iss/datashop/algopack/eq/orderstats/?date=2024-10-02
 // https://iss.moex.com/iss/datashop/algopack/eq/obstats?date=2024-09-02
 // https://www.moex.com/algopackvisual/supercandles?ticker=GAZP - UI https://teletype.in/@timredz/megaalerts
-// https://futuresgraph.ru
 
 func main() {
 	if len(os.Args) < 2 {

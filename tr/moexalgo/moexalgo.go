@@ -7,78 +7,39 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"net/http/cookiejar"
 	"strconv"
 	"strings"
 	"time"
 )
 
 const (
-	DefaultAPIURL    = "https://iss.moex.com/iss/"
-	DefaultAuthURL   = "https://passport.moex.com/authenticate"
-	DefaultPageLimit = 1000
+	DefaultAPIURL    = "https://apim.moex.com/iss/"
+	DefaultPageLimit = 1000 // it's maximum available page size
+	DefaultTimeout   = 30 * time.Second
 )
 
 // Debug enables logging
 var Debug = false
 
 type Session struct {
-	http *http.Client
+	token string
+	http  *http.Client
 }
 
 type Params struct {
-	Username string
-	Password string
-	Timeout  time.Duration
+	Token   string
+	Timeout time.Duration
 }
 
 func NewSession(params Params) (*Session, error) {
-	jar, err := cookiejar.New(nil)
-	if err != nil {
-		return nil, err
-	}
-
 	if params.Timeout == 0 {
-		params.Timeout = 30 * time.Second
+		params.Timeout = DefaultTimeout
 	}
-
 	sess := &Session{
-		http: &http.Client{
-			Jar:     jar,
-			Timeout: params.Timeout,
-		},
-	}
-	// если не пустое имя пользователя и пароль = проведем авторизацию
-	if params.Username != "" && params.Password != "" {
-		err = sess.Auth(params.Username, params.Password)
-		if err != nil {
-			return nil, err
-		}
+		token: params.Token,
+		http:  &http.Client{Timeout: params.Timeout},
 	}
 	return sess, nil
-}
-
-func (s *Session) Auth(username, password string) error {
-	log("GET " + DefaultAuthURL)
-	req, err := http.NewRequest(http.MethodGet, DefaultAuthURL, nil)
-	if err != nil {
-		return err
-	}
-	req.SetBasicAuth(username, password)
-	resp, err := s.http.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("moexalgo: auth failed: %s", string(data))
-	}
-	return nil
 }
 
 func Get[T any, PT interface {
@@ -91,7 +52,9 @@ func Get[T any, PT interface {
 	if err != nil {
 		return err
 	}
-	req.WithContext(ctx)
+	req = req.WithContext(ctx)
+
+	req.Header.Set("Authorization", "Bearer "+s.token)
 
 	resp, err := s.http.Do(req)
 	if err != nil {
@@ -105,12 +68,12 @@ func Get[T any, PT interface {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("moexalgo.Get: %s", string(body))
+		return fmt.Errorf("moexalgo.Get: %d %s", resp.StatusCode, string(body))
 	}
 
 	var r apiResponse
 	if err = json.Unmarshal(body, &r); err != nil {
-		return fmt.Errorf("moexalgo.Get: %w", err)
+		return fmt.Errorf("moexalgo.Get: %w; body: %s", err, string(body))
 	}
 
 	dataSection, ok := r.getData()

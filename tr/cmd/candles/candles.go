@@ -3,11 +3,12 @@ package candles
 import (
 	"context"
 	"fmt"
-	"github.com/WLM1ke/gomoex"
-	"github.com/iimos/play/tr/store"
 	"math/rand"
 	"net/http"
 	"time"
+
+	"github.com/WLM1ke/gomoex"
+	"github.com/iimos/play/tr/store"
 )
 
 var tickers = map[string]tickerDesc{
@@ -47,8 +48,8 @@ func Load(ctx context.Context) error {
 
 	iss := gomoex.NewISSClient(&http.Client{Timeout: 10 * time.Second})
 
-	start := must(time.Parse(time.DateOnly, "2024-01-01"))
-	end := must(time.Parse(time.DateOnly, "2024-11-15"))
+	start := must(time.Parse(time.DateOnly, "2026-01-01"))
+	end := must(time.Parse(time.DateOnly, "2026-02-01"))
 
 	for ticker, tdesc := range tickers {
 		for d := end; d.Compare(start) >= 0; d = d.AddDate(0, 0, -1) {
@@ -59,10 +60,10 @@ func Load(ctx context.Context) error {
 				continue
 			}
 
-			if d.Weekday() == time.Saturday || d.Weekday() == time.Sunday {
-				fmt.Printf(": WEEKEND\n")
-				continue
-			}
+			//if d.Weekday() == time.Saturday || d.Weekday() == time.Sunday {
+			//	fmt.Printf(": WEEKEND\n")
+			//	continue
+			//}
 
 			count, err := s.CountCandlesForDate(ctx, ticker, d)
 			if err != nil {

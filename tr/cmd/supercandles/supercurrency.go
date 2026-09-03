@@ -34,12 +34,24 @@ func LoadCurrencies(ctx context.Context, opts LoadOptions) error {
 		return err
 	}
 
+	// Get last date from table to determine if we should reload it
+	lastTableDate, err := storage.GetLastSuperFxDate(ctx)
+	if err != nil {
+		return err
+	}
+
 	start := opts.StartDate
 	end := opts.EndDate
 
 	// Use defaults if dates not provided
 	if start.IsZero() {
-		start = time.Now().AddDate(0, 0, -10) // today - 10 days (start of day)
+		if lastTableDate.IsZero() {
+			// Table is empty, start from 10 days ago
+			start = time.Now().AddDate(0, 0, -10)
+		} else {
+			// Use last date from table as start date
+			start = lastTableDate
+		}
 	}
 	if end.IsZero() {
 		end = time.Now()
@@ -50,12 +62,6 @@ func LoadCurrencies(ctx context.Context, opts LoadOptions) error {
 	end = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location())
 
 	fmt.Printf("Loading data from %s to %s\n", start.Format(time.DateOnly), end.Format(time.DateOnly))
-
-	// Get last date from table to determine if we should reload it
-	lastTableDate, err := storage.GetLastSuperFxDate(ctx)
-	if err != nil {
-		return err
-	}
 
 	for d := end; d.Compare(start) >= 0; d = d.AddDate(0, 0, -1) {
 		//printMemUsage()

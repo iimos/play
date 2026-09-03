@@ -34,24 +34,34 @@ func LoadStocks(ctx context.Context, opts LoadOptions) error {
 		return err
 	}
 
-	start := opts.StartDate
-	end := opts.EndDate
-
-	// Use defaults if dates not provided
-	if start.IsZero() {
-		start = time.Now().AddDate(0, 0, -10) // today - 10 days (start of day)
-	}
-	if end.IsZero() {
-		end = time.Now()
-	}
-
-	fmt.Printf("Loading data from %s to %s\n", start.Format(time.DateOnly), end.Format(time.DateOnly))
-
 	// Get last date from table to determine if we should reload it
 	lastTableDate, err := storage.GetLastSuperEqDate(ctx)
 	if err != nil {
 		return err
 	}
+
+	start := opts.StartDate
+	end := opts.EndDate
+
+	// Use defaults if dates not provided
+	if start.IsZero() {
+		if lastTableDate.IsZero() {
+			// Table is empty, start from 10 days ago
+			start = time.Now().AddDate(0, 0, -10)
+		} else {
+			// Use last date from table as start date
+			start = lastTableDate
+		}
+	}
+	if end.IsZero() {
+		end = time.Now()
+	}
+
+	// Normalize dates to start of day for comparison
+	start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
+	end = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location())
+
+	fmt.Printf("Loading data from %s to %s\n", start.Format(time.DateOnly), end.Format(time.DateOnly))
 
 	for d := end; d.Compare(start) >= 0; d = d.AddDate(0, 0, -1) {
 		// printMemUsage()

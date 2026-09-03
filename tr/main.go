@@ -34,7 +34,7 @@ _, _ = fmt.Fprintf(os.Stderr, "  load-supereq    - load stock supercandles\n")
 	_, _ = fmt.Fprintf(os.Stderr, "  load            - load all supercandles (stocks, futures, currencies)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "flags:\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --force         - force reload all dates (delete and reload)\n")
-		_, _ = fmt.Fprintf(os.Stderr, "  --start {date}  - start date (format: YYYY-MM-DD)\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  --start {date}  - start date (format: YYYY-MM-DD, defaults to last date in table)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --end {date}    - end date (format: YYYY-MM-DD, defaults to today)\n")
 		os.Exit(1)
 	}
@@ -45,7 +45,7 @@ _, _ = fmt.Fprintf(os.Stderr, "  load-supereq    - load stock supercandles\n")
 	// Parse flags
 	flags := flag.NewFlagSet(cmd, flag.ExitOnError)
 	forceFlag := flags.Bool("force", false, "force reload all dates (delete and reload)")
-	startFlag := flags.String("start", "", "start date (format: YYYY-MM-DD)")
+	startFlag := flags.String("start", "", "start date (format: YYYY-MM-DD, defaults to last date in table)")
 	endFlag := flags.String("end", "", "end date (format: YYYY-MM-DD, defaults to today)")
 
 	// Parse flags from os.Args[2:]

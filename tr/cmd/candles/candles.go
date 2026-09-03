@@ -39,7 +39,7 @@ type tickerDesc struct {
 	TradingStart   time.Time
 }
 
-func Load(ctx context.Context) error {
+func Load(ctx context.Context, opts LoadOptions) error {
 	s, err := store.New()
 	if err != nil {
 		return err
@@ -48,8 +48,28 @@ func Load(ctx context.Context) error {
 
 	iss := gomoex.NewISSClient(&http.Client{Timeout: 10 * time.Second})
 
-	start := must(time.Parse(time.DateOnly, "2026-01-01"))
-	end := must(time.Parse(time.DateOnly, "2026-02-01"))
+	start := opts.StartDate
+	end := opts.EndDate
+
+	// Use defaults if dates not provided
+	if start.IsZero() {
+		start = time.Now().AddDate(0, 0, -10) // today - 10 days (start of day)
+	}
+	if end.IsZero() {
+		end = time.Now()
+	}
+
+	// Normalize dates to start of day for comparison
+	start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
+	end = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location())
+
+	fmt.Printf("Loading data from %s to %s\n", start.Format(time.DateOnly), end.Format(time.DateOnly))
+
+	// Get last date from table to determine if we should reload it
+	lastTableDate, err := s.GetLastCandlesDate(ctx)
+	if err != nil {
+		return err
+	}
 
 	for ticker, tdesc := range tickers {
 		for d := end; d.Compare(start) >= 0; d = d.AddDate(0, 0, -1) {
@@ -65,14 +85,33 @@ func Load(ctx context.Context) error {
 			//	continue
 			//}
 
-			count, err := s.CountCandlesForDate(ctx, ticker, d)
-			if err != nil {
-				panic(err)
-			}
+			// Check if we need to reload this date
+			// Always reload if it's the last date in the table (might be incomplete)
+			shouldReload := opts.ForceReload || (!lastTableDate.IsZero() && d.Format(time.DateOnly) == lastTableDate.Format(time.DateOnly))
 
-			if count > 0 {
-				fmt.Printf(": EXISTS; %d candles\n", count)
-				continue
+			if !shouldReload {
+				count, err := s.CountCandlesForDate(ctx, ticker, d)
+				if err != nil {
+					panic(err)
+				}
+
+				if count > 0 {
+					fmt.Printf(": EXISTS; %d candles\n", count)
+					continue
+				}
+			} else {
+				// Delete existing data for this ticker and date before reloading
+				fmt.Printf(": FORCE RELOAD")
+				if !lastTableDate.IsZero() && d.Format(time.DateOnly) == lastTableDate.Format(time.DateOnly) {
+					fmt.Printf(" (last date in table)")
+				}
+				err := s.DeleteCandlesForDate(ctx, ticker, d)
+				if err != nil {
+					fmt.Printf(" (FAILED to delete data: %v)\n", err)
+					return fmt.Errorf("failed to delete candles for ticker %s date %s: %w", ticker, d.Format(time.DateOnly), err)
+				} else {
+					fmt.Printf(" (data deleted)")
+				}
 			}
 
 			from := d.Format(time.DateOnly)

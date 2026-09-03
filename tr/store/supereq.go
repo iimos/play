@@ -21,7 +21,7 @@ func (s *Store) StoreSuperEq(ctx context.Context, candles []*SuperCandleEq) erro
 	}
 	batch, err := s.conn.PrepareBatch(ctx, `INSERT INTO super_eq(
 	    time, secid,
-                         
+                          
         pr_open, pr_high, pr_low, pr_close, pr_std, vol, val, trades, pr_vwap, pr_change, trades_b, trades_s, val_b, val_s, vol_b, vol_s, disb, pr_vwap_b, pr_vwap_s, sec_pr_open, sec_pr_high, sec_pr_low, sec_pr_close,
 
         spread_bbo, spread_lv10, spread_1mio, levels_b, levels_s, imbalance_vol_bbo, imbalance_val_bbo, imbalance_vol, imbalance_val, vwap_b, vwap_s, vwap_b_1mio, vwap_s_1mio,
@@ -55,9 +55,23 @@ func (s *Store) StoreSuperEq(ctx context.Context, candles []*SuperCandleEq) erro
 	return batch.Send()
 }
 
+func (s *Store) GetLastSuperEqDate(ctx context.Context) (time.Time, error) {
+	var lastDate time.Time
+	err := s.conn.QueryRow(ctx, "SELECT max(Date(time)) FROM super_eq").Scan(&lastDate)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return lastDate, nil
+}
+
 func (s *Store) CountSuperEqCandlesForDate(ctx context.Context, date time.Time) (uint64, error) {
 	dateStr := date.Format(time.DateOnly)
 	var count uint64
 	err := s.conn.QueryRow(ctx, "SELECT count() FROM super_eq WHERE Date(time) = ?", dateStr).Scan(&count)
 	return count, err
+}
+
+func (s *Store) DeleteSuperEqPartition(ctx context.Context, date time.Time) error {
+	dateStr := date.Format(time.DateOnly)
+	return s.conn.Exec(ctx, "ALTER TABLE super_eq DROP PARTITION ?", dateStr)
 }

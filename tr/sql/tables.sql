@@ -1,3 +1,5 @@
+CREATE DATABASE tr;
+
 CREATE TABLE tr.candles (
       time     DateTime CODEC(DoubleDelta(1), LZ4), -- Начало свечки
       ticker   LowCardinality(String),

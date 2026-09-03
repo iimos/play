@@ -19,7 +19,7 @@ func (s *Store) StoreSuperFO(ctx context.Context, candles []*SuperCandleFO) erro
 	}
 	batch, err := s.conn.PrepareBatch(ctx, `INSERT INTO super_fo(
 	    time, secid, asset_code,
-                         
+                          
         pr_open, pr_high, pr_low, pr_close, pr_std, vol, val, trades, pr_vwap, pr_change, trades_b, trades_s, val_b, val_s, vol_b, vol_s, disb, pr_vwap_b, pr_vwap_s, im, oi_open, oi_high, oi_low, oi_close, sec_pr_open, sec_pr_high, sec_pr_low, sec_pr_close,
 
         mid_price, micro_price, spread_l1, spread_l2, spread_l3, spread_l5, spread_l10, spread_l20, levels_b, levels_s, vol_b_l1, vol_b_l2, vol_b_l3, vol_b_l5, vol_b_l10, vol_b_l20, vol_s_l1, vol_s_l2, vol_s_l3, vol_s_l5, vol_s_l10, vol_s_l20, vwap_b_l3, vwap_b_l5, vwap_b_l10, vwap_b_l20, vwap_s_l3, vwap_s_l5, vwap_s_l10, vwap_s_l20
@@ -53,9 +53,23 @@ func (s *Store) StoreSuperFO(ctx context.Context, candles []*SuperCandleFO) erro
 	return batch.Send()
 }
 
+func (s *Store) GetLastSuperFODate(ctx context.Context) (time.Time, error) {
+	var lastDate time.Time
+	err := s.conn.QueryRow(ctx, "SELECT max(Date(time)) FROM super_fo").Scan(&lastDate)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return lastDate, nil
+}
+
 func (s *Store) CountSuperFOCandlesForDate(ctx context.Context, date time.Time) (uint64, error) {
 	dateStr := date.Format(time.DateOnly)
 	var count uint64
 	err := s.conn.QueryRow(ctx, "SELECT count() FROM super_fo WHERE Date(time) = ?", dateStr).Scan(&count)
 	return count, err
+}
+
+func (s *Store) DeleteSuperFOPartition(ctx context.Context, date time.Time) error {
+	dateStr := date.Format(time.DateOnly)
+	return s.conn.Exec(ctx, "ALTER TABLE super_fo DROP PARTITION ?", dateStr)
 }

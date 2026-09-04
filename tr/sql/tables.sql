@@ -158,6 +158,25 @@ CREATE TABLE tr.super_fo (
 PARTITION BY Date(time)
 ORDER BY (secid, time);
 
+CREATE TABLE tr.security_info (
+    secid                LowCardinality(String),
+    shortname            String, -- Краткое наименование
+    name                 String, -- Полное наименование
+    isin                 String,
+    regnumber            String,
+    is_traded            UInt8,
+    emitent_id           String,
+    emitent_title        String, -- Название эмитента
+    emitent_inn          String,
+    emitent_okpo         String,
+    sec_type             LowCardinality(String), -- Тип бумаги (common_share, futures, currency, ...)
+    sec_group            LowCardinality(String), -- Группа (stock_shares, futures_forts, currency_selt, ...)
+    primary_boardid      LowCardinality(String),
+    marketprice_boardid  LowCardinality(String),
+    updated_at           DateTime DEFAULT now()
+) ENGINE = ReplacingMergeTree(updated_at)
+ORDER BY secid;
+
 CREATE TABLE tr.super_fx (
      time          DateTime CODEC(DoubleDelta(1), LZ4),
      secid         LowCardinality(String),

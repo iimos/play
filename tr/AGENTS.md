@@ -44,6 +44,13 @@ go run main.go load-superfx    # Load currency supercandles
 - MOEX Algopack: https://moexalgo.github.io/api/rest/ (supercandles, orderbook stats)
 - MOEX ISS API: https://iss.moex.com/iss/reference/
 
+## Docs
+https://moexalgo.github.io/docs/method/supercandles/
+https://moexalgo.github.io/docs/method/futoi/
+https://moexalgo.github.io/docs/method/hi2/
+https://moexalgo.github.io/docs/method/megaalerts/
+https://iss.moex.com/iss/reference/
+
 ## Database
 
 `sql` directory may contain ClickHouse schema definitions

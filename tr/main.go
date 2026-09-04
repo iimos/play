@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/iimos/play/tr/cmd/candles"
+	"github.com/iimos/play/tr/cmd/securities"
 	"github.com/iimos/play/tr/cmd/supercandles"
 	"github.com/iimos/play/tr/cmd/test"
 )
@@ -32,6 +33,7 @@ _, _ = fmt.Fprintf(os.Stderr, "  load-supereq    - load stock supercandles\n")
 	_, _ = fmt.Fprintf(os.Stderr, "  load-superfo    - load futures supercandles\n")
 	_, _ = fmt.Fprintf(os.Stderr, "  load-superfx    - load currency supercandles\n")
 	_, _ = fmt.Fprintf(os.Stderr, "  load            - load all supercandles (stocks, futures, currencies)\n")
+	_, _ = fmt.Fprintf(os.Stderr, "  load-securities - load securities metadata (names, emitents, etc.)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "flags:\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --force         - force reload all dates (delete and reload)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --start {date}  - start date (format: YYYY-MM-DD, defaults to last date in table)\n")
@@ -95,6 +97,8 @@ _, _ = fmt.Fprintf(os.Stderr, "  load-supereq    - load stock supercandles\n")
 		err = supercandles.LoadAll(ctx, opts)
 	case "load-candles": // deprecated
 		err = candles.Load(ctx, opts)
+	case "load-securities":
+		err = securities.Load(ctx)
 	case "test": // for debug
 		err = test.Test(ctx)
 	default:

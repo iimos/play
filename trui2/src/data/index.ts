@@ -209,22 +209,31 @@ export async function fetchStockFuturesOI(stockTicker: string, till: Date, inter
   }))
 }
 
-export async function fetchTickers(): Promise<string[]> {
+export interface Security {
+  secid: string
+  shortname: string
+  name: string
+  emitent_title: string
+  sec_type: string
+  sec_group: string
+}
+
+export async function fetchSecurities(): Promise<Security[]> {
   const res = await clickhouse.query({
-    query: `select distinct ticker from (
-                select distinct secid as ticker from tr.super_eq
-                union all
-                select distinct secid as ticker from tr.super_fo
-                union all
-                select distinct secid as ticker from tr.super_fx
-                union all
-                select distinct ticker from tr.candles
-            )
-            order by ticker`,
+    query: `select secid, shortname, name, emitent_title, sec_type, sec_group
+            from tr.security_info FINAL
+            order by secid`,
     format: "JSONEachRow",
   })  
   const rows: any[] = await res.json()
-  return rows.map(x => x.ticker)
+  return rows.map(x => ({
+    secid: x.secid ?? '',
+    shortname: x.shortname ?? '',
+    name: x.name ?? '',
+    emitent_title: x.emitent_title ?? '',
+    sec_type: x.sec_type ?? '',
+    sec_group: x.sec_group ?? '',
+  }))
 }
 
 function interval2sql(interval: string): string {

@@ -18,14 +18,22 @@
 - TypeScript 4.9.5 with strict mode enabled
 
 ## Business Logic & Data Flow
-- **Data Sources**: Moscow Exchange (MOEX) via MOEX ISS API and MOEX Algopack API
+- **Data Sources**: MOEX Algopack https://moexalgo.github.io/api/rest/ (supercandles, orderbook stats)
 - **Super Candles**: Advanced market data including buy/sell volumes, order book statistics, and trade analytics
 - **Database Schema**: 
   - `tr.candles` - Basic OHLCV data for stocks and indexes
   - `tr.super_eq` - Enhanced equities data (stocks) with trader statistics
   - `tr.super_fo` - Futures market data  
   - `tr.super_fx` - Currency market data
+  - `tr.security_info` - Securities metadata (ReplacingMergeTree, в запросах нужен FINAL)
 - **Database Access**: `clickhouse client -f CSVWithNames -q "select 1"` (default on localhost:9000)
+
+## Описание данных
+https://moexalgo.github.io/docs/method/supercandles/
+https://moexalgo.github.io/docs/method/futoi/
+https://moexalgo.github.io/docs/method/hi2/
+https://moexalgo.github.io/docs/method/megaalerts/
+https://iss.moex.com/iss/reference/
 
 ## Project Structure
 - `src/chart/` - Chart components (ChartType, Indicator, Theme, YAxis, etc.)

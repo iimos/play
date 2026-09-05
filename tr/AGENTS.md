@@ -59,6 +59,7 @@ Main tables:
 `tr.super_eq` - Enhanced equities data (stocks) with trader statistics
 `tr.super_fo` - Futures market data  
 `tr.super_fx` - Currency market data
+`tr.security_info` - Securities metadata (ReplacingMergeTree, в запросах нужен FINAL)
 
 Все таблицы используют партиционирование по дням: `PARTITION BY Date(time)`.
 

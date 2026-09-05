@@ -1,197 +1,132 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { Chart, init, dispose, registerIndicator, IndicatorSeries, LineType, CandleType, TooltipShowRule, TooltipShowType } from 'klinecharts'
+import { Chart, init, dispose, registerIndicator, IndicatorSeries } from 'klinecharts'
 import Layout from '../Layout'
 import TickerSelector from './TickerSelector'
-import { fetchSuperCandles, fetchCandles, fetchLatestTime, IntervalType, SuperCandle } from '../data/index'
+import { fetchCandles, fetchLatestTime, IntervalType, SuperCandle, fetchStockFuturesOI } from '../data/index'
 
-const klineStyle = {
-  // grid: {
-  //   show: true,
-  //   horizontal: {
-  //     show: true,
-  //     size: 1,
-  //     color: "#393939",
-  //     style: LineType.Dashed,
-  //     dashValue: [2, 2]
-  //   },
-  //   vertical: {
-  //     show: false,
-  //     size: 1,
-  //     color: "#393939",
-  //     style: LineType.Dashed,
-  //     dashValue: [2, 2]
-  //   }
-  // },
-  // candle: {
-  //   margin: {
-  //     top: 0.2,
-  //     bottom: 0.1
-  //   },
-  //   type: CandleType.CandleSolid,
-  //   bar: {
-  //     upColor: "#26A69A",
-  //     downColor: "#EF5350",
-  //     noChangeColor: "#888888"
-  //   },
-  //   area: {
-  //     lineSize: 2,
-  //     lineColor: "#2196F3",
-  //     value: "close",
-  //     backgroundColor: [
-  //       {
-  //         offset: 0,
-  //         color: "rgba(33, 150, 243, 0.01)"
-  //       },
-  //       {
-  //         offset: 1,
-  //         color: "rgba(33, 150, 243, 0.2)"
-  //       }
-  //     ]
-  //   },
-  //   priceMark: {
-  //     show: true,
-  //     high: {
-  //       show: true,
-  //       color: "#D9D9D9",
-  //       textMargin: 5,
-  //       textSize: 10,
-  //       textFamily: "Helvetica Neue",
-  //       textWeight: "normal"
-  //     },
-  //     low: {
-  //       show: true,
-  //       color: "#D9D9D9",
-  //       textMargin: 5,
-  //       textSize: 10,
-  //       textFamily: "Helvetica Neue",
-  //       textWeight: "normal"
-  //     },
-  //     last: {
-  //       show: true,
-  //       upColor: "#26A69A",
-  //       downColor: "#EF5350",
-  //       noChangeColor: "#888888",
-  //       line: {
-  //         show: true,
-  //         style: LineType.Dashed,
-  //         dashValue: [4, 4],
-  //         size: 1
-  //       },
-  //       text: {
-  //         show: true,
-  //         size: 12,
-  //         paddingLeft: 2,
-  //         paddingTop: 2,
-  //         paddingRight: 2,
-  //         paddingBottom: 2,
-  //         color: "#FFFFFF",
-  //         family: "Helvetica Neue",
-  //         weight: "normal",
-  //         borderRadius: 2
-  //       }
-  //     }
-  //   },
-  //   tooltip: {
-  //     showRule: TooltipShowRule.Always,
-  //     showType: TooltipShowType.Standard,
-  //     labels: ["时间", "开", "收", "高", "低", "成交量"],
-  //     values: null,
-  //     defaultValue: "n/a",
-  //     rect: {
-  //       paddingLeft: 0,
-  //       paddingRight: 0,
-  //       paddingTop: 0,
-  //       paddingBottom: 6,
-  //       offsetLeft: 8,
-  //       offsetTop: 8,
-  //       offsetRight: 8,
-  //       borderRadius: 4,
-  //       borderSize: 1,
-  //       borderColor: "#3f4254",
-  //       backgroundColor: "rgba(17, 17, 17, .3)"
-  //     },
-  //     text: {
-  //       size: 12,
-  //       family: "Helvetica Neue",
-  //       weight: "normal",
-  //       color: "#D9D9D9",
-  //       marginLeft: 8,
-  //       marginTop: 6,
-  //       marginRight: 8,
-  //       marginBottom: 0
-  //     }
-  //   }
-  // },
+const klineStyle = {}
+
+// Суммарный OI фьючерсов акции, заполняется перед созданием индикатора stock_oi
+let stockOIMap = new Map<number, number>()
+
+interface StockOIResult {
+  oi_value: number | null
 }
-
-// interface Avp {
-//   avp?: number
-// }
 
 registerIndicator<SuperCandle>({
   name: 'volume_bs',
   series: IndicatorSeries.Volume,
   precision: 0,
-  // minValue: 0,
   shouldFormatBigNumber: true,
   figures: [
-    { key: 'volume_b', title: 'buy: ', type: 'line', styles: (data, indicator, defaultStyles) => {
-      // const kLineData = data.current.kLineData
-      // let color = formatValue(indicator.styles, 'bars[0].noChangeColor', (defaultStyles.bars)[0].noChangeColor)
-      // if (isValid(kLineData)) {
-      //   if (kLineData.close > kLineData.open) {
-      //     color = formatValue(indicator.styles, 'bars[0].upColor', (defaultStyles.bars)[0].upColor)
-      //   } else if (kLineData.close < kLineData.open) {
-      //     color = formatValue(indicator.styles, 'bars[0].downColor', (defaultStyles.bars)[0].downColor)
-      //   }
-      // }
-      return { color: "green" }
-    }},
-    { key: 'volume_s', title: 'sell: ', type: 'line', styles: (data, indicator, defaultStyles) => ({ color: "red" })}
+    { key: 'volume_b', title: 'buy: ', type: 'line', styles: () => ({ color: "green" })},
+    { key: 'volume_s', title: 'sell: ', type: 'line', styles: () => ({ color: "red" })}
   ],
-  calc: dataList => {
-    return dataList as SuperCandle[]
-    // console.log(dataList)
-    // return dataList.map(d => {
-    //   return d
-    //   // const avp: Avp = {}
-    //   // avp.avp = d.volume_s ?? 0
-    //   // return avp
-    // })
-  }
+  calc: dataList => dataList as SuperCandle[]
 })
 
+// Собственный OI фьючерса (данные уже в свечах: oi_close / oi_high / oi_low)
+registerIndicator<SuperCandle>({
+  name: 'oi',
+  series: IndicatorSeries.Volume,
+  precision: 0,
+  shouldFormatBigNumber: true,
+  figures: [
+    { key: 'oi_close', title: 'OI: ', type: 'line', styles: () => ({ color: "#FFA500" })},
+    { key: 'oi_high', title: 'OI high: ', type: 'dash', styles: () => ({ color: "#FFD700", size: 1 })},
+    { key: 'oi_low', title: 'OI low: ', type: 'dash', styles: () => ({ color: "#D2691E", size: 1 })},
+  ],
+  calc: dataList => dataList as SuperCandle[]
+})
+
+// Суммарный OI фьючерсов акции (данные в stockOIMap)
+registerIndicator<StockOIResult>({
+  name: 'stock_oi',
+  series: IndicatorSeries.Volume,
+  precision: 0,
+  shouldFormatBigNumber: true,
+  figures: [
+    { key: 'oi_value', title: 'OI: ', type: 'line', styles: () => ({ color: "#FFA500" })}
+  ],
+  calc: dataList => dataList.map(c => {
+    const v = stockOIMap.get(c.timestamp)
+    return { oi_value: v === undefined ? null : v }
+  })
+})
 
 export default function ChartType () {
   const [ticker, setTicker] = useState("ROSN")
-  const [interval, setInterval] = useState(IntervalType.FiveMinutes)
+  const [interval, setInterval] = useState(IntervalType.Hour)
+  const [activeVolumeIndicator, setActiveVolumeIndicator] = useState<'VOL' | 'volume_bs' | 'oi'>('volume_bs')
+  const [oiAvailable, setOIAvailable] = useState(false)
+  const [isFutures, setIsFutures] = useState(false)
   const chart = useRef<Chart | null>()
-  const paneId = useRef<string>("")
+  const volumePaneId = useRef<string>("")
+  const isFuturesRef = useRef(false)
 
-  useEffect(() => {
-    chart.current = init("real-time-k-line", {
-      styles: klineStyle
-    })
-    chart.current?.createIndicator('VOL', true)
-    paneId.current = chart.current?.createIndicator('volume_bs', true) as string
+  const switchIndicator = (name: 'VOL' | 'volume_bs' | 'oi') => {
+    const c = chart.current
+    if (!c || !volumePaneId.current) return
+    if (name === 'oi' && !oiAvailable) return
 
-    async function fetch() {
-      const latestTime = await fetchLatestTime()
-      const candles = await fetchCandles(ticker, latestTime, interval)
-      chart.current?.applyNewData(candles)
+    // createIndicator с isStack=false очищает панель и добавляет новый индикатор
+    if (name === 'oi') {
+      c.createIndicator(isFuturesRef.current ? 'oi' : 'stock_oi', false, { id: volumePaneId.current })
+    } else {
+      c.createIndicator(name, false, { id: volumePaneId.current })
     }
-    fetch().catch(console.error)
+    setActiveVolumeIndicator(name)
+  }
+
+  // Основной эффект: инициализация чарта и загрузка данных
+  useEffect(() => {
+    let cancelled = false
+
+    setActiveVolumeIndicator('volume_bs')
+    setOIAvailable(false)
+    stockOIMap = new Map()
+
+    chart.current = init("real-time-k-line", { styles: klineStyle })
+    volumePaneId.current = chart.current?.createIndicator('volume_bs', false) as string
+
+    async function load() {
+      try {
+        const latestTime = await fetchLatestTime()
+        const candles = await fetchCandles(ticker, latestTime, interval)
+        if (cancelled) return
+        chart.current?.applyNewData(candles)
+
+        // Фьючерс определяется по наличию собственного oi_close в свечах
+        const futures = candles.some(c => c.oi_close !== undefined)
+        isFuturesRef.current = futures
+        setIsFutures(futures)
+
+        if (futures) {
+          setOIAvailable(true)
+        } else {
+          const oiData = await fetchStockFuturesOI(ticker, latestTime, interval)
+          if (cancelled) return
+          const available = oiData.length > 0
+          setOIAvailable(available)
+          if (available) {
+            stockOIMap = new Map(oiData.map(d => [d.timestamp, d.oi_close] as [number, number]))
+          }
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки данных:', error)
+      }
+    }
+    load()
 
     chart.current?.setLoadDataCallback(({ type, data, callback }) => {
       if (!data) {
         callback([], true)
         return
       }
-      // console.log(type, new Date(data.timestamp + 3*3600*1000).toISOString())
       if (type === "forward") {
-        // const firstData = chart.current?.getDataList()[0]
         fetchCandles(ticker, new Date(data.timestamp), interval)
           .then(candles => {
+            if (cancelled) return
             const more = candles.length !== 0
             callback(candles, more)
           })
@@ -202,8 +137,10 @@ export default function ChartType () {
     })
 
     return () => {
+      cancelled = true
       if (chart.current) {
         dispose(chart.current)
+        chart.current = null
       }
     }
   }, [ticker, interval])
@@ -213,12 +150,43 @@ export default function ChartType () {
       <TickerSelector onSelect={setTicker} />
       <div id="real-time-k-line" className="k-line-chart" />
       <div className="k-line-chart-menu-container">
-        <button onClick={_ => setInterval(IntervalType.Minute)}>1m</button>
         <button onClick={_ => setInterval(IntervalType.FiveMinutes)}>5m</button>
         <button onClick={_ => setInterval(IntervalType.Hour)}>hour</button>
         <button onClick={_ => setInterval(IntervalType.Day)}>day</button>
         <button onClick={_ => setInterval(IntervalType.Week)}>week</button>
         <button onClick={_ => setInterval(IntervalType.Month)}>month</button>
+
+        <span style={{ paddingLeft: 12, paddingRight: 6 }}>Объем:</span>
+        <button
+          onClick={_ => switchIndicator('VOL')}
+          style={{ backgroundColor: activeVolumeIndicator === 'VOL' ? '#4CAF50' : '' }}
+        >
+          Объем
+        </button>
+        <button
+          onClick={_ => switchIndicator('volume_bs')}
+          style={{ backgroundColor: activeVolumeIndicator === 'volume_bs' ? '#4CAF50' : '' }}
+        >
+          Покупки/Продажи
+        </button>
+        <button
+          onClick={_ => switchIndicator('oi')}
+          disabled={!oiAvailable}
+          style={{
+            backgroundColor: activeVolumeIndicator === 'oi' ? '#4CAF50' : '',
+            opacity: oiAvailable ? 1 : 0.5,
+            cursor: oiAvailable ? 'pointer' : 'not-allowed'
+          }}
+          title={
+            !oiAvailable
+              ? "Нет данных по открытому интересу"
+              : isFutures
+                ? "Открытый интерес фьючерса"
+                : "Суммарный открытый интерес фьючерсов акции"
+          }
+        >
+          Открытый интерес
+        </button>
       </div>
     </Layout>
   )

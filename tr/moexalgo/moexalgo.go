@@ -124,6 +124,7 @@ type apiResponse struct {
 	Securities *APIResponseData `json:"securities"`
 	OrderBook  *APIResponseData `json:"orderbook"`
 	History    *APIResponseData `json:"history"`
+	Futoi      *APIResponseData `json:"futoi"`
 }
 
 func (r *apiResponse) getData() (APIResponseData, bool) {
@@ -145,6 +146,9 @@ func (r *apiResponse) getData() (APIResponseData, bool) {
 	}
 	if r.History != nil {
 		return *r.History, true
+	}
+	if r.Futoi != nil {
+		return *r.Futoi, true
 	}
 	return APIResponseData{}, false
 }

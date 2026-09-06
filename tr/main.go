@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/iimos/play/tr/cmd/candles"
+	"github.com/iimos/play/tr/cmd/futoi"
 	"github.com/iimos/play/tr/cmd/securities"
 	"github.com/iimos/play/tr/cmd/supercandles"
 	"github.com/iimos/play/tr/cmd/test"
@@ -29,11 +30,12 @@ func main() {
 	if len(os.Args) < 2 {
 		_, _ = fmt.Fprintf(os.Stderr, "usage: %s <command> [flags]\n", os.Args[0])
 		_, _ = fmt.Fprintf(os.Stderr, "commands:\n")
-_, _ = fmt.Fprintf(os.Stderr, "  load-supereq    - load stock supercandles\n")
-	_, _ = fmt.Fprintf(os.Stderr, "  load-superfo    - load futures supercandles\n")
-	_, _ = fmt.Fprintf(os.Stderr, "  load-superfx    - load currency supercandles\n")
-	_, _ = fmt.Fprintf(os.Stderr, "  load            - load all supercandles (stocks, futures, currencies)\n")
-	_, _ = fmt.Fprintf(os.Stderr, "  load-securities - load securities metadata (names, emitents, etc.)\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  load-supereq    - load stock supercandles\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  load-superfo    - load futures supercandles\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  load-superfx    - load currency supercandles\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  load-futoi      - load futures open interest (FUTOI)\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  load            - load all supercandles (stocks, futures, currencies)\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  load-securities - load securities metadata (names, emitents, etc.)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "flags:\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --force         - force reload all dates (delete and reload)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --start {date}  - start date (format: YYYY-MM-DD, defaults to last date in table)\n")
@@ -93,6 +95,8 @@ _, _ = fmt.Fprintf(os.Stderr, "  load-supereq    - load stock supercandles\n")
 		err = supercandles.LoadFutures(ctx, opts)
 	case "load-superfx":
 		err = supercandles.LoadCurrencies(ctx, opts)
+	case "load-futoi":
+		err = futoi.Load(ctx, opts)
 	case "load":
 		err = supercandles.LoadAll(ctx, opts)
 	case "load-candles": // deprecated

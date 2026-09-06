@@ -15,6 +15,7 @@ go run main.go <command> [flags]
 go run main.go load-supereq    # Load stock supercandles
 go run main.go load-superfo    # Load futures supercandles  
 go run main.go load-superfx    # Load currency supercandles
+go run main.go load-futoi      # Load futures open interest (FUTOI)
 
 # Available flags:
 # --force        Force reload all dates (delete and reload)
@@ -44,6 +45,12 @@ go run main.go load-superfx    # Load currency supercandles
 - MOEX Algopack: https://moexalgo.github.io/api/rest/ (supercandles, orderbook stats)
 - MOEX ISS API: https://iss.moex.com/iss/reference/
 
+Примеры
+```
+curl -sk -H "Authorization: Bearer $MOEX_ALGOPACK_TOKEN" https://apim.moex.com/iss/calendars.json
+curl -sk https://iss.moex.com/iss/securities.json
+```
+
 ## Docs
 https://moexalgo.github.io/docs/method/supercandles/
 https://moexalgo.github.io/docs/method/futoi/
@@ -59,13 +66,9 @@ Main tables:
 `tr.super_eq` - Enhanced equities data (stocks) with trader statistics
 `tr.super_fo` - Futures market data  
 `tr.super_fx` - Currency market data
+`tr.futoi` - Futures open interest (FUTOI): открытые позиции по фьючерсам в разрезе физ/юр лиц
 `tr.security_info` - Securities metadata (ReplacingMergeTree, в запросах нужен FINAL)
 
 Все таблицы используют партиционирование по дням: `PARTITION BY Date(time)`.
 
 Access: `clickhouse client -f CSVWithNames -q "select 1"` (default on localhost:9000)
-
-## Автоматическая перезагрузка последней даты
-
-При загрузке данных выполняется автоматическое определение последней даты в таблице. Если загружаемая дата совпадает с последней датой в таблице, она перезагружается полностью. Это решает проблему с неполными данными, когда загрузка была прервана в середине дня.
-

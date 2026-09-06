@@ -67,6 +67,10 @@ func (s *Store) GetLastSuperFxDate(ctx context.Context) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, err
 	}
+	// ClickHouse возвращает 1970-01-01 для пустой таблицы, а не NULL.
+	if lastDate.Year() < 2000 {
+		return time.Time{}, nil
+	}
 	return lastDate, nil
 }
 

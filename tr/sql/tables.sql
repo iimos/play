@@ -158,6 +158,19 @@ CREATE TABLE tr.super_fo (
 PARTITION BY Date(time)
 ORDER BY (secid, time);
 
+CREATE TABLE tr.futoi (
+       time          DateTime CODEC(DoubleDelta(1), LZ4), -- tradedate + tradetime
+       ticker        LowCardinality(String), -- код базового актива (двухсимвольный или код вечного фьючерса)
+       clgroup       LowCardinality(String), -- группа клиентов: FIZ / YUR
+       pos           Int64, -- величина открытых позиций (нетто)
+       pos_long      Int64, -- величина длинных открытых позиций
+       pos_short     Int64, -- величина коротких открытых позиций
+       pos_long_num  Int64, -- количество лиц с длинной позицией
+       pos_short_num Int64  -- количество лиц с короткой позицией
+) ENGINE = MergeTree()
+PARTITION BY Date(time)
+ORDER BY (ticker, clgroup, time);
+
 CREATE TABLE tr.security_info (
     secid                LowCardinality(String),
     shortname            String, -- Краткое наименование

@@ -25,9 +25,19 @@ interface SuperCandleRow {
 	oi_close?: number;
 }
 
-export interface FuturesData {
-  oi_close: number;
+export interface FutOIData {
   timestamp: number;
+  fiz_long: number;
+  fiz_short: number;
+  total_long: number;
+  total_short: number;
+  price: number;
+}
+
+export interface FizOIResult {
+  data: FutOIData[];
+  // true, если данные пришли из iss_openpositions (только дневные срезы).
+  isDaily: boolean;
 }
 
 export const IntervalType = {
@@ -176,37 +186,210 @@ export async function fetchLatestTime(): Promise<Date> {
   return new Date(row[0].latest)
 }
 
-const notSuperCandles = new Map([
-  ["IMOEX2", true],
-  ["LQDT", true],
-])
+const notSuperCandles = new Map([])
 
-export async function fetchStockFuturesOI(stockTicker: string, till: Date, interval: string): Promise<FuturesData[]> {
-  const from = new Date(till.getTime() - 6000*intervalMs(interval))
+// Код акции -> код базового актива фьючерсов в super_fo, когда они не совпадают
+// (FUTOI хранит данные по базовому активу фьючерсов, а не по акции)
+const STOCK_FUTURES_ASSET_ALIAS: Record<string, string> = {
+  ABIO: 'ISKJ',
+  BANEP: 'BANE',
+  BELU: 'BELUGA',
+  BSPBP: 'BSPB',
+  GAZP: 'GAZR',
+  MTLRP: 'MTLR',
+  MTSS: 'MTSI',
+  NVTK: 'NOTKM',
+  PLZL: 'PLZLM',
+  SBER: 'SBRF',
+  SBERP: 'SBPR',
+  SNGS: 'SNGR',
+  SNGSP: 'SNGP',
+  TATNP: 'TATP',
+  TRNFP: 'TRNF',
+}
 
+// Отсекает код месяца + год от secid контракта: "SiZ6" -> "Si", "RNH6" -> "RN".
+// Бессрочные фьючерсы (USDRUBF, CNYRUBF и т.п.) не заканчиваются на [месяц][цифра],
+// поэтому возвращаются как есть.
+function stripFutoiTicker(secid: string): string {
+  const m = secid.match(/^(.*)[FGHJKMNQUVXZ]\d$/)
+  return m ? m[1] : secid
+}
+
+export interface FutOIResolution {
+  // Тикер FUTOI (старая нотация, напр. "Si", "IS") для запроса tr.futoi.
+  futoiTicker: string | null
+  // Полный ASSETCODE (ISS, напр. "USDRUBTOM", "ISKJ") для запроса tr.iss_openpositions.
+  asset: string | null
+}
+
+// Возвращает тикер FUTOI и ASSETCODE для выбранного инструмента, либо null,
+// если по нему нет данных об открытом интересе вовсе.
+export async function resolveFutoiTicker(secid: string, isFutures: boolean): Promise<FutOIResolution> {
+  if (isFutures) {
+    // secid уже является контрактом фьючерса. ASSETCODE достаём из короткого
+    // имени ('ISKJ-3.26' -> 'ISKJ', 'Si-12.26' -> 'Si').
+    const res = await clickhouse.query({
+      query: `select shortname from tr.security_info FINAL where secid='${secid}'`,
+      format: "JSONEachRow",
+    })
+    const rows: any[] = await res.json()
+    const shortname: string | undefined = rows[0]?.shortname
+    const asset = shortname ? shortname.split('-')[0] : null
+    return { futoiTicker: stripFutoiTicker(secid), asset }
+  }
+
+  // Код базового актива фьючерса обычно совпадает с secid, но у части
+  // переименованных тикеров отличается (SBER -> SBRF, GAZP -> GAZR и т.п.).
+  const asset = STOCK_FUTURES_ASSET_ALIAS[secid] ?? secid
+
+  // Контракт ищем в справочнике по короткому имени 'ASSET-M.YY' (например
+  // 'DOMRF-6.26', 'SBRF-3.26'). Из secid контракта ('DRM6') вырезаем тикер
+  // FUTOI в старой нотации ('DR').
   const res = await clickhouse.query({
     query: `
-    select timeslot, sum(oi_close) as total_oi_close
-    from (
-      select toStartOfInterval(time, interval '${interval2sql(interval)}') timeslot,
-             secid,
-             argMax(oi_close, time) as oi_close
-      from tr.super_fo
-      where asset_code='${stockTicker}'
-        and time >= parseDateTimeBestEffort('${from.toISOString()}')
-        and time < parseDateTimeBestEffort('${till.toISOString()}')
-      group by timeslot, secid
-    )
-    group by timeslot
-    order by timeslot asc`,
+      select secid
+      from tr.security_info FINAL
+      where sec_group = 'futures_forts'
+        and shortname like '${asset}-%'
+      order by is_traded desc
+      limit 1
+    `,
     format: "JSONEachRow",
-  })  
-  
+  })
   const rows: any[] = await res.json()
+  if (rows.length === 0) {
+    return { futoiTicker: null, asset: null }
+  }
+  return { futoiTicker: stripFutoiTicker(rows[0].secid), asset }
+}
+
+// Цена для рублёвой оценки берётся по самому ликвидному (max oi_close) контракту
+// базового актива на каждый таймслот — FUTOI агрегирует позиции по всем контрактам,
+// поэтому это аппроксимация, а не точная оценка стоимости.
+function fizOIPriceSubquery(futoiTicker: string, from: Date, till: Date, interval: string): string {
+  return `
+      select timeslot, argMax(price, oi) as price
+      from (
+        select toStartOfInterval(time, interval '${interval2sql(interval)}') timeslot,
+               argMax(pr_close, time) as price,
+               argMax(oi_close, time) as oi
+        from tr.super_fo
+        where match(secid, '^${futoiTicker}([FGHJKMNQUVXZ][0-9])?$')
+          and pr_close > 0
+          and time >= parseDateTimeBestEffort('${from.toISOString()}')
+          and time < parseDateTimeBestEffort('${till.toISOString()}')
+        group by timeslot, secid
+      )
+      group by timeslot`
+}
+
+function mapFizOIRows(rows: any[]): FutOIData[] {
   return rows.map(x => ({
-    oi_close: Number(x.total_oi_close),
-    timestamp: new Date(x.timeslot).getTime()
+    timestamp: new Date(x.timeslot).getTime(),
+    fiz_long: Number(x.fiz_long ?? 0),
+    fiz_short: Number(x.fiz_short ?? 0),
+    total_long: Number(x.total_long ?? 0),
+    total_short: Number(x.total_short ?? 0),
+    price: Number(x.price ?? 0),
   }))
+}
+
+async function fetchFizOIFromFutoi(futoiTicker: string, from: Date, till: Date, interval: string): Promise<FutOIData[]> {
+  const res = await clickhouse.query({
+    query: `
+    select f.timeslot, f.fiz_long, f.fiz_short, f.total_long, f.total_short, p.price
+    from (
+      select timeslot,
+             sumIf(pos_long, clgroup='FIZ') as fiz_long,
+             sumIf(abs(pos_short), clgroup='FIZ') as fiz_short,
+             sum(pos_long) as total_long,
+             sum(abs(pos_short)) as total_short
+      from (
+        select toStartOfInterval(time, interval '${interval2sql(interval)}') timeslot,
+               clgroup,
+               argMax(pos_long, time) as pos_long,
+               argMax(pos_short, time) as pos_short
+        from tr.futoi
+        where ticker='${futoiTicker}'
+          and time >= parseDateTimeBestEffort('${from.toISOString()}')
+          and time < parseDateTimeBestEffort('${till.toISOString()}')
+        group by timeslot, clgroup
+      )
+      group by timeslot
+    ) f
+    left join (
+      ${fizOIPriceSubquery(futoiTicker, from, till, interval)}
+    ) p on p.timeslot = f.timeslot
+    order by f.timeslot asc`,
+    format: "JSONEachRow",
+  })
+  const rows: any[] = await res.json()
+  return mapFizOIRows(rows)
+}
+
+// Для дневных данных iss_openpositions цена должна быть привязана к дневному
+// срезу, а не к внутридневному таймслоту: на часовых и более мелких интервалах
+// срез ложится в 00:00, а внутридневная цена — в торговые часы, поэтому джойн
+// по таймслоту разъезжается.
+function fizOIPriceInterval(interval: string): string {
+  switch (interval) {
+    case IntervalType.Minute:
+    case IntervalType.FiveMinutes:
+    case IntervalType.Hour:
+      return IntervalType.Day
+    default:
+      return interval
+  }
+}
+
+async function fetchFizOIFromIssOpenPositions(asset: string, futoiTicker: string, from: Date, till: Date, interval: string): Promise<FutOIData[]> {
+  // Данные только дневные (срез за торговый день), поэтому на внутридневных
+  // интервалах каждый день даст одну точку в 00:00.
+  const priceInterval = fizOIPriceInterval(interval)
+  const res = await clickhouse.query({
+    query: `
+    select f.timeslot, f.fiz_long, f.fiz_short, f.total_long, f.total_short, p.price
+    from (
+      select timeslot,
+             sumIf(open_position_long, clgroup='FIZ') as fiz_long,
+             sumIf(open_position_short, clgroup='FIZ') as fiz_short,
+             sum(open_position_long) as total_long,
+             sum(open_position_short) as total_short
+      from (
+        select toStartOfInterval(time, interval '${interval2sql(interval)}') timeslot,
+               clgroup,
+               argMax(open_position_long, time) as open_position_long,
+               argMax(open_position_short, time) as open_position_short
+        from tr.iss_openpositions
+        where asset='${asset}'
+          and time >= parseDateTimeBestEffort('${from.toISOString()}')
+          and time < parseDateTimeBestEffort('${till.toISOString()}')
+        group by timeslot, clgroup
+      )
+      group by timeslot
+    ) f
+    left join (
+      ${fizOIPriceSubquery(futoiTicker, from, till, priceInterval)}
+    ) p on p.timeslot = f.timeslot
+    order by f.timeslot asc`,
+    format: "JSONEachRow",
+  })
+  const rows: any[] = await res.json()
+  return mapFizOIRows(rows)
+}
+
+// Открытый интерес физлиц по фьючерсам. Сначала пробуем tr.futoi (5-минутные
+// срезы). Если по активу данных нет — падаем в tr.iss_openpositions (только
+// дневные срезы).
+export async function fetchFizOI(futoiTicker: string, asset: string | null, till: Date, interval: string): Promise<FizOIResult> {
+  const from = new Date(till.getTime() - 6000*intervalMs(interval))
+
+  const data = await fetchFizOIFromFutoi(futoiTicker, from, till, interval)
+  if (data.length > 0 || asset == null) {
+    return { data, isDaily: false }
+  }
+  return { data: await fetchFizOIFromIssOpenPositions(asset, futoiTicker, from, till, interval), isDaily: true }
 }
 
 export interface Security {

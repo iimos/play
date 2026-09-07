@@ -26,10 +26,12 @@ interface FizOIDailyPoint {
 }
 
 function fmtRubles(n: number): string {
-  if (n >= 1e9) return (n / 1e9).toFixed(1) + ' млрд ₽'
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + ' млн ₽'
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + ' тыс ₽'
-  return Math.round(n) + ' ₽'
+  const sign = n < 0 ? '-' : ''
+  const a = Math.abs(n)
+  if (a >= 1e9) return sign + (a / 1e9).toFixed(1) + ' млрд ₽'
+  if (a >= 1e6) return sign + (a / 1e6).toFixed(1) + ' млн ₽'
+  if (a >= 1e3) return sign + (a / 1e3).toFixed(1) + ' тыс ₽'
+  return sign + Math.round(a) + ' ₽'
 }
 
 function toFizOIPoint(d: FutOIData): FizOIPoint {
@@ -90,22 +92,58 @@ function forwardFillDailyPoint(ts: number): FizOIPoint {
   return ans >= 0 ? fizOIDaily[ans].point : emptyFizOIPoint()
 }
 
+type ActiveTradesPoint = SuperCandle & { val_net?: number }
+
+function fmtLots(n: number | undefined): string {
+  return (n ?? 0).toLocaleString('ru-RU')
+}
+
 registerIndicator<SuperCandle>({
   name: 'volume_bs',
+  shortName: 'Активные сделки',
   series: IndicatorSeries.Volume,
   precision: 0,
   shouldFormatBigNumber: true,
   figures: [
-    { key: 'volume_b', title: 'buy: ', type: 'line', styles: () => ({ color: "green" })},
-    { key: 'volume_s', title: 'sell: ', type: 'line', styles: () => ({ color: "red" })}
+    {
+      key: 'val_net',
+      title: 'нетто (₽): ',
+      type: 'bar',
+      baseValue: 0,
+      styles: (data) => {
+        const net = (data.current.indicatorData as ActiveTradesPoint)?.val_net ?? 0
+        return { color: net >= 0 ? 'green' : 'red' }
+      },
+    }
   ],
-  calc: dataList => dataList as SuperCandle[]
+  calc: dataList => dataList.map(c => ({
+    ...c,
+    val_net: (c.val_b ?? 0) - (c.val_s ?? 0),
+  })) as unknown as SuperCandle[],
+  createTooltipDataSource: ({ indicator, crosshair }) => {
+    const values: { title: string, value: string }[] = []
+    const data = crosshair.dataIndex != null
+      ? (indicator.result ?? [])[crosshair.dataIndex] as ActiveTradesPoint | undefined
+      : undefined
+    if (data?.val_net != null) {
+      values.push({ title: 'нетто: ', value: fmtRubles(data.val_net) })
+    }
+    values.push({ title: 'vol_b (лоты): ', value: fmtLots(data?.volume_b) })
+    values.push({ title: 'vol_s (лоты): ', value: fmtLots(data?.volume_s) })
+    if (data?.val_b != null) {
+      values.push({ title: 'val_b: ', value: fmtRubles(data.val_b) })
+    }
+    if (data?.val_s != null) {
+      values.push({ title: 'val_s: ', value: fmtRubles(data.val_s) })
+    }
+    return { name: 'Активные сделки', calcParamsText: '', icons: [], values }
+  },
 })
 
 // Открытый интерес физлиц в рублях (данные FUTOI из tr.futoi)
 registerIndicator<FizOIPoint>({
   name: 'fiz_oi',
-  shortName: 'ОИ физлиц',
+  shortName: 'Открытый интерес физлиц',
   series: IndicatorSeries.Volume,
   precision: 0,
   shouldFormatBigNumber: true,
@@ -125,13 +163,13 @@ registerIndicator<FizOIPoint>({
       ? (indicator.result ?? [])[crosshair.dataIndex] as FizOIPoint | undefined
       : undefined
     if (data?.ruble_long != null) {
-      values.push({ title: 'ОИ физлиц (лонг): ', value: fmtRubles(data.ruble_long) })
+      values.push({ title: 'Лонг=', value: fmtRubles(data.ruble_long) })
     }
     if (data?.ruble_short != null) {
-      values.push({ title: 'ОИ физлиц (шорт): ', value: fmtRubles(data.ruble_short) })
+      values.push({ title: 'Шорт=', value: fmtRubles(data.ruble_short) })
     }
     if (data?.share != null) {
-      values.push({ title: 'Доля физлиц: ', value: `${data.share.toFixed(1)}%` })
+      values.push({ title: 'Доля физлиц=', value: `${data.share.toFixed(1)}%` })
     }
     return { name: 'ОИ физлиц', calcParamsText: '', icons: [], values }
   },
@@ -270,7 +308,7 @@ export default function ChartType () {
           onClick={_ => switchIndicator('volume_bs')}
           style={{ backgroundColor: activeVolumeIndicator === 'volume_bs' ? '#4CAF50' : '' }}
         >
-          Покупки/Продажи
+          Активные сделки
         </button>
         <button
           onClick={_ => switchIndicator('oi')}

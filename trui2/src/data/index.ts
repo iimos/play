@@ -4,6 +4,8 @@ import { createClient } from "@clickhouse/client-web";
 export interface SuperCandle extends KLineData {
   volume_b?: number;
   volume_s?: number;
+  val_b?: number;
+  val_s?: number;
   oi_open?: number;
   oi_high?: number;
   oi_low?: number;
@@ -19,6 +21,8 @@ interface SuperCandleRow {
 	volume: number;
 	volume_s?: number;
 	volume_b?: number;
+	val_s?: number;
+	val_b?: number;
 	oi_open?: number;
 	oi_high?: number;
 	oi_low?: number;
@@ -71,7 +75,9 @@ export async function fetchSuperCandles(ticker: string, till: Date, interval: st
            argMax(pr_close, time) close,
            sum(vol) volume,
            sum(vol_b) volume_b,
-           sum(vol_s) volume_s`
+           sum(vol_s) volume_s,
+           sum(val_b) val_b,
+           sum(val_s) val_s`
 
     // Добавляем поля открытого интереса только для фьючерсов
     if (table === 'tr.super_fo') {
@@ -111,6 +117,8 @@ export async function fetchSuperCandles(ticker: string, till: Date, interval: st
       volume: Number(x.volume),
       volume_b: Number(x.volume_b),
       volume_s: Number(x.volume_s),
+      val_b: Number(x.val_b),
+      val_s: Number(x.val_s),
     }
     
     // Добавляем данные открытого интереса, если они есть

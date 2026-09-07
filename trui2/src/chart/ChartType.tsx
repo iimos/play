@@ -6,8 +6,31 @@ import { fetchCandles, fetchLatestTime, IntervalType, SuperCandle, fetchFizOI, r
 
 const klineStyle = {}
 
-// Идентификатор панели, на которой живёт переключаемый индикатор объёма.
-const VOLUME_PANE_ID = 'volume_pane'
+type VolumeIndicatorId = 'VOL' | 'volume_bs' | 'oi' | 'fiz_imbalance'
+
+interface VolumeIndicatorDef {
+  id: VolumeIndicatorId
+  label: string
+  indicatorName: string
+  paneId: string
+  requiresOI: boolean
+}
+
+// Все индикаторы объёма показываются друг под другом на отдельных панелях,
+// каждый можно независимо включать/выключать чекбоксом.
+const VOLUME_INDICATORS: VolumeIndicatorDef[] = [
+  { id: 'VOL', label: 'Объем', indicatorName: 'VOL', paneId: 'pane_vol', requiresOI: false },
+  { id: 'volume_bs', label: 'Активные сделки', indicatorName: 'volume_bs', paneId: 'pane_volume_bs', requiresOI: false },
+  { id: 'oi', label: 'Открытый интерес', indicatorName: 'fiz_oi', paneId: 'pane_oi', requiresOI: true },
+  { id: 'fiz_imbalance', label: 'Дисбаланс ОИ', indicatorName: 'fiz_imbalance', paneId: 'pane_fiz_imbalance', requiresOI: true },
+]
+
+const DEFAULT_ENABLED: Record<VolumeIndicatorId, boolean> = {
+  VOL: true,
+  volume_bs: true,
+  oi: true,
+  fiz_imbalance: true,
+}
 
 // OI физлиц (FUTOI) по инструменту, заполняется перед созданием индикатора fiz_oi
 let fizOIMap = new Map<number, FizOIPoint>()
@@ -265,7 +288,7 @@ export default function ChartType () {
   const [initial] = useState(readQuery)
   const [ticker, setTicker] = useState(initial.ticker)
   const [interval, setInterval] = useState(initial.interval)
-  const [activeVolumeIndicator, setActiveVolumeIndicator] = useState<'VOL' | 'volume_bs' | 'oi' | 'fiz_imbalance'>('volume_bs')
+  const [enabled, setEnabled] = useState<Record<VolumeIndicatorId, boolean>>(DEFAULT_ENABLED)
   const [oiAvailable, setOIAvailable] = useState(false)
   const [oiIsDaily, setOIIsDaily] = useState(false)
   const chart = useRef<Chart | null>(null)
@@ -279,28 +302,14 @@ export default function ChartType () {
     window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`)
   }, [ticker, interval])
 
-  const switchIndicator = (name: 'VOL' | 'volume_bs' | 'oi' | 'fiz_imbalance') => {
-    const c = chart.current
-    if (!c) return
-    if ((name === 'oi' || name === 'fiz_imbalance') && !oiAvailable) return
-
-    // Убираем предыдущий индикатор с панели объёма и создаём новый на её месте.
-    c.removeIndicator({ paneId: VOLUME_PANE_ID })
-    if (name === 'oi') {
-      c.createIndicator({ name: 'fiz_oi', paneId: VOLUME_PANE_ID })
-    } else if (name === 'fiz_imbalance') {
-      c.createIndicator({ name: 'fiz_imbalance', paneId: VOLUME_PANE_ID })
-    } else {
-      c.createIndicator({ name, paneId: VOLUME_PANE_ID })
-    }
-    setActiveVolumeIndicator(name)
+  const toggleIndicator = (id: VolumeIndicatorId) => {
+    setEnabled(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
   // Основной эффект: инициализация чарта и загрузка данных
   useEffect(() => {
     let cancelled = false
 
-    setActiveVolumeIndicator('volume_bs')
     setOIAvailable(false)
     setOIIsDaily(false)
     fizOIMap = new Map()
@@ -310,7 +319,6 @@ export default function ChartType () {
     futoiAssetRef.current = null
 
     chart.current = init("real-time-k-line", { styles: klineStyle })
-    chart.current?.createIndicator({ name: 'volume_bs', paneId: VOLUME_PANE_ID })
 
     // Загружаем OI физлиц для диапазона и резолвим тикер FUTOI (для init-загрузки).
     async function loadOI(till: Date, candles: SuperCandle[]) {
@@ -395,10 +403,32 @@ export default function ChartType () {
     }
   }, [ticker, interval])
 
+  // Синхронизация индикаторов с чартом: для каждого включённого индикатора
+  // держим свою панель, для выключенного — убираем панель.
+  useEffect(() => {
+    const c = chart.current
+    if (!c) return
+    for (const ind of VOLUME_INDICATORS) {
+      const shouldShow = enabled[ind.id] && (!ind.requiresOI || oiAvailable)
+      const isShown = c.getIndicators({ paneId: ind.paneId }).length > 0
+      if (shouldShow && !isShown) {
+        c.createIndicator({ name: ind.indicatorName, paneId: ind.paneId })
+      } else if (!shouldShow && isShown) {
+        c.removeIndicator({ paneId: ind.paneId })
+      }
+    }
+  }, [enabled, oiAvailable, ticker, interval])
+
+  // Высота контейнера растёт вместе с числом включённых индикаторов,
+  // чтобы основной график не сжимался.
+  const visibleIndicatorCount = VOLUME_INDICATORS.filter(
+    ind => enabled[ind.id] && (!ind.requiresOI || oiAvailable)
+  ).length
+  const containerHeight = 480 + visibleIndicatorCount * 100
+
   return (
-    <Layout title={`${ticker} ${interval}`}>
+    <Layout title={`${ticker} ${interval}`} style={{ height: containerHeight }}>
       <TickerSelector onSelect={setTicker} />
-      <div id="real-time-k-line" className="k-line-chart" />
       <div className="k-line-chart-menu-container">
         <button onClick={_ => setInterval(IntervalType.FiveMinutes)} style={{ backgroundColor: interval === IntervalType.FiveMinutes ? '#4CAF50' : '' }}>5m</button>
         <button onClick={_ => setInterval(IntervalType.Hour)} style={{ backgroundColor: interval === IntervalType.Hour ? '#4CAF50' : '' }}>hour</button>
@@ -406,59 +436,44 @@ export default function ChartType () {
         <button onClick={_ => setInterval(IntervalType.Week)} style={{ backgroundColor: interval === IntervalType.Week ? '#4CAF50' : '' }}>week</button>
         <button onClick={_ => setInterval(IntervalType.Month)} style={{ backgroundColor: interval === IntervalType.Month ? '#4CAF50' : '' }}>month</button>
 
-        <span style={{ paddingLeft: 12, paddingRight: 6 }}>Объем:</span>
-        <button
-          onClick={_ => switchIndicator('VOL')}
-          style={{ backgroundColor: activeVolumeIndicator === 'VOL' ? '#4CAF50' : '' }}
-        >
-          Объем
-        </button>
-        <button
-          onClick={_ => switchIndicator('volume_bs')}
-          style={{ backgroundColor: activeVolumeIndicator === 'volume_bs' ? '#4CAF50' : '' }}
-        >
-          Активные сделки
-        </button>
-        <button
-          onClick={_ => switchIndicator('oi')}
-          disabled={!oiAvailable}
-          style={{
-            backgroundColor: activeVolumeIndicator === 'oi' ? '#4CAF50' : '',
-            opacity: oiAvailable ? 1 : 0.5,
-            cursor: oiAvailable ? 'pointer' : 'not-allowed'
-          }}
-          title={
-            !oiAvailable
-              ? "Нет данных по открытому интересу"
-              : oiIsDaily
-                ? "Открытый интерес физлиц (данные суточные)"
-                : "Открытый интерес физлиц (FUTOI)"
-          }
-        >
-          Открытый интерес
-        </button>
-        <button
-          onClick={_ => switchIndicator('fiz_imbalance')}
-          disabled={!oiAvailable}
-          style={{
-            backgroundColor: activeVolumeIndicator === 'fiz_imbalance' ? '#4CAF50' : '',
-            opacity: oiAvailable ? 1 : 0.5,
-            cursor: oiAvailable ? 'pointer' : 'not-allowed'
-          }}
-          title={
-            !oiAvailable
-              ? "Нет данных по открытому интересу"
-              : "Дисбаланс позиций физлиц"
-          }
-        >
-          Дисбаланс ОИ
-        </button>
+        <span style={{ paddingLeft: 12, paddingRight: 6 }}>Индикаторы:</span>
+        {VOLUME_INDICATORS.map(ind => {
+          const oiDisabled = ind.requiresOI && !oiAvailable
+          return (
+            <label
+              key={ind.id}
+              style={{
+                marginRight: 12,
+                display: 'inline-flex',
+                alignItems: 'center',
+                cursor: oiDisabled ? 'not-allowed' : 'pointer',
+                opacity: oiDisabled ? 0.5 : 1,
+              }}
+              title={
+                oiDisabled
+                  ? "Нет данных по открытому интересу"
+                  : ind.id === 'oi' && oiIsDaily
+                    ? "Открытый интерес физлиц (данные суточные)"
+                    : ind.label
+              }
+            >
+              <input
+                type="checkbox"
+                checked={enabled[ind.id]}
+                disabled={oiDisabled}
+                onChange={_ => toggleIndicator(ind.id)}
+              />
+              <span style={{ paddingLeft: 4 }}>{ind.label}</span>
+            </label>
+          )
+        })}
         {oiAvailable && oiIsDaily && (
           <span style={{ paddingLeft: 6, color: '#FFB74D', fontSize: 12 }}>
             данные суточные
           </span>
         )}
       </div>
+      <div id="real-time-k-line" className="k-line-chart" />
     </Layout>
   )
 }

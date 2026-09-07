@@ -118,13 +118,15 @@ func GetAll[T any, PT interface {
 }
 
 type apiResponse struct {
-	Data       *APIResponseData `json:"data"`
-	Candles    *APIResponseData `json:"candles"`
-	MarketData *APIResponseData `json:"marketdata"`
-	Securities *APIResponseData `json:"securities"`
-	OrderBook  *APIResponseData `json:"orderbook"`
-	History    *APIResponseData `json:"history"`
-	Futoi      *APIResponseData `json:"futoi"`
+	Data          *APIResponseData `json:"data"`
+	Candles       *APIResponseData `json:"candles"`
+	MarketData    *APIResponseData `json:"marketdata"`
+	Securities    *APIResponseData `json:"securities"`
+	OrderBook     *APIResponseData `json:"orderbook"`
+	History       *APIResponseData `json:"history"`
+	Futoi         *APIResponseData `json:"futoi"`
+	OpenPositions *APIResponseData `json:"open_positions"`
+	Assets        *APIResponseData `json:"assets"`
 }
 
 func (r *apiResponse) getData() (APIResponseData, bool) {
@@ -149,6 +151,12 @@ func (r *apiResponse) getData() (APIResponseData, bool) {
 	}
 	if r.Futoi != nil {
 		return *r.Futoi, true
+	}
+	if r.OpenPositions != nil {
+		return *r.OpenPositions, true
+	}
+	if r.Assets != nil {
+		return *r.Assets, true
 	}
 	return APIResponseData{}, false
 }

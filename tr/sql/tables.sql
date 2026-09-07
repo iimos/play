@@ -171,6 +171,20 @@ CREATE TABLE tr.futoi (
 PARTITION BY Date(time)
 ORDER BY (ticker, clgroup, time);
 
+CREATE TABLE tr.iss_openpositions (
+       time                 DateTime CODEC(DoubleDelta(1), LZ4), -- tradedate (день, 00:00)
+       asset                LowCardinality(String), -- ASSETCODE базового актива (полная нотация, напр. AFKS, ASTR)
+       clgroup              LowCardinality(String), -- группа клиентов: FIZ / YUR (из is_fiz: 0=YUR, 1=FIZ)
+       persons_long         Int64, -- количество лиц с длинной позицией
+       persons_short        Int64, -- количество лиц с короткой позицией
+       open_position_long   Int64, -- величина длинных открытых позиций
+       open_position_short  Int64, -- величина коротких открытых позиций (положительная)
+       oichange_long        Int64, -- изменение ОИ по лонгам
+       oichange_short       Int64  -- изменение ОИ по шортам
+) ENGINE = MergeTree()
+PARTITION BY Date(time)
+ORDER BY (asset, clgroup, time);
+
 CREATE TABLE tr.security_info (
     secid                LowCardinality(String),
     shortname            String, -- Краткое наименование

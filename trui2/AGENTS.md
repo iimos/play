@@ -21,12 +21,16 @@
 - **Data Sources**: MOEX Algopack https://moexalgo.github.io/api/rest/ (supercandles, orderbook stats)
 - **Super Candles**: Advanced market data including buy/sell volumes, order book statistics, and trade analytics
 - **Database Schema**: 
-  - `tr.candles` - Basic OHLCV data for stocks and indexes
-  - `tr.super_eq` - Enhanced equities data (stocks) with trader statistics
-  - `tr.super_fo` - Futures market data  
-  - `tr.super_fx` - Currency market data
-  - `tr.security_info` - Securities metadata (ReplacingMergeTree, в запросах нужен FINAL)
-- **Database Access**: `clickhouse client -f CSVWithNames -q "select 1"` (default on localhost:9000)
+`tr.candles` - Basic OHLCV data for stocks and indexes
+`tr.super_eq` - Enhanced equities data (stocks) with trader statistics
+`tr.super_fo` - Futures market data  
+`tr.super_fx` - Currency market data
+`tr.futoi` - Futures open interest (FUTOI): открытые позиции по фьючерсам в разрезе физ/юр лиц
+`tr.security_info` - Securities metadata (ReplacingMergeTree, в запросах нужен FINAL)
+
+Database Access: `clickhouse client -f CSVWithNames -q "select 1"` (default on localhost:9000)
+
+Более детальное описание данных есть в `../tr/docs`
 
 ## Описание данных
 https://moexalgo.github.io/docs/method/supercandles/

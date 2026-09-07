@@ -9,9 +9,11 @@ import (
 
 	"github.com/iimos/play/tr/cmd/candles"
 	"github.com/iimos/play/tr/cmd/futoi"
+	"github.com/iimos/play/tr/cmd/openpositions"
 	"github.com/iimos/play/tr/cmd/securities"
 	"github.com/iimos/play/tr/cmd/supercandles"
 	"github.com/iimos/play/tr/cmd/test"
+	"golang.org/x/sync/errgroup"
 )
 
 // https://iss.moex.com/iss/reference/
@@ -34,7 +36,8 @@ func main() {
 		_, _ = fmt.Fprintf(os.Stderr, "  load-superfo    - load futures supercandles\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-superfx    - load currency supercandles\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-futoi      - load futures open interest (FUTOI)\n")
-		_, _ = fmt.Fprintf(os.Stderr, "  load            - load all supercandles (stocks, futures, currencies)\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  load-iss-openpositions - load daily futures open positions by phys/legal (ISS statistics)\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  load            - load all (supercandles, futoi, openpositions)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-securities - load securities metadata (names, emitents, etc.)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "flags:\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --force         - force reload all dates (delete and reload)\n")
@@ -97,8 +100,14 @@ func main() {
 		err = supercandles.LoadCurrencies(ctx, opts)
 	case "load-futoi":
 		err = futoi.Load(ctx, opts)
+	case "load-iss-openpositions":
+		err = openpositions.Load(ctx, opts)
 	case "load":
-		err = supercandles.LoadAll(ctx, opts)
+		gr, grctx := errgroup.WithContext(ctx)
+		gr.Go(func() error { return supercandles.LoadAll(grctx, opts) })
+		gr.Go(func() error { return futoi.Load(grctx, opts) })
+		gr.Go(func() error { return openpositions.Load(grctx, opts) })
+		err = gr.Wait()
 	case "load-candles": // deprecated
 		err = candles.Load(ctx, opts)
 	case "load-securities":

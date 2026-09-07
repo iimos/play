@@ -16,6 +16,8 @@ go run main.go load-supereq    # Load stock supercandles
 go run main.go load-superfo    # Load futures supercandles  
 go run main.go load-superfx    # Load currency supercandles
 go run main.go load-futoi      # Load futures open interest (FUTOI)
+go run main.go load-iss-openpositions # Load daily futures open positions by phys/legal (ISS statistics)
+go run main.go load            # Load all (supercandles, futoi, etc)
 
 # Available flags:
 # --force        Force reload all dates (delete and reload)
@@ -57,6 +59,7 @@ https://moexalgo.github.io/docs/method/futoi/
 https://moexalgo.github.io/docs/method/hi2/
 https://moexalgo.github.io/docs/method/megaalerts/
 https://iss.moex.com/iss/reference/
+https://raw.githubusercontent.com/moexalgo/moexalgo.github.io/main/static/openapi/openapi.yaml
 
 ## Database
 
@@ -67,8 +70,11 @@ Main tables:
 `tr.super_fo` - Futures market data  
 `tr.super_fx` - Currency market data
 `tr.futoi` - Futures open interest (FUTOI): открытые позиции по фьючерсам в разрезе физ/юр лиц
+`tr.iss_openpositions` - Дневные открытые позиции по фьючерсам в разрезе физ/юр лиц (ISS statistics openpositions)
 `tr.security_info` - Securities metadata (ReplacingMergeTree, в запросах нужен FINAL)
 
 Все таблицы используют партиционирование по дням: `PARTITION BY Date(time)`.
 
 Access: `clickhouse client -f CSVWithNames -q "select 1"` (default on localhost:9000)
+
+Более детальное описание данных есть в ./docs

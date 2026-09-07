@@ -32,8 +32,8 @@ Business Logic:
 `tr.security_info` - Securities metadata (ReplacingMergeTree, в запросах нужен FINAL)
 
 Database Access: `clickhouse client -f CSVWithNames -q "select 1"` (default on localhost:9000)
-
-Более детальное описание данных есть в `../tr/docs`
+У всех таблиц и полей есть комментарии.
+Более детальное описание данных есть в `../tr/docs`.
 
 Описание данных:
 https://moexalgo.github.io/docs/method/supercandles/

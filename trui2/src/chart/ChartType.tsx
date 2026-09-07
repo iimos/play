@@ -1,10 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { Chart, init, dispose, registerIndicator, IndicatorSeries } from 'klinecharts'
+import { Chart, init, dispose, registerIndicator, Period, TooltipLegend } from 'klinecharts'
 import Layout from '../Layout'
 import TickerSelector from './TickerSelector'
 import { fetchCandles, fetchLatestTime, IntervalType, SuperCandle, fetchFizOI, resolveFutoiTicker, FutOIData, FizOIResult } from '../data/index'
 
 const klineStyle = {}
+
+// Идентификатор панели, на которой живёт переключаемый индикатор объёма.
+const VOLUME_PANE_ID = 'volume_pane'
 
 // OI физлиц (FUTOI) по инструменту, заполняется перед созданием индикатора fiz_oi
 let fizOIMap = new Map<number, FizOIPoint>()
@@ -98,10 +101,10 @@ function fmtLots(n: number | undefined): string {
   return (n ?? 0).toLocaleString('ru-RU')
 }
 
-registerIndicator<SuperCandle>({
+registerIndicator<ActiveTradesPoint>({
   name: 'volume_bs',
   shortName: 'Активные сделки',
-  series: IndicatorSeries.Volume,
+  series: 'volume',
   precision: 0,
   shouldFormatBigNumber: true,
   figures: [
@@ -110,33 +113,36 @@ registerIndicator<SuperCandle>({
       title: 'нетто (₽): ',
       type: 'bar',
       baseValue: 0,
-      styles: (data) => {
-        const net = (data.current.indicatorData as ActiveTradesPoint)?.val_net ?? 0
+      styles: (params) => {
+        const net = params.data.current?.val_net ?? 0
         return { color: net >= 0 ? 'green' : 'red' }
       },
     }
   ],
-  calc: dataList => dataList.map(c => ({
-    ...c,
-    val_net: (c.val_b ?? 0) - (c.val_s ?? 0),
-  })) as unknown as SuperCandle[],
+  calc: dataList => dataList.map(c => {
+    const k = c as unknown as SuperCandle
+    return {
+      ...k,
+      val_net: (k.val_b ?? 0) - (k.val_s ?? 0),
+    } as ActiveTradesPoint
+  }),
   createTooltipDataSource: ({ indicator, crosshair }) => {
-    const values: { title: string, value: string }[] = []
+    const legends: TooltipLegend[] = []
     const data = crosshair.dataIndex != null
-      ? (indicator.result ?? [])[crosshair.dataIndex] as ActiveTradesPoint | undefined
+      ? indicator.result[crosshair.dataIndex]
       : undefined
     if (data?.val_net != null) {
-      values.push({ title: 'нетто: ', value: fmtRubles(data.val_net) })
+      legends.push({ title: 'нетто: ', value: fmtRubles(data.val_net) })
     }
-    values.push({ title: 'vol_b (лоты): ', value: fmtLots(data?.volume_b) })
-    values.push({ title: 'vol_s (лоты): ', value: fmtLots(data?.volume_s) })
+    legends.push({ title: 'vol_b (лоты): ', value: fmtLots(data?.volume_b) })
+    legends.push({ title: 'vol_s (лоты): ', value: fmtLots(data?.volume_s) })
     if (data?.val_b != null) {
-      values.push({ title: 'val_b: ', value: fmtRubles(data.val_b) })
+      legends.push({ title: 'val_b: ', value: fmtRubles(data.val_b) })
     }
     if (data?.val_s != null) {
-      values.push({ title: 'val_s: ', value: fmtRubles(data.val_s) })
+      legends.push({ title: 'val_s: ', value: fmtRubles(data.val_s) })
     }
-    return { name: 'Активные сделки', calcParamsText: '', icons: [], values }
+    return { name: 'Активные сделки', calcParamsText: '', features: [], legends }
   },
 })
 
@@ -144,7 +150,7 @@ registerIndicator<SuperCandle>({
 registerIndicator<FizOIPoint>({
   name: 'fiz_oi',
   shortName: 'Открытый интерес физлиц',
-  series: IndicatorSeries.Volume,
+  series: 'volume',
   precision: 0,
   shouldFormatBigNumber: true,
   figures: [
@@ -158,22 +164,41 @@ registerIndicator<FizOIPoint>({
     return fizOIMap.get(c.timestamp) ?? emptyFizOIPoint()
   }),
   createTooltipDataSource: ({ indicator, crosshair }) => {
-    const values: { title: string, value: string }[] = []
+    const legends: TooltipLegend[] = []
     const data = crosshair.dataIndex != null
-      ? (indicator.result ?? [])[crosshair.dataIndex] as FizOIPoint | undefined
+      ? indicator.result[crosshair.dataIndex]
       : undefined
     if (data?.ruble_long != null) {
-      values.push({ title: 'Лонг=', value: fmtRubles(data.ruble_long) })
+      legends.push({ title: 'Лонг=', value: fmtRubles(data.ruble_long) })
     }
     if (data?.ruble_short != null) {
-      values.push({ title: 'Шорт=', value: fmtRubles(data.ruble_short) })
+      legends.push({ title: 'Шорт=', value: fmtRubles(data.ruble_short) })
     }
     if (data?.share != null) {
-      values.push({ title: 'Доля физлиц=', value: `${data.share.toFixed(1)}%` })
+      legends.push({ title: 'Доля физлиц=', value: `${data.share.toFixed(1)}%` })
     }
-    return { name: 'ОИ физлиц', calcParamsText: '', icons: [], values }
+    return { name: 'ОИ физлиц', calcParamsText: '', features: [], legends }
   },
 })
+
+function intervalToPeriod(interval: string): Period {
+  switch (interval) {
+    case IntervalType.Minute:
+      return { span: 1, type: 'minute' }
+    case IntervalType.FiveMinutes:
+      return { span: 5, type: 'minute' }
+    case IntervalType.Hour:
+      return { span: 1, type: 'hour' }
+    case IntervalType.Day:
+      return { span: 1, type: 'day' }
+    case IntervalType.Week:
+      return { span: 1, type: 'week' }
+    case IntervalType.Month:
+      return { span: 1, type: 'month' }
+    default:
+      throw new Error("Unsupported interval type")
+  }
+}
 
 export default function ChartType () {
   const [ticker, setTicker] = useState("ROSN")
@@ -181,21 +206,21 @@ export default function ChartType () {
   const [activeVolumeIndicator, setActiveVolumeIndicator] = useState<'VOL' | 'volume_bs' | 'oi'>('volume_bs')
   const [oiAvailable, setOIAvailable] = useState(false)
   const [oiIsDaily, setOIIsDaily] = useState(false)
-  const chart = useRef<Chart | null>()
-  const volumePaneId = useRef<string>("")
+  const chart = useRef<Chart | null>(null)
   const futoiTickerRef = useRef<string | null>(null)
   const futoiAssetRef = useRef<string | null>(null)
 
   const switchIndicator = (name: 'VOL' | 'volume_bs' | 'oi') => {
     const c = chart.current
-    if (!c || !volumePaneId.current) return
+    if (!c) return
     if (name === 'oi' && !oiAvailable) return
 
-    // createIndicator с isStack=false очищает панель и добавляет новый индикатор
+    // Убираем предыдущий индикатор с панели объёма и создаём новый на её месте.
+    c.removeIndicator({ paneId: VOLUME_PANE_ID })
     if (name === 'oi') {
-      c.createIndicator('fiz_oi', false, { id: volumePaneId.current })
+      c.createIndicator({ name: 'fiz_oi', paneId: VOLUME_PANE_ID })
     } else {
-      c.createIndicator(name, false, { id: volumePaneId.current })
+      c.createIndicator({ name, paneId: VOLUME_PANE_ID })
     }
     setActiveVolumeIndicator(name)
   }
@@ -214,67 +239,80 @@ export default function ChartType () {
     futoiAssetRef.current = null
 
     chart.current = init("real-time-k-line", { styles: klineStyle })
-    volumePaneId.current = chart.current?.createIndicator('volume_bs', false) as string
+    chart.current?.createIndicator({ name: 'volume_bs', paneId: VOLUME_PANE_ID })
 
-    async function load() {
-      try {
-        const latestTime = await fetchLatestTime()
-        const candles = await fetchCandles(ticker, latestTime, interval)
+    // Загружаем OI физлиц для диапазона и резолвим тикер FUTOI (для init-загрузки).
+    async function loadOI(till: Date, candles: SuperCandle[]) {
+      const futures = candles.some(c => c.oi_close !== undefined)
+      const resolution = await resolveFutoiTicker(ticker, futures)
+      if (cancelled) return
+      futoiTickerRef.current = resolution.futoiTicker
+      futoiAssetRef.current = resolution.asset
+      if (resolution.futoiTicker) {
+        const oiResult = await fetchFizOI(resolution.futoiTicker, resolution.asset, till, interval)
         if (cancelled) return
-        chart.current?.applyNewData(candles)
-
-        // Фьючерс определяется по наличию собственного oi_close в свечах
-        const futures = candles.some(c => c.oi_close !== undefined)
-
-        const resolution = await resolveFutoiTicker(ticker, futures)
-        if (cancelled) return
-        futoiTickerRef.current = resolution.futoiTicker
-        futoiAssetRef.current = resolution.asset
-        if (resolution.futoiTicker) {
-          const oiResult = await fetchFizOI(resolution.futoiTicker, resolution.asset, latestTime, interval)
-          if (cancelled) return
-          const available = oiResult.data.length > 0
-          setOIAvailable(available)
-          setOIIsDaily(available && oiResult.isDaily)
-          if (available) {
-            applyFizOIResult(oiResult, true)
-          }
-        } else {
-          setOIAvailable(false)
+        const available = oiResult.data.length > 0
+        setOIAvailable(available)
+        setOIIsDaily(available && oiResult.isDaily)
+        if (available) {
+          applyFizOIResult(oiResult, true)
         }
-      } catch (error) {
-        console.error('Ошибка загрузки данных:', error)
+      } else {
+        setOIAvailable(false)
       }
     }
-    load()
 
-    chart.current?.setLoadDataCallback(({ type, data, callback }) => {
-      if (!data) {
-        callback([], true)
-        return
+    // Докрутка OI вперёд при подгрузке истории.
+    async function loadOIForward(till: Date) {
+      if (!futoiTickerRef.current) return
+      try {
+        const oiResult = await fetchFizOI(futoiTickerRef.current, futoiAssetRef.current, till, interval)
+        if (!cancelled) {
+          applyFizOIResult(oiResult, false)
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки OI:', error)
       }
-      if (type === "forward") {
-        fetchCandles(ticker, new Date(data.timestamp), interval)
-          .then(async candles => {
-            if (cancelled) return
-            if (candles.length > 0 && futoiTickerRef.current) {
+    }
+
+    chart.current?.setSymbol({ ticker, pricePrecision: 2, volumePrecision: 0 })
+    chart.current?.setPeriod(intervalToPeriod(interval))
+    chart.current?.setDataLoader({
+      getBars: ({ type, timestamp, callback }) => {
+        if (type === 'init') {
+          fetchLatestTime()
+            .then(async latestTime => {
+              const candles = await fetchCandles(ticker, latestTime, interval)
+              if (cancelled) return
               try {
-                const oiResult = await fetchFizOI(futoiTickerRef.current, futoiAssetRef.current, new Date(data.timestamp), interval)
-                if (!cancelled) {
-                  applyFizOIResult(oiResult, false)
-                }
+                await loadOI(latestTime, candles)
               } catch (error) {
-                console.error('Ошибка загрузки OI:', error)
+                console.error('Ошибка загрузки данных:', error)
               }
-            }
-            if (cancelled) return
-            const more = candles.length !== 0
-            callback(candles, more)
-          })
-          .catch(console.error)
-      } else {
-        callback([], false)
-      }
+              callback(candles, { forward: true, backward: false })
+            })
+            .catch(error => {
+              console.error('Ошибка загрузки данных:', error)
+              if (!cancelled) callback([], { forward: false, backward: false })
+            })
+        } else if (type === 'forward' && timestamp != null) {
+          fetchCandles(ticker, new Date(timestamp), interval)
+            .then(async candles => {
+              if (cancelled) return
+              if (candles.length > 0) {
+                await loadOIForward(new Date(timestamp))
+              }
+              if (cancelled) return
+              callback(candles, { forward: candles.length !== 0, backward: false })
+            })
+            .catch(error => {
+              console.error('Ошибка загрузки данных:', error)
+              if (!cancelled) callback([], { forward: false, backward: false })
+            })
+        } else {
+          callback([], { forward: false, backward: false })
+        }
+      },
     })
 
     return () => {

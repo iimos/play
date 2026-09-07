@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react'
-import { init, dispose, Chart, TooltipShowRule, TooltipShowType, CandleTooltipCustomCallbackData } from 'klinecharts'
+import { init, dispose, Chart, TooltipShowRule, TooltipShowType, KLineData, NeighborData, Nullable } from 'klinecharts'
 import generatedDataList from '../generatedDataList'
 import Layout from '../Layout'
 
@@ -9,21 +9,24 @@ function getTooltipOptions (candleShowType: TooltipShowType, candleShowRule: Too
       tooltip: {
         showType: candleShowType,
         showRule: candleShowRule,
-        custom: (data: CandleTooltipCustomCallbackData) => {
-          const { prev, current } = data
-          const prevClose = (prev?.close ?? current.open)
-          const change = (current.close - prevClose) / prevClose * 100
-          return [
-            { title: 'open', value: current.open.toFixed(2) },
-            { title: 'close', value: current.close.toFixed(2) },
-            {
-              title: 'Change: ',
-              value: {
-                text: `${change.toFixed(2)}%`,
-                color: change < 0 ? '#EF5350' : '#26A69A'
+        legend: {
+          template: (data: NeighborData<Nullable<KLineData>>) => {
+            const { prev, current } = data
+            if (!current) return []
+            const prevClose = (prev?.close ?? current.open)
+            const change = (current.close - prevClose) / prevClose * 100
+            return [
+              { title: 'open', value: current.open.toFixed(2) },
+              { title: 'close', value: current.close.toFixed(2) },
+              {
+                title: 'Change: ',
+                value: {
+                  text: `${change.toFixed(2)}%`,
+                  color: change < 0 ? '#EF5350' : '#26A69A'
+                }
               }
-            }
-          ]
+            ]
+          }
         }
       }
     },
@@ -42,16 +45,23 @@ const rules = [
 ]
 
 export default function TooltipKLineChart () {
-  const chart = useRef<Chart | null>()
+  const chart = useRef<Chart | null>(null)
   const [candleShowType, setCandleShowType] = useState('standard')
   const [candleShowRule, setCandleShowRule] = useState('always')
   const [indicatorShowRule, setIndicatorShowRule] = useState('always')
 
   useEffect(() => {
     chart.current = init('tooltip-k-line')
-    chart.current?.createIndicator('MA', false, { id: 'candle_pane' })
-    chart.current?.createIndicator('KDJ', false, { height: 80 })
-    chart.current?.applyNewData(generatedDataList())
+    chart.current?.createIndicator({ name: 'MA', paneId: 'candle_pane' })
+    chart.current?.createIndicator({ name: 'KDJ', paneId: 'kdj_pane' })
+    chart.current?.setPaneOptions({ id: 'kdj_pane', height: 80 })
+    chart.current?.setSymbol({ ticker: 'TestSymbol' })
+    chart.current?.setPeriod({ span: 1, type: 'day' })
+    chart.current?.setDataLoader({
+      getBars: ({ callback }) => {
+        callback(generatedDataList())
+      }
+    })
     return () => { dispose('tooltip-k-line') }
   }, [])
 

@@ -9,12 +9,18 @@ const themes = [
 ]
 
 export default function CustomThemeKLineChart () {
-  const chart = useRef<Chart | null>()
+  const chart = useRef<Chart | null>(null)
   const [theme, setTheme] = useState('light')
 
   useEffect(() => {
     chart.current = init('style-k-line')
-    chart.current?.applyNewData(generatedDataList())
+    chart.current?.setSymbol({ ticker: 'TestSymbol' })
+    chart.current?.setPeriod({ span: 1, type: 'day' })
+    chart.current?.setDataLoader({
+      getBars: ({ callback }) => {
+        callback(generatedDataList())
+      }
+    })
     return () => {
       dispose('style-k-line')
     }

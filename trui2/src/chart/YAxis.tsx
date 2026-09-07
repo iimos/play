@@ -1,30 +1,34 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { init, dispose, Chart, YAxisType } from 'klinecharts'
+import { init, dispose, Chart } from 'klinecharts'
 import generatedDataList from '../generatedDataList'
 import Layout from '../Layout'
 
 const types = [
   { key: 'normal', text: '线性轴' },
   { key: 'percentage', text: '百分比轴' },
-  { key: 'log', text: '对数轴' }
+  { key: 'logarithm', text: '对数轴' }
 ]
 
 export default function CustomThemeKLineChart () {
-  const chart = useRef<Chart | null>()
+  const chart = useRef<Chart | null>(null)
   const [type, setType] = useState('normal')
 
   useEffect(() => {
     chart.current = init('y-axis-k-line')
-    chart.current?.applyNewData(generatedDataList())
+    chart.current?.setSymbol({ ticker: 'TestSymbol' })
+    chart.current?.setPeriod({ span: 1, type: 'day' })
+    chart.current?.setDataLoader({
+      getBars: ({ callback }) => {
+        callback(generatedDataList())
+      }
+    })
     return () => {
       dispose('y-axis-k-line')
     }
   }, [])
 
   useEffect(() => {
-    chart.current?.setStyles({
-      yAxis: { type: type as YAxisType }
-    })
+    chart.current?.overrideYAxis({ name: type })
   }, [type])
 
   return (

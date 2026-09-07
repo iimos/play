@@ -25,37 +25,44 @@ registerIndicator<EmojiEntity>({
   },
   draw: ({
     ctx,
-    barSpace,
-    visibleRange,
+    chart,
     indicator,
     xAxis,
     yAxis
   }) => {
-    const { from, to } = visibleRange
+    const { from, to } = chart.getVisibleRange()
+    const barSpace = chart.getBarSpace()
 
     ctx.font = `${barSpace.gapBar}px Helvetica Neue`
     ctx.textAlign = 'center'
     const result = indicator.result
     for (let i = from; i < to; i++) {
       const data = result[i]
+      if (!data) continue
       const x = xAxis.convertToPixel(i)
       const y = yAxis.convertToPixel(data.emoji)
       ctx.fillText(data.text, x, y)
     }
-    return false
+    return true
   }
 })
 
 const mainIndicators = ['MA', 'EMA', 'SAR']
 const subIndicators = ['VOL', 'MACD', 'KDJ']
+const volumePaneId = 'indicator_vol_pane'
 
 export default function Indicator () {
-  const chart = useRef<Chart | null>()
-  const paneId = useRef<string>('')
+  const chart = useRef<Chart | null>(null)
   useEffect(() => {
     chart.current = init('indicator-k-line')
-    paneId.current = chart.current?.createIndicator('VOL', false) as string
-    chart.current?.applyNewData(generatedDataList())
+    chart.current?.createIndicator({ name: 'VOL', paneId: volumePaneId })
+    chart.current?.setSymbol({ ticker: 'TestSymbol' })
+    chart.current?.setPeriod({ span: 1, type: 'day' })
+    chart.current?.setDataLoader({
+      getBars: ({ callback }) => {
+        callback(generatedDataList())
+      }
+    })
     return () => {
       dispose('indicator-k-line')
     }
@@ -73,7 +80,7 @@ export default function Indicator () {
               <button
                 key={type}
                 onClick={_ => {
-                  chart.current?.createIndicator(type, false, { id: 'candle_pane' })
+                  chart.current?.createIndicator({ name: type, paneId: 'candle_pane' })
                 }}>
                 {type}
               </button>
@@ -82,7 +89,7 @@ export default function Indicator () {
         }
         <button
           onClick={_ => {
-            chart.current?.createIndicator('EMOJI', true, { id: 'candle_pane' })
+            chart.current?.createIndicator({ name: 'EMOJI', paneId: 'candle_pane' })
           }}>
           自定义
         </button>
@@ -93,7 +100,7 @@ export default function Indicator () {
               <button
                 key={type}
                 onClick={_ => {
-                  chart.current?.createIndicator(type, false, { id: paneId.current })
+                  chart.current?.createIndicator({ name: type, paneId: volumePaneId })
                 }}>
                 {type}
               </button>
@@ -102,7 +109,7 @@ export default function Indicator () {
         }
         <button
           onClick={_ => {
-            chart.current?.createIndicator('EMOJI', false, { id: paneId.current })
+            chart.current?.createIndicator({ name: 'EMOJI', paneId: volumePaneId })
           }}>
           自定义
         </button>

@@ -9,7 +9,7 @@ registerOverlay({
   needDefaultXAxisFigure: true,
   needDefaultYAxisFigure: true,
   totalStep: 3,
-  createPointFigures: function ({ overlay, coordinates }) {
+  createPointFigures: function ({ coordinates }) {
     if (coordinates.length === 2) {
       const xDis = Math.abs(coordinates[0].x - coordinates[1].x)
       const yDis = Math.abs(coordinates[0].y - coordinates[1].y)
@@ -36,10 +36,16 @@ const overlays = [
 ]
 
 export default function DrawGraphMarkKLineChart () {
-  const chart = useRef<Chart | null>()
+  const chart = useRef<Chart | null>(null)
   useEffect(() => {
     chart.current = init('overlay-k-line')
-    chart.current?.applyNewData(generatedDataList())
+    chart.current?.setSymbol({ ticker: 'TestSymbol' })
+    chart.current?.setPeriod({ span: 1, type: 'day' })
+    chart.current?.setDataLoader({
+      getBars: ({ callback }) => {
+        callback(generatedDataList())
+      }
+    })
     return () => {
       dispose('overlay-k-line')
     }

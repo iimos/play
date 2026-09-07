@@ -21,6 +21,7 @@ interface FizOIPoint {
   ruble_long: number | null
   ruble_short: number | null
   share: number | null
+  oi_imbalance: number | null
 }
 
 interface FizOIDailyPoint {
@@ -40,6 +41,8 @@ function fmtRubles(n: number): string {
 function toFizOIPoint(d: FutOIData): FizOIPoint {
   const total = d.total_long + d.total_short
   const share = total > 0 ? Math.min(100, (d.fiz_long + d.fiz_short) / total * 100) : null
+  const sum = d.fiz_long + d.fiz_short
+  const oi_imbalance = sum > 0 ? (d.fiz_long - d.fiz_short) / sum : null
   const hasPrice = d.price > 0
   return {
     fiz_long: d.fiz_long,
@@ -47,11 +50,12 @@ function toFizOIPoint(d: FutOIData): FizOIPoint {
     ruble_long: hasPrice ? d.fiz_long * d.price : null,
     ruble_short: hasPrice ? d.fiz_short * d.price : null,
     share,
+    oi_imbalance,
   }
 }
 
 function emptyFizOIPoint(): FizOIPoint {
-  return { fiz_long: null, fiz_short: null, ruble_long: null, ruble_short: null, share: null }
+  return { fiz_long: null, fiz_short: null, ruble_long: null, ruble_short: null, share: null, oi_imbalance: null }
 }
 
 // Мержит результат fetchFizOI в модульное состояние. replace=true — новый
@@ -181,6 +185,53 @@ registerIndicator<FizOIPoint>({
   },
 })
 
+// Дисбаланс позиций физлиц: (fiz_long - fiz_short) / (fiz_long + fiz_short)
+registerIndicator<FizOIPoint>({
+  name: 'fiz_imbalance',
+  shortName: 'Дисбаланс физлиц',
+  series: 'volume',
+  precision: 2,
+  minValue: -1,
+  maxValue: 1,
+  figures: [
+    {
+      key: 'oi_imbalance',
+      title: 'imbalance: ',
+      type: 'bar',
+      baseValue: 0,
+      styles: (params) => {
+        const v = params.data.current?.oi_imbalance ?? 0
+        return { color: v >= 0 ? 'green' : 'red' }
+      },
+    }
+  ],
+  calc: dataList => dataList.map(c => {
+    if (fizOIDailyMode) {
+      return forwardFillDailyPoint(c.timestamp)
+    }
+    return fizOIMap.get(c.timestamp) ?? emptyFizOIPoint()
+  }),
+  createTooltipDataSource: ({ indicator, crosshair }) => {
+    const legends: TooltipLegend[] = []
+    const data = crosshair.dataIndex != null
+      ? indicator.result[crosshair.dataIndex]
+      : undefined
+    if (data?.oi_imbalance != null) {
+      legends.push({ title: 'imbalance: ', value: data.oi_imbalance.toFixed(3) })
+    }
+    if (data?.ruble_long != null) {
+      legends.push({ title: 'Лонг=', value: fmtRubles(data.ruble_long) })
+    }
+    if (data?.ruble_short != null) {
+      legends.push({ title: 'Шорт=', value: fmtRubles(data.ruble_short) })
+    }
+    if (data?.share != null) {
+      legends.push({ title: 'Доля физлиц=', value: `${data.share.toFixed(1)}%` })
+    }
+    return { name: 'Дисбаланс физлиц', calcParamsText: '', features: [], legends }
+  },
+})
+
 function intervalToPeriod(interval: string): Period {
   switch (interval) {
     case IntervalType.Minute:
@@ -200,25 +251,45 @@ function intervalToPeriod(interval: string): Period {
   }
 }
 
+function readQuery() {
+  const params = new URLSearchParams(window.location.search)
+  const validIntervals = Object.values(IntervalType)
+  const interval = params.get('interval') ?? ''
+  return {
+    ticker: params.get('ticker') ?? 'ROSN',
+    interval: validIntervals.includes(interval) ? interval : IntervalType.Hour,
+  }
+}
+
 export default function ChartType () {
-  const [ticker, setTicker] = useState("ROSN")
-  const [interval, setInterval] = useState(IntervalType.Hour)
-  const [activeVolumeIndicator, setActiveVolumeIndicator] = useState<'VOL' | 'volume_bs' | 'oi'>('volume_bs')
+  const [initial] = useState(readQuery)
+  const [ticker, setTicker] = useState(initial.ticker)
+  const [interval, setInterval] = useState(initial.interval)
+  const [activeVolumeIndicator, setActiveVolumeIndicator] = useState<'VOL' | 'volume_bs' | 'oi' | 'fiz_imbalance'>('volume_bs')
   const [oiAvailable, setOIAvailable] = useState(false)
   const [oiIsDaily, setOIIsDaily] = useState(false)
   const chart = useRef<Chart | null>(null)
   const futoiTickerRef = useRef<string | null>(null)
   const futoiAssetRef = useRef<string | null>(null)
 
-  const switchIndicator = (name: 'VOL' | 'volume_bs' | 'oi') => {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    params.set('ticker', ticker)
+    params.set('interval', interval)
+    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`)
+  }, [ticker, interval])
+
+  const switchIndicator = (name: 'VOL' | 'volume_bs' | 'oi' | 'fiz_imbalance') => {
     const c = chart.current
     if (!c) return
-    if (name === 'oi' && !oiAvailable) return
+    if ((name === 'oi' || name === 'fiz_imbalance') && !oiAvailable) return
 
     // Убираем предыдущий индикатор с панели объёма и создаём новый на её месте.
     c.removeIndicator({ paneId: VOLUME_PANE_ID })
     if (name === 'oi') {
       c.createIndicator({ name: 'fiz_oi', paneId: VOLUME_PANE_ID })
+    } else if (name === 'fiz_imbalance') {
+      c.createIndicator({ name: 'fiz_imbalance', paneId: VOLUME_PANE_ID })
     } else {
       c.createIndicator({ name, paneId: VOLUME_PANE_ID })
     }
@@ -329,11 +400,11 @@ export default function ChartType () {
       <TickerSelector onSelect={setTicker} />
       <div id="real-time-k-line" className="k-line-chart" />
       <div className="k-line-chart-menu-container">
-        <button onClick={_ => setInterval(IntervalType.FiveMinutes)}>5m</button>
-        <button onClick={_ => setInterval(IntervalType.Hour)}>hour</button>
-        <button onClick={_ => setInterval(IntervalType.Day)}>day</button>
-        <button onClick={_ => setInterval(IntervalType.Week)}>week</button>
-        <button onClick={_ => setInterval(IntervalType.Month)}>month</button>
+        <button onClick={_ => setInterval(IntervalType.FiveMinutes)} style={{ backgroundColor: interval === IntervalType.FiveMinutes ? '#4CAF50' : '' }}>5m</button>
+        <button onClick={_ => setInterval(IntervalType.Hour)} style={{ backgroundColor: interval === IntervalType.Hour ? '#4CAF50' : '' }}>hour</button>
+        <button onClick={_ => setInterval(IntervalType.Day)} style={{ backgroundColor: interval === IntervalType.Day ? '#4CAF50' : '' }}>day</button>
+        <button onClick={_ => setInterval(IntervalType.Week)} style={{ backgroundColor: interval === IntervalType.Week ? '#4CAF50' : '' }}>week</button>
+        <button onClick={_ => setInterval(IntervalType.Month)} style={{ backgroundColor: interval === IntervalType.Month ? '#4CAF50' : '' }}>month</button>
 
         <span style={{ paddingLeft: 12, paddingRight: 6 }}>Объем:</span>
         <button
@@ -365,6 +436,22 @@ export default function ChartType () {
           }
         >
           Открытый интерес
+        </button>
+        <button
+          onClick={_ => switchIndicator('fiz_imbalance')}
+          disabled={!oiAvailable}
+          style={{
+            backgroundColor: activeVolumeIndicator === 'fiz_imbalance' ? '#4CAF50' : '',
+            opacity: oiAvailable ? 1 : 0.5,
+            cursor: oiAvailable ? 'pointer' : 'not-allowed'
+          }}
+          title={
+            !oiAvailable
+              ? "Нет данных по открытому интересу"
+              : "Дисбаланс позиций физлиц"
+          }
+        >
+          Дисбаланс ОИ
         </button>
         {oiAvailable && oiIsDaily && (
           <span style={{ paddingLeft: 6, color: '#FFB74D', fontSize: 12 }}>

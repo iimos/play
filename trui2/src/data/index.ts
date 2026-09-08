@@ -6,6 +6,8 @@ export interface SuperCandle extends KLineData {
   volume_s?: number;
   val_b?: number;
   val_s?: number;
+  pr_vwap_b?: number;
+  pr_vwap_s?: number;
   oi_open?: number;
   oi_high?: number;
   oi_low?: number;
@@ -23,6 +25,8 @@ interface SuperCandleRow {
 	volume_b?: number;
 	val_s?: number;
 	val_b?: number;
+	pr_vwap_b?: number | null;
+	pr_vwap_s?: number | null;
 	oi_open?: number;
 	oi_high?: number;
 	oi_low?: number;
@@ -60,6 +64,14 @@ const clickhouse = createClient({
   request_timeout: 3000,
 })
 
+// ClickHouse сериализует DateTime в JSONEachRow строкой в таймзоне сервера
+// (Europe/Moscow) без суффикса, напр. "2026-01-05 07:00:00". Парсим её явно как
+// МСК (UTC+3, без DST), а не как локальное время браузера, чтобы timestamp был
+// корректным абсолютным моментом независимо от таймзоны клиента.
+function parseMskTime(s: string): number {
+  return new Date(s.replace(' ', 'T') + '+03:00').getTime()
+}
+
 export async function fetchSuperCandles(ticker: string, till: Date, interval: string): Promise<SuperCandle[]> {
   const range = Math.max(10*intervalMs(interval), 3*intervalMs(IntervalType.Day)) // грузим минимум 3 дня, чтобы не застрять в выходных
   const from = new Date(till.getTime() - 6000*intervalMs(interval))
@@ -77,7 +89,9 @@ export async function fetchSuperCandles(ticker: string, till: Date, interval: st
            sum(vol_b) volume_b,
            sum(vol_s) volume_s,
            sum(val_b) val_b,
-           sum(val_s) val_s`
+           sum(val_s) val_s,
+           val_b/nullIf(volume_b,0) pr_vwap_b,
+           val_s/nullIf(volume_s,0) pr_vwap_s`
 
     // Добавляем поля открытого интереса только для фьючерсов
     if (table === 'tr.super_fo') {
@@ -109,7 +123,7 @@ export async function fetchSuperCandles(ticker: string, till: Date, interval: st
   
   return rows.map(x => {
     const candle: SuperCandle = {
-      timestamp: new Date(x.timeslot).getTime(),
+      timestamp: parseMskTime(x.timeslot),
       open: Number(x.open),
       high: Number(x.high),
       low: Number(x.low),
@@ -119,6 +133,12 @@ export async function fetchSuperCandles(ticker: string, till: Date, interval: st
       volume_s: Number(x.volume_s),
       val_b: Number(x.val_b),
       val_s: Number(x.val_s),
+    }
+    if (x.pr_vwap_b != null) {
+      candle.pr_vwap_b = Number(x.pr_vwap_b)
+    }
+    if (x.pr_vwap_s != null) {
+      candle.pr_vwap_s = Number(x.pr_vwap_s)
     }
     
     // Добавляем данные открытого интереса, если они есть
@@ -166,7 +186,7 @@ export async function fetchCandles(ticker: string, till: Date, interval: string)
   const rows: SuperCandleRow[] = await res.json()
   return rows.map(x => {
     return {
-      timestamp: new Date(x.timeslot).getTime(),
+      timestamp: parseMskTime(x.timeslot),
       open: Number(x.open),
       high: Number(x.high),
       low: Number(x.low),
@@ -191,7 +211,7 @@ export async function fetchLatestTime(): Promise<Date> {
   if (!row || row.length === 0 || row[0].latest === null) {
     return new Date()
   }
-  return new Date(row[0].latest)
+  return new Date(parseMskTime(row[0].latest))
 }
 
 const notSuperCandles = new Map([])
@@ -294,7 +314,7 @@ function fizOIPriceSubquery(futoiTicker: string, from: Date, till: Date, interva
 
 function mapFizOIRows(rows: any[]): FutOIData[] {
   return rows.map(x => ({
-    timestamp: new Date(x.timeslot).getTime(),
+    timestamp: parseMskTime(x.timeslot),
     fiz_long: Number(x.fiz_long ?? 0),
     fiz_short: Number(x.fiz_short ?? 0),
     total_long: Number(x.total_long ?? 0),

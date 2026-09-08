@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { Chart, init, dispose, registerIndicator, Period, TooltipLegend } from 'klinecharts'
+import { Chart, init, dispose, registerIndicator, registerOverlay, Period, TooltipLegend } from 'klinecharts'
 import Layout from '../Layout'
 import TickerSelector from './TickerSelector'
 import { fetchCandles, fetchLatestTime, IntervalType, SuperCandle, fetchFizOI, resolveFutoiTicker, FutOIData, FizOIResult } from '../data/index'
 
 const klineStyle = {}
 
-type VolumeIndicatorId = 'VOL' | 'volume_bs' | 'oi' | 'fiz_imbalance'
+type VolumeIndicatorId = 'VOL' | 'volume_bs' | 'volume_bs_cum' | 'oi' | 'fiz_imbalance' | 'pr_vwap_spread'
 
 interface VolumeIndicatorDef {
   id: VolumeIndicatorId
@@ -14,6 +14,8 @@ interface VolumeIndicatorDef {
   indicatorName: string
   paneId: string
   requiresOI: boolean
+  // Интервалы, на которых индикатор скрыт (недоступен).
+  hiddenOn?: string[]
 }
 
 // Все индикаторы объёма показываются друг под другом на отдельных панелях,
@@ -21,15 +23,19 @@ interface VolumeIndicatorDef {
 const VOLUME_INDICATORS: VolumeIndicatorDef[] = [
   { id: 'VOL', label: 'Объем', indicatorName: 'VOL', paneId: 'pane_vol', requiresOI: false },
   { id: 'volume_bs', label: 'Активные сделки', indicatorName: 'volume_bs', paneId: 'pane_volume_bs', requiresOI: false },
+  { id: 'volume_bs_cum', label: 'Накопл. объём активных сделок', indicatorName: 'volume_bs_cum', paneId: 'pane_volume_bs_cum', requiresOI: false, hiddenOn: [IntervalType.Week, IntervalType.Month] },
   { id: 'oi', label: 'Открытый интерес', indicatorName: 'fiz_oi', paneId: 'pane_oi', requiresOI: true },
   { id: 'fiz_imbalance', label: 'Дисбаланс ОИ', indicatorName: 'fiz_imbalance', paneId: 'pane_fiz_imbalance', requiresOI: true },
+  { id: 'pr_vwap_spread', label: 'Спред VWAP', indicatorName: 'pr_vwap_spread', paneId: 'pane_pr_vwap_spread', requiresOI: false },
 ]
 
 const DEFAULT_ENABLED: Record<VolumeIndicatorId, boolean> = {
   VOL: true,
   volume_bs: true,
+  volume_bs_cum: true,
   oi: true,
   fiz_imbalance: true,
+  pr_vwap_spread: true,
 }
 
 // OI физлиц (FUTOI) по инструменту, заполняется перед созданием индикатора fiz_oi
@@ -37,6 +43,47 @@ let fizOIMap = new Map<number, FizOIPoint>()
 // Дневные срезы (iss_openpositions) для forward-fill на внутридневных интервалах.
 let fizOIDaily: FizOIDailyPoint[] = []
 let fizOIDailyMode = false
+
+// Текущий интервал графика — нужен calc-функции volume_bs_cum, чтобы выбрать
+// период накопления (торговый день МСК на внутридневных, неделя на дневках).
+// Модульная переменная рассчитана на единственный экземпляр чарта (как и
+// fizOIMap/fizOIDailyMode выше).
+let currentInterval = IntervalType.Hour
+
+// Дата в таймзоне МСК (Europe/Moscow, UTC+3 без DST) в формате YYYY-MM-DD.
+// Собираем через formatToParts, чтобы не зависеть от локали/движка ('en-CA'
+// выдаёт YYYY-MM-DD только де-факто, а не по спецификации).
+const mskDayParts = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Europe/Moscow',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+function mskDateKey(ts: number): string {
+  const parts = mskDayParts.formatToParts(new Date(ts))
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? ''
+  return `${get('year')}-${get('month')}-${get('day')}`
+}
+
+// Понедельник недели (в МСК) для заданного timestamp, в формате YYYY-MM-DD.
+function mskMonday(ts: number): string {
+  const dateKey = mskDateKey(ts)
+  const d = new Date(dateKey + 'T00:00:00Z')
+  const diff = (d.getUTCDay() + 6) % 7 // 0 = понедельник
+  d.setUTCDate(d.getUTCDate() - diff)
+  return d.toISOString().slice(0, 10)
+}
+
+// Ключ периода накопления для volume_bs_cum. На внутридневных интервалах это
+// календарный день МСК (вечерняя сессия 19:00–23:50 остаётся в своей дате),
+// на дневках — неделя (понедельник).
+function accumulationPeriodKey(ts: number): string {
+  if (currentInterval === IntervalType.Day) {
+    return mskMonday(ts)
+  }
+  return mskDateKey(ts)
+}
 
 interface FizOIPoint {
   fiz_long: number | null
@@ -173,6 +220,63 @@ registerIndicator<ActiveTradesPoint>({
   },
 })
 
+// Кумулятивная сумма разностей (vol_b - vol_s) с начала периода:
+// на внутридневных интервалах — с начала торгового дня (МСК), на дневках —
+// с начала недели. Рисуется красными/зелёными столбиками.
+type VolBsCumPoint = SuperCandle & { net?: number }
+
+registerIndicator<VolBsCumPoint>({
+  name: 'volume_bs_cum',
+  shortName: 'Накопл. объём активных сделок',
+  series: 'volume',
+  precision: 0,
+  shouldFormatBigNumber: true,
+  figures: [
+    {
+      key: 'net',
+      title: 'vol_b - vol_s: ',
+      type: 'bar',
+      baseValue: 0,
+      styles: (params) => {
+        const v = params.data.current?.net ?? 0
+        return { color: v >= 0 ? 'green' : 'red' }
+      },
+    },
+  ],
+  // ВАЖНО: klinecharts вызывает calc на полном отсортированном списке данных при
+  // каждом изменении (init/forward). Кумулятивная сумма пересчитывается с нуля,
+  // поэтому корректность зависит от идемпотентного полного прохода по списку.
+  calc: dataList => {
+    let cum = 0
+    let prevKey = ''
+    return dataList.map(c => {
+      const k = c as unknown as SuperCandle
+      const key = accumulationPeriodKey(k.timestamp)
+      if (key !== prevKey) {
+        cum = 0
+        prevKey = key
+      }
+      // Нет данных по покупкам/продажам (напр. интервал 1m или тикер из
+      // tr.candles) — не рисуем фантомный нулевой бар.
+      if (k.volume_b == null && k.volume_s == null) {
+        return { ...k } as VolBsCumPoint
+      }
+      cum += (k.volume_b ?? 0) - (k.volume_s ?? 0)
+      return { ...k, net: cum } as VolBsCumPoint
+    })
+  },
+  createTooltipDataSource: ({ indicator, crosshair }) => {
+    const legends: TooltipLegend[] = []
+    const data = crosshair.dataIndex != null
+      ? indicator.result[crosshair.dataIndex]
+      : undefined
+    if (data?.net != null) {
+      legends.push({ title: 'vol_b - vol_s: ', value: fmtLots(data.net) })
+    }
+    return { name: 'Накопл. объём активных сделок', calcParamsText: '', features: [], legends }
+  },
+})
+
 // Открытый интерес физлиц в рублях (данные FUTOI из tr.futoi)
 registerIndicator<FizOIPoint>({
   name: 'fiz_oi',
@@ -255,6 +359,199 @@ registerIndicator<FizOIPoint>({
   },
 })
 
+// Спред между средней ценой покупателей и продавцов: pr_vwap_b - pr_vwap_s
+type SpreadPoint = SuperCandle & { spread?: number }
+
+registerIndicator<SpreadPoint>({
+  name: 'pr_vwap_spread',
+  shortName: 'Спред VWAP',
+  series: 'normal',
+  precision: 2,
+  figures: [
+    {
+      key: 'spread',
+      title: 'спред (₽): ',
+      type: 'bar',
+      baseValue: 0,
+      styles: (params) => {
+        const v = params.data.current?.spread ?? 0
+        return { color: v >= 0 ? 'green' : 'red' }
+      },
+    },
+  ],
+  calc: dataList => dataList.map(c => {
+    const k = c as unknown as SuperCandle
+    const b = k.pr_vwap_b
+    const s = k.pr_vwap_s
+    return {
+      ...k,
+      spread: (b != null && s != null) ? b - s : undefined,
+    } as SpreadPoint
+  }),
+  createTooltipDataSource: ({ indicator, crosshair }) => {
+    const legends: TooltipLegend[] = []
+    const data = crosshair.dataIndex != null
+      ? indicator.result[crosshair.dataIndex]
+      : undefined
+    if (data?.spread != null) {
+      legends.push({ title: 'спред: ', value: `${data.spread.toFixed(2)} ₽` })
+    }
+    if (data?.pr_vwap_b != null) {
+      legends.push({ title: 'VWAP покуп.: ', value: data.pr_vwap_b.toFixed(2) })
+    }
+    if (data?.pr_vwap_s != null) {
+      legends.push({ title: 'VWAP продаж: ', value: data.pr_vwap_s.toFixed(2) })
+    }
+    return { name: 'Спред VWAP', calcParamsText: '', features: [], legends }
+  },
+})
+
+// Вертикальная пунктирная линия-разделитель на всю высоту панели свечей.
+// Используется для визуального отделения торговых дней (внутридневные интервалы)
+// и недель (дневной интервал).
+registerOverlay({
+  name: 'periodSeparator',
+  totalStep: 1,
+  needDefaultPointFigure: false,
+  needDefaultXAxisFigure: false,
+  needDefaultYAxisFigure: false,
+  createPointFigures: ({ chart, coordinates, bounding }) => {
+    if (coordinates.length === 0) {
+      return []
+    }
+    // dataIndexToCoordinate возвращает центр бара, а разделитель должен лежать
+    // в середине зазора между свечами — сдвигаем на половину шага влево.
+    const x = coordinates[0].x - chart.getBarSpace().halfBar
+    return [{
+      type: 'line',
+      attrs: {
+        coordinates: [
+          { x, y: 0 },
+          { x, y: bounding.height },
+        ],
+      },
+      styles: { style: 'dashed', color: 'rgba(148, 148, 148, 0.5)', size: 1, dashedValue: [4, 4] },
+      ignoreEvent: true,
+    }]
+  },
+})
+
+// Полупрозрачная заливка выходного дня (субботы/воскресенья). Две точки: первая
+// и последняя свеча этого дня.
+registerOverlay({
+  name: 'weekendHighlight',
+  totalStep: 2,
+  needDefaultPointFigure: false,
+  needDefaultXAxisFigure: false,
+  needDefaultYAxisFigure: false,
+  createPointFigures: ({ chart, coordinates, bounding }) => {
+    if (coordinates.length < 2) {
+      return []
+    }
+    // Заливаем от левого края первой свечи до правого края последней.
+    const halfBar = chart.getBarSpace().halfBar
+    const x0 = coordinates[0].x - halfBar
+    const x1 = coordinates[1].x + halfBar
+    return [{
+      type: 'polygon',
+      attrs: {
+        coordinates: [
+          { x: x0, y: 0 },
+          { x: x1, y: 0 },
+          { x: x1, y: bounding.height },
+          { x: x0, y: bounding.height },
+        ],
+      },
+      styles: { style: 'fill', color: 'rgba(255, 183, 77, 0.12)' },
+      ignoreEvent: true,
+    }]
+  },
+})
+
+// true, если таймстамп попадает на субботу или воскресенье (по МСК).
+function isWeekend(ts: number): boolean {
+  const day = new Date(mskDateKey(ts) + 'T00:00:00Z').getUTCDay()
+  return day === 0 || day === 6
+}
+
+interface WeekendHighlight {
+  overlayId: string
+  startTs: number
+  endTs: number
+}
+
+// Создаёт подсветку выходного дня или расширяет уже созданную, если подгрузка
+// истории вперёд (влево) добавила более ранние свечи этого же дня.
+function upsertWeekendHighlight(chart: Chart, weekends: Map<string, WeekendHighlight>, dateKey: string, startTs: number, endTs: number) {
+  const existing = weekends.get(dateKey)
+  if (!existing) {
+    const overlayId = chart.createOverlay({ name: 'weekendHighlight', points: [{ timestamp: startTs }, { timestamp: endTs }] }) as string | null
+    if (overlayId != null) {
+      weekends.set(dateKey, { overlayId, startTs, endTs })
+    }
+    return
+  }
+  if (existing.startTs !== startTs || existing.endTs !== endTs) {
+    chart.overrideOverlay({ id: existing.overlayId, points: [{ timestamp: startTs }, { timestamp: endTs }] })
+    existing.startTs = startTs
+    existing.endTs = endTs
+  }
+}
+
+// Ключ периода, между которым рисуется разделитель: на внутридневных интервалах
+// это календарный день (МСК), на дневках — неделя (понедельник). Вызывается
+// только для внутридневных и дневного интервалов (неделя/месяц отсекаются в
+// syncPeriodSeparators).
+function separatorPeriodKey(ts: number): string {
+  if (currentInterval === IntervalType.Day) {
+    return mskMonday(ts)
+  }
+  return mskDateKey(ts)
+}
+
+// Рисует разделители периодов и подсветку выходных для уже загруженных свечей.
+// Отслеживает уже созданные timestamps/даты, чтобы не плодить дубли при подгрузке
+// истории вперёд.
+function syncPeriodSeparators(chart: Chart, createdSeparators: Set<number>, createdWeekends: Map<string, WeekendHighlight>) {
+  const dataList = chart.getDataList() as SuperCandle[]
+  if (currentInterval === IntervalType.Week || currentInterval === IntervalType.Month) {
+    return
+  }
+  let prevKey = ''
+  let prevDateKey: string | null = null
+  let dayStartTs = 0
+  let prevTs = 0
+  for (const c of dataList) {
+    const key = separatorPeriodKey(c.timestamp)
+    const dateKey = mskDateKey(c.timestamp)
+
+    // Разделитель на границе периода (день/неделя).
+    if (prevKey !== '' && key !== prevKey && !createdSeparators.has(c.timestamp)) {
+      createdSeparators.add(c.timestamp)
+      chart.createOverlay({ name: 'periodSeparator', points: [{ timestamp: c.timestamp }] })
+    }
+
+    // Подсветка выходного дня целиком — по переходу на новый календарный день
+    // финализируем предыдущий, если он суббота/воскресенье.
+    if (prevDateKey !== null && dateKey !== prevDateKey) {
+      if (isWeekend(prevTs)) {
+        upsertWeekendHighlight(chart, createdWeekends, prevDateKey, dayStartTs, prevTs)
+      }
+      dayStartTs = c.timestamp
+    } else if (prevDateKey === null) {
+      dayStartTs = c.timestamp
+    }
+
+    prevKey = key
+    prevDateKey = dateKey
+    prevTs = c.timestamp
+  }
+  // Последний (ещё не финализированный) день.
+  if (prevDateKey !== null && isWeekend(prevTs)) {
+    upsertWeekendHighlight(chart, createdWeekends, prevDateKey, dayStartTs, prevTs)
+  }
+}
+
 function intervalToPeriod(interval: string): Period {
   switch (interval) {
     case IntervalType.Minute:
@@ -290,7 +587,6 @@ export default function ChartType () {
   const [interval, setInterval] = useState(initial.interval)
   const [enabled, setEnabled] = useState<Record<VolumeIndicatorId, boolean>>(DEFAULT_ENABLED)
   const [oiAvailable, setOIAvailable] = useState(false)
-  const [oiIsDaily, setOIIsDaily] = useState(false)
   const chart = useRef<Chart | null>(null)
   const futoiTickerRef = useRef<string | null>(null)
   const futoiAssetRef = useRef<string | null>(null)
@@ -311,14 +607,18 @@ export default function ChartType () {
     let cancelled = false
 
     setOIAvailable(false)
-    setOIIsDaily(false)
     fizOIMap = new Map()
     fizOIDaily = []
     fizOIDailyMode = false
     futoiTickerRef.current = null
     futoiAssetRef.current = null
+    currentInterval = interval
 
     chart.current = init("real-time-k-line", { styles: klineStyle })
+    // Разделители периодов уже созданные для текущего чарта (сбрасываются вместе
+    // с пересозданием чарта при смене тикера/интервала).
+    const createdSeparators = new Set<number>()
+    const createdWeekends = new Map<string, WeekendHighlight>()
 
     // Загружаем OI физлиц для диапазона и резолвим тикер FUTOI (для init-загрузки).
     async function loadOI(till: Date, candles: SuperCandle[]) {
@@ -332,7 +632,6 @@ export default function ChartType () {
         if (cancelled) return
         const available = oiResult.data.length > 0
         setOIAvailable(available)
-        setOIIsDaily(available && oiResult.isDaily)
         if (available) {
           applyFizOIResult(oiResult, true)
         }
@@ -369,6 +668,7 @@ export default function ChartType () {
                 console.error('Ошибка загрузки данных:', error)
               }
               callback(candles, { forward: true, backward: false })
+              if (chart.current) syncPeriodSeparators(chart.current, createdSeparators, createdWeekends)
             })
             .catch(error => {
               console.error('Ошибка загрузки данных:', error)
@@ -383,6 +683,7 @@ export default function ChartType () {
               }
               if (cancelled) return
               callback(candles, { forward: candles.length !== 0, backward: false })
+              if (chart.current) syncPeriodSeparators(chart.current, createdSeparators, createdWeekends)
             })
             .catch(error => {
               console.error('Ошибка загрузки данных:', error)
@@ -409,7 +710,8 @@ export default function ChartType () {
     const c = chart.current
     if (!c) return
     for (const ind of VOLUME_INDICATORS) {
-      const shouldShow = enabled[ind.id] && (!ind.requiresOI || oiAvailable)
+      const hidden = ind.hiddenOn?.includes(interval) ?? false
+      const shouldShow = enabled[ind.id] && (!ind.requiresOI || oiAvailable) && !hidden
       const isShown = c.getIndicators({ paneId: ind.paneId }).length > 0
       if (shouldShow && !isShown) {
         c.createIndicator({ name: ind.indicatorName, paneId: ind.paneId })
@@ -422,7 +724,7 @@ export default function ChartType () {
   // Высота контейнера растёт вместе с числом включённых индикаторов,
   // чтобы основной график не сжимался.
   const visibleIndicatorCount = VOLUME_INDICATORS.filter(
-    ind => enabled[ind.id] && (!ind.requiresOI || oiAvailable)
+    ind => enabled[ind.id] && (!ind.requiresOI || oiAvailable) && !(ind.hiddenOn?.includes(interval) ?? false)
   ).length
   const containerHeight = 480 + visibleIndicatorCount * 100
 
@@ -439,6 +741,8 @@ export default function ChartType () {
         <span style={{ paddingLeft: 12, paddingRight: 6 }}>Индикаторы:</span>
         {VOLUME_INDICATORS.map(ind => {
           const oiDisabled = ind.requiresOI && !oiAvailable
+          const hidden = ind.hiddenOn?.includes(interval) ?? false
+          const disabled = oiDisabled || hidden
           return (
             <label
               key={ind.id}
@@ -446,32 +750,27 @@ export default function ChartType () {
                 marginRight: 12,
                 display: 'inline-flex',
                 alignItems: 'center',
-                cursor: oiDisabled ? 'not-allowed' : 'pointer',
-                opacity: oiDisabled ? 0.5 : 1,
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.5 : 1,
               }}
               title={
                 oiDisabled
                   ? "Нет данных по открытому интересу"
-                  : ind.id === 'oi' && oiIsDaily
-                    ? "Открытый интерес физлиц (данные суточные)"
+                  : hidden
+                    ? "Индикатор недоступен на этом интервале"
                     : ind.label
               }
             >
               <input
                 type="checkbox"
                 checked={enabled[ind.id]}
-                disabled={oiDisabled}
+                disabled={disabled}
                 onChange={_ => toggleIndicator(ind.id)}
               />
               <span style={{ paddingLeft: 4 }}>{ind.label}</span>
             </label>
           )
         })}
-        {oiAvailable && oiIsDaily && (
-          <span style={{ paddingLeft: 6, color: '#FFB74D', fontSize: 12 }}>
-            данные суточные
-          </span>
-        )}
       </div>
       <div id="real-time-k-line" className="k-line-chart" />
     </Layout>

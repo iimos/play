@@ -279,6 +279,15 @@ CREATE TABLE tr.security_info (
     sec_group            LowCardinality(String) COMMENT 'Группа (stock_shares, futures_forts, currency_selt, ...)',
     primary_boardid      LowCardinality(String) COMMENT 'Основной режим торгов (TQBR, RFUD, CETS, ...)',
     marketprice_boardid  LowCardinality(String) COMMENT 'Режим торгов для рыночной цены',
+    lotsize              Float64 COMMENT 'Размер лота (LOTSIZE; для фьючерсов LOTVOLUME)',
+    trading_currency     LowCardinality(String) COMMENT 'Валюта торгов (CURRENCYID; у фьючерсов пусто)',
+    decimals             UInt8 COMMENT 'Число знаков после запятой в цене',
+    minstep              Float64 COMMENT 'Минимальный шаг цены',
+    facevalue            Float64 COMMENT 'Номинальная стоимость (FACEVALUE)',
+    faceunit             LowCardinality(String) COMMENT 'Валюта номинала (FACEUNIT)',
+    asset_code           LowCardinality(String) COMMENT 'Базовый актив фьючерса (ASSETCODE)',
+    last_tradedate       Nullable(Date) COMMENT 'Дата последней торговли фьючерса (LASTTRADEDATE)',
+    last_deldate         Nullable(Date) COMMENT 'Дата исполнения фьючерса (LASTDELDATE)',
     updated_at           DateTime DEFAULT now() COMMENT 'Время последнего обновления записи'
 ) ENGINE = ReplacingMergeTree(updated_at)
 COMMENT 'Справочник метаданных ценных бумаг Московской биржи'

@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"time"
 )
 
 // SecurityInfo содержит справочную информацию о ценной бумаге.
@@ -21,6 +22,15 @@ type SecurityInfo struct {
 	Group              string
 	PrimaryBoardID     string
 	MarketpriceBoardID string
+	LotSize            float64
+	TradingCurrency    string
+	Decimals           uint8
+	MinStep            float64
+	FaceValue          float64
+	FaceUnit           string
+	AssetCode          string
+	LastTradeDate      *time.Time
+	LastDelDate        *time.Time
 }
 
 func (s *Store) StoreSecurityInfo(ctx context.Context, infos []SecurityInfo) error {
@@ -30,7 +40,9 @@ func (s *Store) StoreSecurityInfo(ctx context.Context, infos []SecurityInfo) err
 	batch, err := s.conn.PrepareBatch(ctx, `INSERT INTO security_info(
 	    secid, shortname, name, isin, regnumber, is_traded,
 	    emitent_id, emitent_title, emitent_inn, emitent_okpo,
-	    sec_type, sec_group, primary_boardid, marketprice_boardid
+	    sec_type, sec_group, primary_boardid, marketprice_boardid,
+	    lotsize, trading_currency, decimals, minstep, facevalue, faceunit,
+	    asset_code, last_tradedate, last_deldate
 	)`)
 	if err != nil {
 		return err
@@ -40,6 +52,8 @@ func (s *Store) StoreSecurityInfo(ctx context.Context, infos []SecurityInfo) err
 			i.SecID, i.ShortName, i.Name, i.ISIN, i.RegNumber, i.IsTraded,
 			i.EmitentID, i.EmitentTitle, i.EmitentINN, i.EmitentOKPO,
 			i.Type, i.Group, i.PrimaryBoardID, i.MarketpriceBoardID,
+			i.LotSize, i.TradingCurrency, i.Decimals, i.MinStep, i.FaceValue, i.FaceUnit,
+			i.AssetCode, i.LastTradeDate, i.LastDelDate,
 		)
 		if err != nil {
 			return err

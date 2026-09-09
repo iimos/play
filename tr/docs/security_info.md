@@ -5,6 +5,7 @@
 человекочитаемые названия вместо «голых» тикеров.
 
 - Источник: MOEX ISS API — `https://iss.moex.com/iss/securities.json?q={тикер}`
+  (справочные поля) + борд-эндпоинты и `/iss/securities/{secid}` (торговые параметры)
 - Наполнение: команда `go run main.go load-securities`
 - Обновление: по требованию (см. раздел «Актуальность»)
 
@@ -26,6 +27,15 @@ CREATE TABLE tr.security_info (
     sec_group            LowCardinality(String), -- Группа инструментов
     primary_boardid      LowCardinality(String),
     marketprice_boardid  LowCardinality(String),
+    lotsize              Float64,
+    trading_currency     LowCardinality(String),
+    decimals             UInt8,
+    minstep              Float64,
+    facevalue            Float64,
+    faceunit             LowCardinality(String),
+    asset_code           LowCardinality(String),
+    last_tradedate       Nullable(Date),
+    last_deldate         Nullable(Date),
     updated_at           DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(updated_at)
 ORDER BY secid;
@@ -49,6 +59,15 @@ ORDER BY secid;
 | `sec_group` | `String` | группа инструментов (`stock_shares`, `futures_forts`, ...) |
 | `primary_boardid` | `String` | основной режим торгов (`TQBR`, `RFUD`, `CETS`, ...) |
 | `marketprice_boardid` | `String` | режим торгов для рыночной цены |
+| `lotsize` | `Float64` | размер лота (`LOTSIZE`; у фьючерсов `LOTVOLUME`, может быть дробным) |
+| `trading_currency` | `String` | валюта торгов (`CURRENCYID`: `RUB`/`SUR`; у фьючерсов пусто) |
+| `decimals` | `UInt8` | число знаков после запятой в цене |
+| `minstep` | `Float64` | минимальный шаг цены |
+| `facevalue` | `Float64` | номинальная стоимость (`FACEVALUE`) |
+| `faceunit` | `String` | валюта номинала (`FACEUNIT`) |
+| `asset_code` | `String` | базовый актив фьючерса (`ASSETCODE`: `AI92`, `GOLD`, ...; у не-фьючерсов пусто) |
+| `last_tradedate` | `Nullable(Date)` | дата последней торговли фьючерса (экспирация; `NULL` у не-фьючерсов) |
+| `last_deldate` | `Nullable(Date)` | дата исполнения фьючерса (`NULL` у не-фьючерсов) |
 | `updated_at` | `DateTime` | время последнего обновления записи |
 
 ## Важные нюансы
@@ -143,6 +162,23 @@ LEFT ANTI JOIN tr.security_info i ON i.secid = s.secid;
 Флаг отражает, торгуется ли инструмент на момент обновления. Истёкшие фьючерсы
 и снятые с торгов бумаги будут иметь `is_traded = 0`, но их исторические данные
 в `super_*` при этом остаются.
+
+### 10. Торговые параметры (`lotsize`, `trading_currency`, ...) — из борд-эндпоинта
+
+Поля `lotsize`/`trading_currency`/`decimals`/`minstep`/`facevalue`/`faceunit`
+берутся из `/iss/engines/{engine}/markets/{market}/boards/{board}/securities/{secid}`,
+для фьючерсов (включая истёкшие) — из `/iss/securities/{secid}` (блок `description`:
+`LOTSIZE`, `ASSETCODE`, `LSTTRADE`, `LSTDELDATE`). Engine/market выводятся из
+`sec_group`, борд — из `primary_boardid`.
+
+Поля могут быть пустыми (нулями/`NULL`) в трёх случаях:
+
+- **Снятые с торгов бумаги** (`is_traded = 0`, например делистингованные ГДР/АДР —
+  `AGRO`, `CIAN`, `QIWI`): их уже нет в текущем борд-листинге, данные недоступны.
+- **Акции «Сектора Роста»** (борд `MTQR`): торгуются в другом engine (`otc`, а не
+  `stock`), поэтому `lotsize` не заполняется (~5 бумаг).
+- **Редкие legacy-фьючерсы** (например `RSH2`/`RSM2` — RTS Standard): в API нет
+  поля `LOTSIZE`.
 
 ## Примеры запросов
 

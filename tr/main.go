@@ -7,12 +7,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/iimos/play/tr/cmd/bonddaily"
 	"github.com/iimos/play/tr/cmd/candles"
 	"github.com/iimos/play/tr/cmd/futoi"
 	"github.com/iimos/play/tr/cmd/openpositions"
 	"github.com/iimos/play/tr/cmd/securities"
 	"github.com/iimos/play/tr/cmd/supercandles"
 	"github.com/iimos/play/tr/cmd/test"
+	"github.com/iimos/play/tr/tz"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -39,6 +41,7 @@ func main() {
 		_, _ = fmt.Fprintf(os.Stderr, "  load-iss-openpositions - load daily futures open positions by phys/legal (ISS statistics)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load            - load all (supercandles, futoi, openpositions)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-securities - load securities metadata (names, emitents, etc.)\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  load-bond-daily    - load daily bond candles with bond attributes\n")
 		_, _ = fmt.Fprintf(os.Stderr, "flags:\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --force         - force reload all dates (delete and reload)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --start {date}  - start date (format: YYYY-MM-DD, defaults to last date in table)\n")
@@ -77,8 +80,8 @@ func main() {
 			os.Exit(1)
 		}
 	} else {
-		// Default to today
-		endDate = time.Now()
+		// Default to today (Moscow)
+		endDate = time.Now().In(tz.MSK)
 	}
 
 	opts := struct {
@@ -107,9 +110,12 @@ func main() {
 		gr.Go(func() error { return supercandles.LoadAll(grctx, opts) })
 		gr.Go(func() error { return futoi.Load(grctx, opts) })
 		gr.Go(func() error { return openpositions.Load(grctx, opts) })
+		gr.Go(func() error { return bonddaily.Load(grctx, opts) })
 		err = gr.Wait()
 	case "load-candles": // deprecated
 		err = candles.Load(ctx, opts)
+	case "load-bond-daily":
+		err = bonddaily.Load(ctx, opts)
 	case "load-securities":
 		err = securities.Load(ctx)
 	case "test": // for debug

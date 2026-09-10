@@ -3,19 +3,21 @@ package securities
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
+	"github.com/iimos/play/tr/httpjson"
 	"github.com/iimos/play/tr/store"
 	"github.com/tidwall/gjson"
 	"golang.org/x/sync/errgroup"
 )
 
-const securitiesURL = "https://iss.moex.com/iss/securities.json"
+const (
+	securitiesURL = "https://iss.moex.com/iss/securities.json"
+	bondsListURL  = "https://iss.moex.com/iss/engines/stock/markets/bonds/securities.json"
+)
 
 // Load получает справочную информацию (название, эмитент и т.п.) по всем тикерам,
 // встречающимся в таблицах данных, и сохраняет её в таблицу security_info.
@@ -33,6 +35,14 @@ func Load(ctx context.Context) error {
 	fmt.Printf("Found %d distinct secids in data tables\n", len(secids))
 
 	client := &http.Client{Timeout: 30 * time.Second}
+
+	bondSecids, err := listBondSecIDs(ctx, client)
+	if err != nil {
+		return fmt.Errorf("list bonds: %w", err)
+	}
+	fmt.Printf("Found %d bonds in MOEX listing\n", len(bondSecids))
+
+	secids = dedupe(append(secids, bondSecids...))
 
 	var (
 		mu    sync.Mutex
@@ -82,14 +92,14 @@ func fetchSecurityInfo(ctx context.Context, client *http.Client, secid string) (
 		"iss.only": {"securities"},
 	}.Encode()
 
-	body, err := getJSON(ctx, client, u)
+	body, err := httpjson.GetJSON(ctx, client, u)
 	if err != nil {
 		return store.SecurityInfo{}, false, err
 	}
 
 	rows := gjson.GetBytes(body, "1.securities")
 	if !rows.IsArray() {
-		return store.SecurityInfo{}, false, fmt.Errorf("unexpected response: %s", truncate(string(body), 200))
+		return store.SecurityInfo{}, false, fmt.Errorf("unexpected response: %s", httpjson.Truncate(string(body), 200))
 	}
 
 	var found gjson.Result
@@ -141,6 +151,48 @@ func fetchSecurityInfo(ctx context.Context, client *http.Client, secid string) (
 	return info, true, nil
 }
 
+// listBondSecIDs возвращает SECID всех облигаций из листинга MOEX.
+// Эндпоинт листинга игнорирует параметр start и отдаёт все строки разом,
+// поэтому пагинация не применяется.
+func listBondSecIDs(ctx context.Context, client *http.Client) ([]string, error) {
+	u := bondsListURL + "?" + url.Values{
+		"iss.json": {"extended"},
+		"iss.meta": {"off"},
+		"iss.only": {"securities"},
+	}.Encode()
+
+	body, err := httpjson.GetJSON(ctx, client, u)
+	if err != nil {
+		return nil, err
+	}
+
+	rows := gjson.GetBytes(body, "1.securities")
+	if !rows.IsArray() {
+		return nil, fmt.Errorf("unexpected response: %s", httpjson.Truncate(string(body), 200))
+	}
+
+	var secids []string
+	rows.ForEach(func(_, r gjson.Result) bool {
+		secids = append(secids, r.Get("SECID").String())
+		return true
+	})
+	return secids, nil
+}
+
+// dedupe убирает дубликаты из среза строк, сохраняя порядок.
+func dedupe(in []string) []string {
+	seen := make(map[string]struct{}, len(in))
+	out := make([]string, 0, len(in))
+	for _, s := range in {
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	return out
+}
+
 // engineMarketByGroup определяет engine/market ISS по группе инструмента.
 func engineMarketByGroup(group string) (engine, market string, ok bool) {
 	switch {
@@ -150,6 +202,8 @@ func engineMarketByGroup(group string) (engine, market string, ok bool) {
 		return "currency", "selt", true
 	case group == "stock_shares" || group == "stock_ppif" || group == "stock_dr":
 		return "stock", "shares", true
+	case group == "stock_bonds":
+		return "stock", "bonds", true
 	}
 	return "", "", false
 }
@@ -183,7 +237,7 @@ func fetchBoardInfo(ctx context.Context, client *http.Client, group, boardid, se
 		"iss.only": {"securities"},
 	}.Encode()
 
-	body, err := getJSON(ctx, client, u)
+	body, err := httpjson.GetJSON(ctx, client, u)
 	if err != nil {
 		return boardInfo{}
 	}
@@ -231,7 +285,7 @@ func fetchFuturesInfo(ctx context.Context, client *http.Client, secid, boardid s
 		"iss.only": {"description"},
 	}.Encode()
 
-	body, err := getJSON(ctx, client, u)
+	body, err := httpjson.GetJSON(ctx, client, u)
 	if err != nil {
 		return boardInfo{}
 	}
@@ -259,62 +313,6 @@ func fetchFuturesInfo(ctx context.Context, client *http.Client, secid, boardid s
 	return b
 }
 
-// getJSON выполняет GET-запрос и возвращает тело ответа. Транзиентные ошибки
-// (сеть, 5xx, 429) ретраятся с экспоненциальной паузой, остальные 4xx — нет.
-func getJSON(ctx context.Context, client *http.Client, u string) ([]byte, error) {
-	const maxAttempts = 3
-	var lastErr error
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		if attempt > 1 {
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case <-time.After(time.Duration(attempt) * time.Second):
-			}
-		}
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, http.NoBody)
-		if err != nil {
-			return nil, err
-		}
-
-		resp, err := client.Do(req)
-		if err != nil {
-			lastErr = err
-			continue
-		}
-
-		body, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		if err != nil {
-			lastErr = err
-			continue
-		}
-
-		if resp.StatusCode == http.StatusOK {
-			return body, nil
-		}
-
-		lastErr = fmt.Errorf("%s: http %d", u, resp.StatusCode)
-		if !retriableStatus(resp.StatusCode) {
-			return nil, lastErr
-		}
-	}
-	return nil, lastErr
-}
-
-// retriableStatus возвращает true для транзиентных HTTP-статусов.
-func retriableStatus(code int) bool {
-	return code >= 500 || code == http.StatusTooManyRequests || code == http.StatusRequestTimeout
-}
-
 func parseISODate(s string) (time.Time, error) {
 	return time.Parse("2006-01-02", s)
-}
-
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return strings.TrimSpace(s[:n]) + "..."
 }

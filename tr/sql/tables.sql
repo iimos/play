@@ -264,6 +264,35 @@ COMMENT 'Дневные открытые позиции по фьючерсам 
 PARTITION BY Date(time)
 ORDER BY (asset, clgroup, time);
 
+CREATE TABLE tr.bond_daily (
+       time          DateTime CODEC(DoubleDelta(1), LZ4) COMMENT 'Дата торгового дня (TRADEDATE, 00:00)',
+       secid         LowCardinality(String) COMMENT 'Код инструмента (тикер)',
+       boardid       LowCardinality(String) COMMENT 'Режим торгов (TQCB/TQOB/TQDB)',
+       open          Float64 COMMENT 'Цена открытия',
+       high          Float64 COMMENT 'Максимальная цена',
+       low           Float64 COMMENT 'Минимальная цена',
+       close         Float64 COMMENT 'Цена закрытия',
+       value         Float64 COMMENT 'Объем в рублях',
+       volume        UInt64 COMMENT 'Объем в лотах/штуках',
+       numtrades     UInt32 COMMENT 'Количество сделок',
+       accint        Float64 COMMENT 'Накопленный купонный доход (НКД)',
+       yieldclose    Float64 COMMENT 'Доходность к погашению по цене закрытия, %',
+       yieldatwap    Float64 COMMENT 'Доходность по средневзвешенной цене, %',
+       waprice       Float64 COMMENT 'Средневзвешенная цена',
+       duration      Nullable(Float64) COMMENT 'Дюрация, дней',
+       couponpercent Float64 COMMENT 'Ставка купона, %',
+       couponvalue   Float64 COMMENT 'Сумма купона на облигацию',
+       facevalue     Float64 COMMENT 'Номинал',
+       faceunit      LowCardinality(String) COMMENT 'Валюта номинала',
+       currencyid    LowCardinality(String) COMMENT 'Валюта расчетов',
+       matdate       Nullable(Date) COMMENT 'Дата погашения',
+       bondtype      LowCardinality(String) COMMENT 'Тип облигации',
+       bondsubtype   LowCardinality(String) COMMENT 'Подтип облигации'
+) ENGINE = MergeTree()
+PARTITION BY Date(time)
+ORDER BY (secid, time)
+COMMENT 'Дневные свечи облигаций с облигационными атрибутами (ISS history)';
+
 CREATE TABLE tr.security_info (
     secid                LowCardinality(String) COMMENT 'Код инструмента (тикер), ключ для JOIN',
     shortname            String COMMENT 'Краткое наименование',

@@ -12,6 +12,7 @@ import (
 
 	"github.com/iimos/play/tr/moexalgo"
 	"github.com/iimos/play/tr/store"
+	"github.com/iimos/play/tr/tz"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -47,17 +48,17 @@ func Load(ctx context.Context, opts LoadOptions) error {
 
 	if start.IsZero() {
 		if lastTableDate.IsZero() {
-			start = time.Now().AddDate(0, 0, -10)
+			start = time.Now().In(tz.MSK).AddDate(0, 0, -10)
 		} else {
 			start = lastTableDate
 		}
 	}
 	if end.IsZero() {
-		end = time.Now()
+		end = time.Now().In(tz.MSK)
 	}
 
-	start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
-	end = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location())
+	start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, tz.MSK)
+	end = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, tz.MSK)
 
 	fmt.Printf("Loading open positions data from %s to %s\n", start.Format(time.DateOnly), end.Format(time.DateOnly))
 

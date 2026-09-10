@@ -9,6 +9,7 @@ import (
 
 	"github.com/WLM1ke/gomoex"
 	"github.com/iimos/play/tr/store"
+	"github.com/iimos/play/tr/tz"
 )
 
 var tickers = map[string]tickerDesc{
@@ -53,15 +54,15 @@ func Load(ctx context.Context, opts LoadOptions) error {
 
 	// Use defaults if dates not provided
 	if start.IsZero() {
-		start = time.Now().AddDate(0, 0, -10) // today - 10 days (start of day)
+		start = time.Now().In(tz.MSK).AddDate(0, 0, -10) // today - 10 days (start of day)
 	}
 	if end.IsZero() {
-		end = time.Now()
+		end = time.Now().In(tz.MSK)
 	}
 
 	// Normalize dates to start of day for comparison
-	start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
-	end = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location())
+	start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, tz.MSK)
+	end = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, tz.MSK)
 
 	fmt.Printf("Loading data from %s to %s\n", start.Format(time.DateOnly), end.Format(time.DateOnly))
 

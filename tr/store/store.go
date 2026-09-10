@@ -5,20 +5,11 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"os"
 	"time"
-	_ "time/tzdata"
 )
 
 var ClickhouseURL = "127.0.0.1:9000"
 
-var TimezoneMSK *time.Location
-
 func init() {
-	tz, err := time.LoadLocation("Europe/Moscow")
-	if err != nil {
-		panic(err)
-	}
-	TimezoneMSK = tz
-
 	if u := os.Getenv("CLICKHOUSE_URL"); u != "" {
 		ClickhouseURL = u
 	}

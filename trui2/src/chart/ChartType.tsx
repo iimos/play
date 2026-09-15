@@ -2,7 +2,8 @@ import React, { useEffect, useState, useRef } from 'react'
 import { Chart, init, dispose, registerIndicator, registerOverlay, Period, TooltipLegend } from 'klinecharts'
 import Layout from '../Layout'
 import TickerSelector from './TickerSelector'
-import { fetchCandles, fetchLatestTime, IntervalType, SuperCandle, fetchFizOI, resolveFutoiTicker, FutOIData, FizOIResult } from '../data/index'
+import { fetchCandles, fetchLatestTime, fetchMetric, IntervalType, SuperCandle, fetchFizOI, resolveFutoiTicker, resolveSuperTable, FutOIData, FizOIResult } from '../data/index'
+import { makeMetricIndicator, MetricIndicatorSpec, setMetricValues, appendMetricValues, clearMetricValues, removeMetricValues } from './metricIndicator'
 
 const klineStyle = {}
 
@@ -587,6 +588,10 @@ export default function ChartType () {
   const [interval, setInterval] = useState(initial.interval)
   const [enabled, setEnabled] = useState<Record<VolumeIndicatorId, boolean>>(DEFAULT_ENABLED)
   const [oiAvailable, setOIAvailable] = useState(false)
+  const [metrics, setMetrics] = useState<MetricIndicatorSpec[]>([])
+  const [metricInput, setMetricInput] = useState('')
+  const [superTable, setSuperTable] = useState<string | null>(null)
+  const [dataError, setDataError] = useState<string | null>(null)
   const chart = useRef<Chart | null>(null)
   const futoiTickerRef = useRef<string | null>(null)
   const futoiAssetRef = useRef<string | null>(null)
@@ -602,17 +607,45 @@ export default function ChartType () {
     setEnabled(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
+  const addMetric = () => {
+    const expression = metricInput.trim()
+    if (!expression) return
+    const spec = makeMetricIndicator(expression)
+    setMetrics(prev => [...prev, spec])
+    setMetricInput('')
+  }
+
+  const removeMetric = (id: number) => {
+    const spec = metrics.find(f => f.id === id)
+    if (spec) {
+      chart.current?.removeIndicator({ paneId: spec.paneId })
+      removeMetricValues(spec.key)
+    }
+    setMetrics(prev => prev.filter(f => f.id !== id))
+  }
+
   // Основной эффект: инициализация чарта и загрузка данных
   useEffect(() => {
     let cancelled = false
 
     setOIAvailable(false)
+    setDataError(null)
+    setSuperTable(null)
+    clearMetricValues()
     fizOIMap = new Map()
     fizOIDaily = []
     fizOIDailyMode = false
     futoiTickerRef.current = null
     futoiAssetRef.current = null
     currentInterval = interval
+
+    // Резолвим таблицу суперсвечей по типу инструмента — показываем в UI,
+    // чтобы было понятно, какие колонки доступны в SQL-метриках.
+    resolveSuperTable(ticker).then(t => {
+      if (!cancelled) setSuperTable(t)
+    }).catch(() => {
+      if (!cancelled) setSuperTable(null)
+    })
 
     chart.current = init("real-time-k-line", { styles: klineStyle })
     // Разделители периодов уже созданные для текущего чарта (сбрасываются вместе
@@ -653,6 +686,33 @@ export default function ChartType () {
       }
     }
 
+    // Загружаем SQL-метрики для диапазона (отдельные запросы, см. fetchMetric).
+    async function loadMetrics(till: Date) {
+      for (const m of metrics) {
+        try {
+          const points = await fetchMetric(ticker, till, interval, m.expression)
+          if (cancelled) return
+          setMetricValues(m.key, points)
+        } catch (error) {
+          console.error('Ошибка загрузки метрики:', error)
+          if (!cancelled) setDataError(error instanceof Error ? error.message : String(error))
+        }
+      }
+    }
+
+    // Докрутка SQL-метрик вперёд при подгрузке истории.
+    async function loadMetricsForward(till: Date) {
+      for (const m of metrics) {
+        try {
+          const points = await fetchMetric(ticker, till, interval, m.expression)
+          if (cancelled) return
+          appendMetricValues(m.key, points)
+        } catch (error) {
+          console.error('Ошибка загрузки метрики:', error)
+        }
+      }
+    }
+
     chart.current?.setSymbol({ ticker, pricePrecision: 2, volumePrecision: 0 })
     chart.current?.setPeriod(intervalToPeriod(interval))
     chart.current?.setDataLoader({
@@ -667,12 +727,17 @@ export default function ChartType () {
               } catch (error) {
                 console.error('Ошибка загрузки данных:', error)
               }
+              await loadMetrics(latestTime)
+              if (cancelled) return
               callback(candles, { forward: true, backward: false })
               if (chart.current) syncPeriodSeparators(chart.current, createdSeparators, createdWeekends)
             })
             .catch(error => {
               console.error('Ошибка загрузки данных:', error)
-              if (!cancelled) callback([], { forward: false, backward: false })
+              if (!cancelled) {
+                setDataError(error instanceof Error ? error.message : String(error))
+                callback([], { forward: false, backward: false })
+              }
             })
         } else if (type === 'forward' && timestamp != null) {
           fetchCandles(ticker, new Date(timestamp), interval)
@@ -680,6 +745,7 @@ export default function ChartType () {
               if (cancelled) return
               if (candles.length > 0) {
                 await loadOIForward(new Date(timestamp))
+                await loadMetricsForward(new Date(timestamp))
               }
               if (cancelled) return
               callback(candles, { forward: candles.length !== 0, backward: false })
@@ -687,7 +753,10 @@ export default function ChartType () {
             })
             .catch(error => {
               console.error('Ошибка загрузки данных:', error)
-              if (!cancelled) callback([], { forward: false, backward: false })
+              if (!cancelled) {
+                setDataError(error instanceof Error ? error.message : String(error))
+                callback([], { forward: false, backward: false })
+              }
             })
         } else {
           callback([], { forward: false, backward: false })
@@ -702,7 +771,7 @@ export default function ChartType () {
         chart.current = null
       }
     }
-  }, [ticker, interval])
+  }, [ticker, interval, metrics])
 
   // Синхронизация индикаторов с чартом: для каждого включённого индикатора
   // держим свою панель, для выключенного — убираем панель.
@@ -719,14 +788,21 @@ export default function ChartType () {
         c.removeIndicator({ paneId: ind.paneId })
       }
     }
-  }, [enabled, oiAvailable, ticker, interval])
+    // Индикаторы по SQL-метрике — одна панель на метрику.
+    for (const f of metrics) {
+      const isShown = c.getIndicators({ paneId: f.paneId }).length > 0
+      if (!isShown) {
+        c.createIndicator({ name: f.indicatorName, paneId: f.paneId })
+      }
+    }
+  }, [enabled, oiAvailable, ticker, interval, metrics])
 
   // Высота контейнера растёт вместе с числом включённых индикаторов,
   // чтобы основной график не сжимался.
   const visibleIndicatorCount = VOLUME_INDICATORS.filter(
     ind => enabled[ind.id] && (!ind.requiresOI || oiAvailable) && !(ind.hiddenOn?.includes(interval) ?? false)
   ).length
-  const containerHeight = 480 + visibleIndicatorCount * 100
+  const containerHeight = 480 + visibleIndicatorCount * 100 + metrics.length * 100
 
   return (
     <Layout title={`${ticker} ${interval}`} style={{ height: containerHeight }}>
@@ -772,6 +848,40 @@ export default function ChartType () {
           )
         })}
       </div>
+      <div className="k-line-chart-menu-container">
+        <span style={{ paddingRight: 6 }}>SQL-метрика:</span>
+        <input
+          type="text"
+          value={metricInput}
+          placeholder="sum(val_b) - sum(val_s)"
+          onChange={e => setMetricInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') addMetric() }}
+          title={`Агрегатное выражение над сырыми колонками таблицы ${superTable ?? 'super_*'}. Группировка по timeslot, поэтому нужен агрегат (sum/argMax/...). Примеры: sum(vol_b)-sum(vol_s), argMax(pr_close,time)-argMax(pr_open,time)`}
+          style={{ height: 24, padding: '0 6px', marginRight: 8, width: 260 }}
+        />
+        <button onClick={addMetric}>Добавить</button>
+        {superTable != null && <span style={{ paddingLeft: 8 }}>{superTable}</span>}
+      </div>
+      {dataError != null && (
+        <div className="k-line-chart-menu-container" style={{ color: '#EF5350' }}>
+          {dataError}
+        </div>
+      )}
+      {metrics.length > 0 && (
+        <div className="k-line-chart-menu-container">
+          <span style={{ paddingRight: 6 }}>Свои метрики:</span>
+          {metrics.map(f => (
+            <span key={f.id} style={{ marginRight: 8, display: 'inline-flex', alignItems: 'center' }}>
+              <span>{f.expression}</span>
+              <button
+                onClick={_ => removeMetric(f.id)}
+                style={{ backgroundColor: '#EF5350', marginLeft: 4 }}>
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
       <div id="real-time-k-line" className="k-line-chart" />
     </Layout>
   )

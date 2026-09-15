@@ -14,23 +14,10 @@ export interface SuperCandle extends KLineData {
   oi_close?: number;
 }
 
-interface SuperCandleRow {
-	timeslot: string;
-	open: number;
-	high: number;
-	low: number;
-	close: number;
-	volume: number;
-	volume_s?: number;
-	volume_b?: number;
-	val_s?: number;
-	val_b?: number;
-	pr_vwap_b?: number | null;
-	pr_vwap_s?: number | null;
-	oi_open?: number;
-	oi_high?: number;
-	oi_low?: number;
-	oi_close?: number;
+// Одна точка пользовательской SQL-метрики: значение на конкретном таймслоте.
+export interface MetricPoint {
+  timestamp: number;
+  value: number;
 }
 
 export interface FutOIData {
@@ -72,11 +59,33 @@ function parseMskTime(s: string): number {
   return new Date(s.replace(' ', 'T') + '+03:00').getTime()
 }
 
+// Группа инструмента (sec_group из security_info) -> таблица суперсвечей.
+// Отсутствующие/неизвестные группы возвращают null (не супер-инструмент).
+const SEC_GROUP_TO_TABLE: Record<string, string> = {
+  futures_forts: 'tr.super_fo',
+  currency_selt: 'tr.super_fx',
+  currency_metal: 'tr.super_fx',
+  stock_shares: 'tr.super_eq',
+  stock_ppif: 'tr.super_eq',
+  stock_dr: 'tr.super_eq',
+}
+
+// Резолвит таблицу суперсвечей по типу инструмента. Нужно для SQL-метрик,
+// чтобы инжектить выражение в правильную таблицу (колонки у них различаются).
+export async function resolveSuperTable(secid: string): Promise<string | null> {
+  const res = await clickhouse.query({
+    query: `select sec_group from tr.security_info FINAL where secid='${secid}'`,
+    format: "JSONEachRow",
+  })
+  const rows: any[] = await res.json()
+  const group: string | undefined = rows[0]?.sec_group
+  return group ? SEC_GROUP_TO_TABLE[group] ?? null : null
+}
+
 export async function fetchSuperCandles(ticker: string, till: Date, interval: string): Promise<SuperCandle[]> {
-  const range = Math.max(10*intervalMs(interval), 3*intervalMs(IntervalType.Day)) // грузим минимум 3 дня, чтобы не застрять в выходных
   const from = new Date(till.getTime() - 6000*intervalMs(interval))
 
-  let rows: SuperCandleRow[] = []
+  let rows: any[] = []
 
   for (let table of ['tr.super_eq', 'tr.super_fo', 'tr.super_fx']) {
     let query = `
@@ -164,7 +173,6 @@ export async function fetchCandles(ticker: string, till: Date, interval: string)
     return fetchSuperCandles(ticker, till, interval)
   }
 
-  const range = Math.max(10*intervalMs(interval), 3*intervalMs(IntervalType.Day)) // грузим минимум 3 дня, чтобы не застрять в выходных
   const from = new Date(till.getTime() - 6000*intervalMs(interval))
 
   const res = await clickhouse.query({
@@ -183,7 +191,7 @@ export async function fetchCandles(ticker: string, till: Date, interval: string)
     order by timeslot asc`,
     format: "JSONEachRow",
   })
-  const rows: SuperCandleRow[] = await res.json()
+  const rows: any[] = await res.json()
   return rows.map(x => {
     return {
       timestamp: parseMskTime(x.timeslot),
@@ -194,6 +202,54 @@ export async function fetchCandles(ticker: string, till: Date, interval: string)
       volume: Number(x.volume),
     }
   })
+}
+
+// Значение пользовательской SQL-метрики на диапазон свечей. Отдельный запрос,
+// чтобы метрики не смешивались с основным запросом свечей и не конфликтовали
+// с его алиасами. Выражение — агрегат над сырыми колонками (группировка по
+// timeslot, как и у свечей). Таблица резолвится по типу инструмента; если тип
+// неизвестен — перебираем таблицы, пропуская те, где нет нужных колонок.
+export async function fetchMetric(ticker: string, till: Date, interval: string, expression: string): Promise<MetricPoint[]> {
+  const from = new Date(till.getTime() - 6000*intervalMs(interval))
+  const tables = [await resolveSuperTable(ticker), 'tr.super_eq', 'tr.super_fo', 'tr.super_fx']
+    .filter((v, i, a) => v != null && a.indexOf(v) === i) as string[]
+
+  for (let idx = 0; idx < tables.length; idx++) {
+    const table = tables[idx]
+    const query = `
+    select toStartOfInterval(time, interval '${interval2sql(interval)}') timeslot,
+           (${expression}) as value
+    from ${table}
+    where secid='${ticker}' 
+      and time >= parseDateTimeBestEffort('${from.toISOString()}')
+      and time < parseDateTimeBestEffort('${till.toISOString()}')
+      and pr_open > 0
+    group by timeslot
+    order by timeslot asc`
+
+    let rows: any[]
+    try {
+      const res = await clickhouse.query({ query, format: "JSONEachRow" })
+      rows = await res.json()
+    } catch (e) {
+      // Выражение может ссылаться на колонку, которой нет в этой таблице
+      // (напр. oi_* есть только в super_fo) — пробуем следующую таблицу.
+      // На последней даём ошибке всплыть, чтобы пользователь увидел её в UI.
+      if (idx === tables.length - 1) {
+        throw e
+      }
+      continue
+    }
+    if (rows.length > 0) {
+      return rows
+        .filter(r => r.value != null && Number.isFinite(Number(r.value)))
+        .map(r => ({
+          timestamp: parseMskTime(r.timeslot),
+          value: Number(r.value),
+        }))
+    }
+  }
+  return []
 }
 
 export async function fetchLatestTime(): Promise<Date> {

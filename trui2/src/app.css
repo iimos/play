@@ -27,6 +27,35 @@
   display: flex;
   flex: 1;
 }
+
+.app .k-line-chart-container .k-line-chart-wrapper {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.app .volume-highlight-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  pointer-events: none;
+  max-width: 320px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #FFFFFF;
+  background-color: rgba(30, 30, 30, .92);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .3);
+}
+
+.app .volume-highlight-tip .volume-highlight-tip-title {
+  font-weight: 600;
+  color: #FFB300;
+  padding-bottom: 2px;
+}
 .app .k-line-chart-container .k-line-chart-menu-container {
   display: flex;
   flex-direction: row;

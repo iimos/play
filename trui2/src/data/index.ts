@@ -52,16 +52,18 @@ const clickhouse = createClient({
 })
 
 // ClickHouse сериализует DateTime в JSONEachRow строкой в таймзоне сервера
-// (Europe/Moscow) без суффикса, напр. "2026-01-05 07:00:00". Парсим её явно как
+// (Europe/Moscow) без суффикса, напр. "2026-01-05 07:00:00"; тип Date (напр.
+// toStartOfInterval по месяцу) — как "2026-01-01" без времени. Парсим явно как
 // МСК (UTC+3, без DST), а не как локальное время браузера, чтобы timestamp был
 // корректным абсолютным моментом независимо от таймзоны клиента.
 function parseMskTime(s: string): number {
-  return new Date(s.replace(' ', 'T') + '+03:00').getTime()
+  const withTime = /\d{2}:\d{2}/.test(s) ? s.replace(' ', 'T') : s + 'T00:00:00'
+  return new Date(withTime + '+03:00').getTime()
 }
 
 // Группа инструмента (sec_group из security_info) -> таблица суперсвечей.
 // Отсутствующие/неизвестные группы возвращают null (не супер-инструмент).
-const SEC_GROUP_TO_TABLE: Record<string, string> = {
+export const SEC_GROUP_TO_TABLE: Record<string, string> = {
   futures_forts: 'tr.super_fo',
   currency_selt: 'tr.super_fx',
   currency_metal: 'tr.super_fx',
@@ -73,13 +75,20 @@ const SEC_GROUP_TO_TABLE: Record<string, string> = {
 // Резолвит таблицу суперсвечей по типу инструмента. Нужно для SQL-метрик,
 // чтобы инжектить выражение в правильную таблицу (колонки у них различаются).
 export async function resolveSuperTable(secid: string): Promise<string | null> {
+  const group = await resolveSecGroup(secid)
+  return group ? SEC_GROUP_TO_TABLE[group] ?? null : null
+}
+
+// Группа инструмента (sec_group из security_info): 'stock_shares', 'futures_forts'
+// и т.п. Нужна, чтобы понять, участвует ли инструмент в рыночном ранжировании.
+export async function resolveSecGroup(secid: string): Promise<string | null> {
   const res = await clickhouse.query({
-    query: `select sec_group from tr.security_info FINAL where secid='${secid}'`,
+    query: `select sec_group from tr.security_info where secid='${secid}' limit 1`,
     format: "JSONEachRow",
   })
   const rows: any[] = await res.json()
   const group: string | undefined = rows[0]?.sec_group
-  return group ? SEC_GROUP_TO_TABLE[group] ?? null : null
+  return group ?? null
 }
 
 export async function fetchSuperCandles(ticker: string, till: Date, interval: string): Promise<SuperCandle[]> {
@@ -250,6 +259,47 @@ export async function fetchMetric(ticker: string, till: Date, interval: string, 
     }
   }
   return []
+}
+
+// Доля инструмента в суммарном обороте всех акций рынка (в рублях) по каждому
+// таймслоту выбранного интервала. value ∈ [0..1]. Инструменты вне stock_shares
+// не покрываются — вернётся пустой список.
+export async function fetchMarketShares(ticker: string, till: Date, interval: string): Promise<MetricPoint[]> {
+  const from = new Date(till.getTime() - 6000*intervalMs(interval))
+  const res = await clickhouse.query({
+    query: `
+    select p.timeslot timeslot, p.val / t.total_val as share
+    from (
+      select toStartOfInterval(time, interval '${interval2sql(interval)}') timeslot,
+             secid,
+             sum(val) val
+      from tr.super_eq
+      where secid = '${ticker}'
+        and time >= parseDateTimeBestEffort('${from.toISOString()}')
+        and time < parseDateTimeBestEffort('${till.toISOString()}')
+        and pr_open > 0
+      group by timeslot, secid
+    ) p
+    join (
+      select toStartOfInterval(time, interval '${interval2sql(interval)}') timeslot,
+             sum(val) total_val
+      from tr.super_eq
+      where secid in (select secid from tr.security_info FINAL where sec_group = 'stock_shares')
+        and time >= parseDateTimeBestEffort('${from.toISOString()}')
+        and time < parseDateTimeBestEffort('${till.toISOString()}')
+        and pr_open > 0
+      group by timeslot
+    ) t using timeslot
+    order by p.timeslot asc`,
+    format: "JSONEachRow",
+  })
+  const rows: any[] = await res.json()
+  return rows
+    .filter(r => r.share != null && Number.isFinite(Number(r.share)))
+    .map(r => ({
+      timestamp: parseMskTime(r.timeslot),
+      value: Number(r.share),
+    }))
 }
 
 export async function fetchLatestTime(): Promise<Date> {

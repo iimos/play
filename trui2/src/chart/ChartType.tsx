@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react'
-import { Chart, init, dispose, registerIndicator, registerOverlay, Period, TooltipLegend } from 'klinecharts'
+import React, { useEffect, useLayoutEffect, useState, useRef } from 'react'
+import { Chart, init, dispose, registerIndicator, registerOverlay, Period, TooltipLegend, Point } from 'klinecharts'
 import Layout from '../Layout'
 import TickerSelector from './TickerSelector'
-import { fetchCandles, fetchLatestTime, fetchMetric, IntervalType, SuperCandle, fetchFizOI, resolveFutoiTicker, resolveSuperTable, FutOIData, FizOIResult } from '../data/index'
+import { fetchCandles, fetchLatestTime, fetchMetric, fetchMarketShares, IntervalType, SuperCandle, fetchFizOI, resolveFutoiTicker, resolveSecGroup, SEC_GROUP_TO_TABLE, FutOIData, FizOIResult, MetricPoint } from '../data/index'
 import { makeMetricIndicator, MetricIndicatorSpec, setMetricValues, appendMetricValues, clearMetricValues, removeMetricValues } from './metricIndicator'
 
 const klineStyle = {}
@@ -65,6 +65,22 @@ function mskDateKey(ts: number): string {
   const parts = mskDayParts.formatToParts(new Date(ts))
   const get = (type: string) => parts.find(p => p.type === type)?.value ?? ''
   return `${get('year')}-${get('month')}-${get('day')}`
+}
+
+// Время суток в МСК (HH:MM) — ключ «того же времени суток» для сравнения объёма.
+const mskTimeParts = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Europe/Moscow',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+
+function mskTimeKey(ts: number): string {
+  const parts = mskTimeParts.formatToParts(new Date(ts))
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? ''
+  // Некоторые движки отдают '24' вместо '00' при hour12:false.
+  const hour = get('hour') === '24' ? '00' : get('hour')
+  return `${hour}:${get('minute')}`
 }
 
 // Понедельник недели (в МСК) для заданного timestamp, в формате YYYY-MM-DD.
@@ -469,6 +485,229 @@ registerOverlay({
   },
 })
 
+// Полупрозрачные рамки вокруг свечей с заметным объёмом. Один оверлей рисует
+// сразу все подсвеченные свечи: точки идут парами (high, low) на каждую свечу.
+registerOverlay({
+  name: 'volumeHighlights',
+  totalStep: 2,
+  needDefaultPointFigure: false,
+  needDefaultXAxisFigure: false,
+  needDefaultYAxisFigure: false,
+  createPointFigures: ({ chart, coordinates }) => {
+    const halfBar = chart.getBarSpace().halfBar
+    const figures = []
+    for (let i = 0; i + 1 < coordinates.length; i += 2) {
+      const x = coordinates[i].x
+      const yTop = Math.min(coordinates[i].y, coordinates[i + 1].y)
+      const yBottom = Math.max(coordinates[i].y, coordinates[i + 1].y)
+      figures.push({
+        type: 'polygon',
+        attrs: {
+          coordinates: [
+            { x: x - halfBar, y: yTop },
+            { x: x + halfBar, y: yTop },
+            { x: x + halfBar, y: yBottom },
+            { x: x - halfBar, y: yBottom },
+          ],
+        },
+        styles: {
+          style: 'stroke_fill',
+          color: 'rgba(255, 179, 0, 0.15)',
+          borderColor: 'rgba(255, 179, 0, 0.9)',
+          borderSize: 1,
+        },
+        ignoreEvent: true,
+      })
+    }
+    return figures
+  },
+})
+
+// Доля рынка (в рублях) по умолчанию, при которой свеча считается заметной.
+const DEFAULT_SHARE_THRESHOLD = 0.20
+// Порог аномалии собственного объёма: объём должен быть строго выше
+// mean + ANOMALY_SIGMA * std (см. base.cut).
+const ANOMALY_SIGMA = 2
+// Окно «среднеисторического» объёма: 60 дней.
+const VOLUME_WINDOW_MS = 60 * 24 * 60 * 60 * 1000
+// Минимум наблюдений в окне, чтобы считать аномалию осмысленной.
+const MIN_BASELINE_SAMPLES = 5
+// Страховка от лавины подсветок при слишком низком пороге доли рынка.
+const MAX_HIGHLIGHTS = 300
+
+// Длительность одного бара интервала в мс.
+function intervalMs(interval: string): number {
+  switch (interval) {
+    case IntervalType.Minute: return 60 * 1000
+    case IntervalType.FiveMinutes: return 5 * 60 * 1000
+    case IntervalType.Hour: return 60 * 60 * 1000
+    case IntervalType.Day: return 24 * 60 * 60 * 1000
+    case IntervalType.Week: return 7 * 24 * 60 * 60 * 1000
+    case IntervalType.Month: return 31 * 24 * 60 * 60 * 1000
+    default: return 24 * 60 * 60 * 1000
+  }
+}
+
+// Окно базы объёма. Не меньше 60 дней, но для недель/месяцев расширяется так,
+// чтобы в него помещалось MIN_BASELINE_SAMPLES баров (иначе аномалия мертва).
+function baselineWindowMs(): number {
+  return Math.max(VOLUME_WINDOW_MS, MIN_BASELINE_SAMPLES * intervalMs(currentInterval))
+}
+
+// Доля инструмента в суммарном обороте всех акций по каждому таймслоту (0..1).
+// Заполняется из БД вместе со свечами; пусто для не-акций и интервала 1m.
+let marketShares = new Map<number, number>()
+
+// Таймслоты, которые надо подсветить: доля рынка >= порога ИЛИ аномалия объёма.
+let highlightTimes = new Set<number>()
+
+// База для сравнения объёма на каждый таймслот: средний объём в то же время
+// суток за последние 60 дней и порог аномалии mean + ANOMALY_SIGMA*std.
+// Для дневок/недель/месяцев «время суток» не различается — одна группа.
+let volumeBaseline = new Map<number, { mean: number; cut: number }>()
+
+// Внутридневные интервалы — сравниваем в пределах одного времени суток.
+function isIntraday(): boolean {
+  return currentInterval !== IntervalType.Day
+    && currentInterval !== IntervalType.Week
+    && currentInterval !== IntervalType.Month
+}
+
+// Оборот свечи в рублях (val_b + val_s). Объём сравниваем в деньгах, а не в
+// лотах: лоты между разными бумагами несопоставимы.
+function candleTurnover(c: SuperCandle): number {
+  return (c.val_b ?? 0) + (c.val_s ?? 0)
+}
+
+// Для каждой свечи считает среднее (и порог аномалии) по свечам того же времени
+// суток за предшествующие 60 дней. Скользящее окно по каждой группе за O(N).
+function computeVolumeBaselines(dataList: SuperCandle[]): Map<number, { mean: number; cut: number }> {
+  const intraday = isIntraday()
+  const windowMs = baselineWindowMs()
+  const result = new Map<number, { mean: number; cut: number }>()
+  const groups = new Map<string, { ts: number[]; val: number[]; start: number; sum: number; sumsq: number }>()
+  for (const c of dataList) {
+    const key = intraday ? mskTimeKey(c.timestamp) : ''
+    let group = groups.get(key)
+    if (group == null) {
+      group = { ts: [], val: [], start: 0, sum: 0, sumsq: 0 }
+      groups.set(key, group)
+    }
+    const turnover = candleTurnover(c)
+    const cutoff = c.timestamp - windowMs
+    while (group.start < group.ts.length && group.ts[group.start] < cutoff) {
+      const old = group.val[group.start]
+      group.sum -= old
+      group.sumsq -= old * old
+      group.start++
+    }
+    const count = group.ts.length - group.start
+    if (count >= MIN_BASELINE_SAMPLES) {
+      const mean = group.sum / count
+      const variance = Math.max(0, group.sumsq / count - mean * mean)
+      result.set(c.timestamp, { mean, cut: mean + ANOMALY_SIGMA * Math.sqrt(variance) })
+    }
+    group.ts.push(c.timestamp)
+    group.val.push(turnover)
+    group.sum += turnover
+    group.sumsq += turnover * turnover
+  }
+  return result
+}
+
+// Текстовое объяснение, почему свеча подсвечена (для всплывашки при наведении).
+// Галочкой помечен критерий, который сработал.
+function describeVolumeHighlight(timestamp: number, turnover: number, shareThreshold: number): string[] {
+  const lines: string[] = []
+  const share = marketShares.get(timestamp)
+  if (share != null) {
+    const hit = share >= shareThreshold ? ' ✓' : ''
+    lines.push(`Доля рынка: ${(share * 100).toFixed(1)}%${hit}`)
+  }
+  const base = volumeBaseline.get(timestamp)
+  if (base != null && base.mean > 0) {
+    const ratio = turnover / base.mean
+    const pct = (ratio - 1) * 100
+    const sign = pct >= 0 ? '+' : ''
+    const hit = turnover > base.cut ? ' ✓' : ''
+    const windowDays = Math.round(baselineWindowMs() / (24 * 60 * 60 * 1000))
+    const suffix = isIntraday() ? `за ${windowDays} дн. в это время` : `за ${windowDays} дн.`
+    lines.push(`Оборот: ${fmtRubles(turnover)} (×${ratio.toFixed(2)}, ${sign}${pct.toFixed(0)}% к среднему ${suffix})${hit}`)
+  }
+  return lines
+}
+
+// Мержит доли рынка (Map.set дедуплицирует по таймслоту). Полный сброс делается
+// синхронно при пересоздании чарта, поэтому здесь всегда только добавление —
+// так поздний ответ init не затирает доли, догруженные вперёд.
+function applyMarketShares(points: MetricPoint[]) {
+  for (const p of points) {
+    marketShares.set(p.timestamp, p.value)
+  }
+}
+
+// Пересчитывает множество подсвечиваемых таймслотов по загруженным свечам.
+function recomputeHighlightTimes(chart: Chart, shareThreshold: number) {
+  const dataList = chart.getDataList() as SuperCandle[]
+  const next = new Set<number>()
+  volumeBaseline = computeVolumeBaselines(dataList)
+  for (const c of dataList) {
+    const share = marketShares.get(c.timestamp)
+    const byShare = share != null && share >= shareThreshold
+    const base = volumeBaseline.get(c.timestamp)
+    const byAnomaly = base != null && candleTurnover(c) > base.cut
+    if (byShare || byAnomaly) {
+      next.add(c.timestamp)
+    }
+  }
+  highlightTimes = next
+}
+
+// id единственного оверлея подсветки (создаётся лениво, живёт между синками).
+interface VolumeHighlightState {
+  overlayId: string | null
+}
+
+// Перерисовывает рамки видимых подсвеченных свечей в одном оверлее. Вне видимого
+// диапазона рамки не рисуются (иначе при мелком зуме их могут быть тысячи).
+function syncVolumeHighlights(chart: Chart, state: VolumeHighlightState) {
+  const dataList = chart.getDataList() as SuperCandle[]
+  const points: Array<{ timestamp: number; value: number }> = []
+  if (dataList.length > 0 && highlightTimes.size > 0) {
+    const range = chart.getVisibleRange()
+    const from = Math.max(0, range.realFrom)
+    const to = Math.min(dataList.length - 1, range.realTo - 1)
+    for (let i = from; i <= to && points.length < MAX_HIGHLIGHTS * 2; i++) {
+      const c = dataList[i]
+      if (highlightTimes.has(c.timestamp)) {
+        points.push({ timestamp: c.timestamp, value: c.high })
+        points.push({ timestamp: c.timestamp, value: c.low })
+      }
+    }
+  }
+  if (points.length === 0) {
+    // override не умеет очищать точки (пустой массив игнорируется), поэтому
+    // когда подсветок нет — оверлей удаляем.
+    removeVolumeHighlights(chart, state)
+    return
+  }
+  if (state.overlayId == null) {
+    const overlayId = chart.createOverlay({ name: 'volumeHighlights', points }) as string | null
+    if (overlayId != null) {
+      state.overlayId = overlayId
+    }
+    return
+  }
+  chart.overrideOverlay({ id: state.overlayId, points })
+}
+
+function removeVolumeHighlights(chart: Chart, state: VolumeHighlightState) {
+  if (state.overlayId != null) {
+    chart.removeOverlay({ id: state.overlayId })
+    state.overlayId = null
+  }
+}
+
 // true, если таймстамп попадает на субботу или воскресенье (по МСК).
 function isWeekend(ts: number): boolean {
   const day = new Date(mskDateKey(ts) + 'T00:00:00Z').getUTCDay()
@@ -592,9 +831,31 @@ export default function ChartType () {
   const [metricInput, setMetricInput] = useState('')
   const [superTable, setSuperTable] = useState<string | null>(null)
   const [dataError, setDataError] = useState<string | null>(null)
+  // Доля рынка считается только для акций (sec_group='stock_shares').
+  const [stockSharesAvailable, setStockSharesAvailable] = useState(false)
+  const [highlightVolume, setHighlightVolume] = useState(true)
+  // Порог доли рынка в процентах (число + черновик строки для поля ввода,
+  // чтобы можно было стереть значение и набрать новое).
+  const [shareThresholdPct, setShareThresholdPct] = useState(DEFAULT_SHARE_THRESHOLD * 100)
+  const [shareThresholdText, setShareThresholdText] = useState(String(DEFAULT_SHARE_THRESHOLD * 100))
   const chart = useRef<Chart | null>(null)
   const futoiTickerRef = useRef<string | null>(null)
   const futoiAssetRef = useRef<string | null>(null)
+  // Значения, читаемые из колбэков чарта, которые не пересоздаются при смене
+  // состояния (включена ли подсветка, порог доли рынка 0..1).
+  const highlightVolumeRef = useRef(highlightVolume)
+  const shareThresholdRef = useRef(shareThresholdPct / 100)
+  // Единственный оверлей подсветки; пересоздаётся вместе с чартом.
+  const volumeHighlightStateRef = useRef<VolumeHighlightState>({ overlayId: null })
+  // Пересчёт множества подсветок + отрисовка (назначается в основном эффекте).
+  const refreshVolumeHighlightsRef = useRef<() => void>(() => {})
+  // Всплывашка с причиной подсветки. Содержимое (без координат) в state — чтобы
+  // не перерисовывать список контролов на каждое движение мыши; позиция —
+  // напрямую через DOM-реф.
+  const [volumeTip, setVolumeTip] = useState<string[] | null>(null)
+  const volumeTipKeyRef = useRef<number | null>(null)
+  const volumeTipElRef = useRef<HTMLDivElement | null>(null)
+  const volumeTipCoordRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -602,6 +863,45 @@ export default function ChartType () {
     params.set('interval', interval)
     window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`)
   }, [ticker, interval])
+
+  // Позиционирование всплывашки рядом с курсором (в координатах контейнера
+  // чарта). Храним в рефе, чтобы колбэк чарта не зависел от пересоздания.
+  // Ширины кэшируются при смене содержимого, чтобы не читать layout на каждое
+  // движение мыши (в hot-path только запись transform).
+  const volumeTipSizeRef = useRef({ parentWidth: 0, tipWidth: 0 })
+  const placeVolumeTipRef = useRef<() => void>(() => {})
+  placeVolumeTipRef.current = () => {
+    const el = volumeTipElRef.current
+    if (el == null) return
+    const { x, y } = volumeTipCoordRef.current
+    const { parentWidth, tipWidth } = volumeTipSizeRef.current
+    const offset = 12
+    const maxLeft = parentWidth - tipWidth - 4
+    const left = Math.min(Math.max(4, x + offset), Math.max(4, maxLeft))
+    el.style.transform = `translate(${Math.round(left)}px, ${Math.round(y + offset)}px)`
+  }
+
+  const hideVolumeTipRef = useRef<() => void>(() => {})
+  hideVolumeTipRef.current = () => {
+    if (volumeTipKeyRef.current !== null) {
+      volumeTipKeyRef.current = null
+      setVolumeTip(null)
+    }
+  }
+
+  // useLayoutEffect — чтобы первый кадр с контентом сразу был на месте (без
+  // «вспышки» у левого верхнего угла). Меряем ширины один раз на контент.
+  useLayoutEffect(() => {
+    if (volumeTip == null) return
+    const el = volumeTipElRef.current
+    if (el != null) {
+      volumeTipSizeRef.current = {
+        tipWidth: el.offsetWidth,
+        parentWidth: el.parentElement?.clientWidth ?? 0,
+      }
+      placeVolumeTipRef.current()
+    }
+  }, [volumeTip])
 
   const toggleIndicator = (id: VolumeIndicatorId) => {
     setEnabled(prev => ({ ...prev, [id]: !prev[id] }))
@@ -631,18 +931,23 @@ export default function ChartType () {
     setOIAvailable(false)
     setDataError(null)
     setSuperTable(null)
+    setStockSharesAvailable(false)
     clearMetricValues()
     fizOIMap = new Map()
     fizOIDaily = []
     fizOIDailyMode = false
     futoiTickerRef.current = null
     futoiAssetRef.current = null
+    marketShares = new Map()
+    highlightTimes = new Set()
+    volumeBaseline = new Map()
     currentInterval = interval
 
-    // Резолвим таблицу суперсвечей по типу инструмента — показываем в UI,
-    // чтобы было понятно, какие колонки доступны в SQL-метриках.
-    resolveSuperTable(ticker).then(t => {
-      if (!cancelled) setSuperTable(t)
+    // Резолвим группу инструмента: по ней определяется таблица суперсвечей (для
+    // UI и SQL-метрик) и участие в рыночном ранжировании по доле оборота.
+    const secGroupPromise = resolveSecGroup(ticker)
+    secGroupPromise.then(group => {
+      if (!cancelled) setSuperTable(group ? SEC_GROUP_TO_TABLE[group] ?? null : null)
     }).catch(() => {
       if (!cancelled) setSuperTable(null)
     })
@@ -652,6 +957,79 @@ export default function ChartType () {
     // с пересозданием чарта при смене тикера/интервала).
     const createdSeparators = new Set<number>()
     const createdWeekends = new Map<string, WeekendHighlight>()
+    // Старый оверлей уничтожен вместе с чартом — начинаем с чистого состояния.
+    volumeHighlightStateRef.current = { overlayId: null }
+
+    // Пересчитываем множество подсветок и рисуем его для видимого диапазона.
+    const refreshVolumeHighlights = () => {
+      if (cancelled || !chart.current) return
+      if (!highlightVolumeRef.current) {
+        hideVolumeTipRef.current()
+        return
+      }
+      recomputeHighlightTimes(chart.current, shareThresholdRef.current)
+      syncVolumeHighlights(chart.current, volumeHighlightStateRef.current)
+      // Тултип не закрываем, если наведённая свеча всё ещё подсвечена (иначе он
+      // пропадал бы при подгрузке истории), но обновляем текст; если критерий
+      // пропал — закрываем.
+      const openKey = volumeTipKeyRef.current
+      if (openKey != null) {
+        if (!highlightTimes.has(openKey)) {
+          hideVolumeTipRef.current()
+        } else {
+          const candle = (chart.current.getDataList() as SuperCandle[]).find(c => c.timestamp === openKey)
+          if (candle != null) {
+            setVolumeTip(describeVolumeHighlight(openKey, candleTurnover(candle), shareThresholdRef.current))
+          }
+        }
+      }
+    }
+    refreshVolumeHighlightsRef.current = refreshVolumeHighlights
+
+    // При скролле/зуме множество подсветок не меняется — только перерисовываем
+    // видимую часть одним оверлеем.
+    const resyncVisibleHighlights = () => {
+      if (cancelled || !chart.current) return
+      if (highlightVolumeRef.current) {
+        syncVolumeHighlights(chart.current, volumeHighlightStateRef.current)
+      }
+    }
+    chart.current?.subscribeAction('onVisibleRangeChange', resyncVisibleHighlights)
+
+    // Всплывашка при наведении: если под курсором подсвеченная свеча — показываем
+    // долю рынка и превышение среднего объёма.
+    volumeTipKeyRef.current = null
+    setVolumeTip(null)
+    const onCrosshairChange = (data?: unknown) => {
+      if (cancelled) return
+      const c = chart.current
+      const cr = data as { x?: number; y?: number; paneId?: string } | undefined
+      // Показываем только для панели свечей; на индикаторных панелях те же бары,
+      // но другой Y (подсказка уезжает вверх).
+      if (!c || !highlightVolumeRef.current || cr?.paneId !== 'candle_pane' || typeof cr.x !== 'number' || typeof cr.y !== 'number') {
+        hideVolumeTipRef.current()
+        return
+      }
+      const point = (c.convertFromPixel([{ x: cr.x }], { paneId: 'candle_pane' }) as Array<Partial<Point>>)[0]
+      const dataIndex = point?.dataIndex
+      if (dataIndex == null || dataIndex < 0) {
+        hideVolumeTipRef.current()
+        return
+      }
+      const candle = (c.getDataList() as SuperCandle[])[Math.round(dataIndex)]
+      if (candle == null || !highlightTimes.has(candle.timestamp)) {
+        hideVolumeTipRef.current()
+        return
+      }
+      volumeTipCoordRef.current = { x: cr.x, y: cr.y }
+      if (volumeTipKeyRef.current !== candle.timestamp) {
+        volumeTipKeyRef.current = candle.timestamp
+        setVolumeTip(describeVolumeHighlight(candle.timestamp, candleTurnover(candle), shareThresholdRef.current))
+      } else {
+        placeVolumeTipRef.current()
+      }
+    }
+    chart.current?.subscribeAction('onCrosshairChange', onCrosshairChange)
 
     // Загружаем OI физлиц для диапазона и резолвим тикер FUTOI (для init-загрузки).
     async function loadOI(till: Date, candles: SuperCandle[]) {
@@ -713,6 +1091,28 @@ export default function ChartType () {
       }
     }
 
+    // Доля инструмента в обороте всех акций. Считается только для акций
+    // (sec_group='stock_shares') и не на 1m: исходные суперсвечи 5-минутные,
+    // поэтому минутные таймслоты не совпадут со свечами графика.
+    async function loadMarketShares(till: Date) {
+      try {
+        if (interval === IntervalType.Minute) {
+          setStockSharesAvailable(false)
+          return
+        }
+        const group = await secGroupPromise
+        if (cancelled) return
+        const available = group === 'stock_shares'
+        setStockSharesAvailable(available)
+        if (!available) return
+        const points = await fetchMarketShares(ticker, till, interval)
+        if (cancelled) return
+        applyMarketShares(points)
+      } catch (error) {
+        console.error('Ошибка загрузки долей рынка:', error)
+      }
+    }
+
     chart.current?.setSymbol({ ticker, pricePrecision: 2, volumePrecision: 0 })
     chart.current?.setPeriod(intervalToPeriod(interval))
     chart.current?.setDataLoader({
@@ -728,9 +1128,11 @@ export default function ChartType () {
                 console.error('Ошибка загрузки данных:', error)
               }
               await loadMetrics(latestTime)
+              loadMarketShares(latestTime).then(refreshVolumeHighlights)
               if (cancelled) return
               callback(candles, { forward: true, backward: false })
               if (chart.current) syncPeriodSeparators(chart.current, createdSeparators, createdWeekends)
+              refreshVolumeHighlights()
             })
             .catch(error => {
               console.error('Ошибка загрузки данных:', error)
@@ -746,10 +1148,12 @@ export default function ChartType () {
               if (candles.length > 0) {
                 await loadOIForward(new Date(timestamp))
                 await loadMetricsForward(new Date(timestamp))
+                loadMarketShares(new Date(timestamp)).then(refreshVolumeHighlights)
               }
               if (cancelled) return
               callback(candles, { forward: candles.length !== 0, backward: false })
               if (chart.current) syncPeriodSeparators(chart.current, createdSeparators, createdWeekends)
+              refreshVolumeHighlights()
             })
             .catch(error => {
               console.error('Ошибка загрузки данных:', error)
@@ -767,11 +1171,27 @@ export default function ChartType () {
     return () => {
       cancelled = true
       if (chart.current) {
+        chart.current.unsubscribeAction('onVisibleRangeChange', resyncVisibleHighlights)
+        chart.current.unsubscribeAction('onCrosshairChange', onCrosshairChange)
         dispose(chart.current)
         chart.current = null
       }
     }
   }, [ticker, interval, metrics])
+
+  // Включение/выключение подсветки и смена порога доли рынка.
+  useEffect(() => {
+    highlightVolumeRef.current = highlightVolume
+    shareThresholdRef.current = shareThresholdPct / 100
+    const c = chart.current
+    if (!c) return
+    if (highlightVolume) {
+      refreshVolumeHighlightsRef.current()
+    } else {
+      hideVolumeTipRef.current()
+      removeVolumeHighlights(c, volumeHighlightStateRef.current)
+    }
+  }, [highlightVolume, shareThresholdPct, ticker, interval])
 
   // Синхронизация индикаторов с чартом: для каждого включённого индикатора
   // держим свою панель, для выключенного — убираем панель.
@@ -813,6 +1233,53 @@ export default function ChartType () {
         <button onClick={_ => setInterval(IntervalType.Day)} style={{ backgroundColor: interval === IntervalType.Day ? '#4CAF50' : '' }}>day</button>
         <button onClick={_ => setInterval(IntervalType.Week)} style={{ backgroundColor: interval === IntervalType.Week ? '#4CAF50' : '' }}>week</button>
         <button onClick={_ => setInterval(IntervalType.Month)} style={{ backgroundColor: interval === IntervalType.Month ? '#4CAF50' : '' }}>month</button>
+
+        <label
+          style={{ marginLeft: 12, display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}
+          title="Подсвечивать свечи с долей ≥ порога от оборота всех акций ИЛИ с оборотом (₽) выше mean+2σ своей истории за то же время суток"
+        >
+          <input
+            type="checkbox"
+            checked={highlightVolume}
+            onChange={_ => setHighlightVolume(v => !v)}
+          />
+          <span style={{ paddingLeft: 4 }}>Подсветка объёма</span>
+        </label>
+        <label
+          style={{
+            marginLeft: 8,
+            display: 'inline-flex',
+            alignItems: 'center',
+            cursor: stockSharesAvailable ? 'pointer' : 'not-allowed',
+            opacity: stockSharesAvailable ? 1 : 0.5,
+          }}
+          title={
+            stockSharesAvailable
+              ? "Порог доли рынка: свеча подсвечивается, если оборот инструмента ≥ X% оборота всех акций"
+              : "Доля рынка считается только для акций"
+          }
+        >
+          <span style={{ paddingRight: 4 }}>доля рынка ≥</span>
+          <input
+            type="number"
+            min={1}
+            max={100}
+            step={1}
+            value={shareThresholdText}
+            disabled={!stockSharesAvailable}
+            onChange={e => {
+              const text = e.target.value
+              setShareThresholdText(text)
+              if (text.trim() === '') return
+              const n = Number(text)
+              if (!Number.isFinite(n)) return
+              setShareThresholdPct(Math.min(100, Math.max(1, Math.round(n))))
+            }}
+            onBlur={() => setShareThresholdText(String(shareThresholdPct))}
+            style={{ width: 56, height: 24 }}
+          />
+          <span style={{ paddingLeft: 4 }}>%</span>
+        </label>
 
         <span style={{ paddingLeft: 12, paddingRight: 6 }}>Индикаторы:</span>
         {VOLUME_INDICATORS.map(ind => {
@@ -882,7 +1349,29 @@ export default function ChartType () {
           ))}
         </div>
       )}
-      <div id="real-time-k-line" className="k-line-chart" />
+      <div
+        className="k-line-chart-wrapper"
+        onMouseLeave={() => hideVolumeTipRef.current()}
+        onMouseMove={e => {
+          // На осях/разделителях klinecharts сбрасывает кроссхейр без колбэка,
+          // поэтому прячем подсказку, как только курсор ушёл с области свечей.
+          if (volumeTipKeyRef.current === null) return
+          const mainDom = chart.current?.getDom('candle_pane', 'main')
+          if (mainDom == null || !mainDom.contains(e.target as Node)) {
+            hideVolumeTipRef.current()
+          }
+        }}
+      >
+        <div id="real-time-k-line" className="k-line-chart" />
+        {volumeTip != null && (
+          <div ref={volumeTipElRef} className="volume-highlight-tip">
+            <div className="volume-highlight-tip-title">Подсвечено</div>
+            {volumeTip.length === 0
+              ? <div>—</div>
+              : volumeTip.map((line, i) => <div key={i}>{line}</div>)}
+          </div>
+        )}
+      </div>
     </Layout>
   )
 }

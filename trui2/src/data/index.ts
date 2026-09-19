@@ -14,6 +14,28 @@ export interface SuperCandle extends KLineData {
   oi_close?: number;
 }
 
+// Бар-разрыв (неторговый день): валидный timestamp, но open/close = NaN, поэтому
+// свеча не рисуется (canvas игнорирует нечисловые координаты). high/low при этом
+// конечны (последняя известная цена), чтобы штатный диапазон y-оси не ломался.
+// Такие бары вставляются в серию, чтобы на графике были разрывы; собственные
+// расчёты должны пропускать их через эту проверку.
+export function isGapBar(c: KLineData | null | undefined): boolean {
+  return c != null && !Number.isFinite(c.open)
+}
+
+// Прогоняет функцию только по реальным свечам, оставляя на местах баров-разрывов
+// null: ядро klinecharts корректно пропускает null в результатах индикаторов
+// (`result[i] ?? {}`, отрисовка по isNumber), поэтому это безопасный способ
+// считать индикаторы «без разрывов».
+export function mapRealBars<D>(dataList: KLineData[], fn: (c: SuperCandle) => D): Array<D | null> {
+  return dataList.map(c => (isGapBar(c) ? null : fn(c as SuperCandle)))
+}
+
+// Только реальные свечи (без баров-разрывов).
+export function realBars(dataList: KLineData[]): SuperCandle[] {
+  return dataList.filter(c => !isGapBar(c)) as SuperCandle[]
+}
+
 // Одна точка пользовательской SQL-метрики: значение на конкретном таймслоте.
 export interface MetricPoint {
   timestamp: number;
@@ -572,7 +594,7 @@ function interval2sql(interval: string): string {
   }
 }
 
-function intervalMs(interval: string): number {
+export function intervalMs(interval: string): number {
   switch (interval) {
     case IntervalType.Minute:
       return 60*1000

@@ -1,11 +1,31 @@
 import React, { useEffect, useLayoutEffect, useState, useRef } from 'react'
-import { Chart, init, dispose, registerIndicator, registerOverlay, Period, TooltipLegend, Point } from 'klinecharts'
+import { Chart, init, dispose, registerIndicator, registerOverlay, CandleTooltipLegendsCustomCallback, Period, TooltipLegend, Point } from 'klinecharts'
 import Layout from '../Layout'
 import TickerSelector from './TickerSelector'
-import { fetchCandles, fetchLatestTime, fetchMetric, fetchMarketShares, IntervalType, SuperCandle, fetchFizOI, resolveFutoiTicker, resolveSecGroup, SEC_GROUP_TO_TABLE, FutOIData, FizOIResult, MetricPoint } from '../data/index'
+import { fetchCandles, fetchLatestTime, fetchMetric, fetchMarketShares, IntervalType, SuperCandle, fetchFizOI, resolveFutoiTicker, resolveSecGroup, SEC_GROUP_TO_TABLE, FutOIData, FizOIResult, MetricPoint, isGapBar, mapRealBars, realBars, intervalMs } from '../data/index'
 import { makeMetricIndicator, MetricIndicatorSpec, setMetricValues, appendMetricValues, clearMetricValues, removeMetricValues } from './metricIndicator'
 
-const klineStyle = {}
+// Легенды тултипа свечи по умолчанию (как во встроенном шаблоне). Нужны, чтобы
+// для баров-разрывов (неторговых дней) отдавать пустой список вместо NaN-полей.
+const DEFAULT_CANDLE_TOOLTIP_LEGENDS: TooltipLegend[] = [
+  { title: 'time', value: '{time}' },
+  { title: 'open', value: '{open}' },
+  { title: 'high', value: '{high}' },
+  { title: 'low', value: '{low}' },
+  { title: 'close', value: '{close}' },
+  { title: 'volume', value: '{volume}' },
+]
+
+const klineStyle = {
+  candle: {
+    tooltip: {
+      legend: {
+        template: ((data) =>
+          isGapBar(data.current) ? [] : DEFAULT_CANDLE_TOOLTIP_LEGENDS) as CandleTooltipLegendsCustomCallback,
+      },
+    },
+  },
+}
 
 type VolumeIndicatorId = 'VOL' | 'volume_bs' | 'volume_bs_cum' | 'oi' | 'fiz_imbalance' | 'pr_vwap_spread'
 
@@ -92,14 +112,93 @@ function mskMonday(ts: number): string {
   return d.toISOString().slice(0, 10)
 }
 
-// Ключ периода накопления для volume_bs_cum. На внутридневных интервалах это
-// календарный день МСК (вечерняя сессия 19:00–23:50 остаётся в своей дате),
-// на дневках — неделя (понедельник).
-function accumulationPeriodKey(ts: number): string {
+// Ключ периода. На внутридневных интервалах это календарный день МСК (вечерняя
+// сессия 19:00–23:50 остаётся в своей дате), на дневках — неделя (понедельник).
+// Используется и для накопления в volume_bs_cum, и для разделителей периодов.
+function periodKey(ts: number): string {
   if (currentInterval === IntervalType.Day) {
     return mskMonday(ts)
   }
   return mskDateKey(ts)
+}
+
+// --- Разрывы за неторговые дни ---------------------------------------------
+// Бар-разрыв — объект с валидным timestamp. open/close = NaN, поэтому свеча не
+// рисуется (canvas игнорирует нечисловые координаты), а high/low берём равными
+// последней известной цене: так штатный расчёт диапазона y-оси (Math.min/max по
+// low/high) остаётся конечным и не требует переопределения. Собственные расчёты
+// пропускают такие бары через isGapBar (маркер — нечисловой open).
+function gapBar(timestamp: number, price: number): SuperCandle {
+  return { timestamp, open: NaN, high: price, low: price, close: NaN, volume: 0 }
+}
+
+// Номер календарного дня (МСК, UTC+3 без DST) от эпохи — для разницы дат.
+function mskDayNumber(ts: number): number {
+  return Math.floor((ts + 3 * 60 * 60 * 1000) / 86400000)
+}
+
+// Ширина одного пропущенного дня в барах текущего интервала: считаем торговый
+// день девятичасовым (основная сессия), а не по фактическому числу баров в
+// данных (они включают вечернюю сессию и растягивают разрыв). Для дневного
+// интервала день не может быть уже одного бара.
+const GAP_DAY_MS = 9 * 60 * 60 * 1000
+
+function gapBarsPerTradingDay(interval: string): number {
+  return Math.max(1, Math.round(GAP_DAY_MS / intervalMs(interval)))
+}
+
+// Жёсткий предел на один разрыв: дыра в данных (а не выходные) не должна
+// порождать сотни тысяч баров-разрывов и подвешивать вкладку.
+const MAX_GAP_SLOTS = 2000
+
+// Вставляет бары-разрывы за неторговые дни и внутридневные пропуски. Целый
+// пропущенный календарный день (МСК) занимает столько слотов, сколько баров в
+// девятичасовом торговом дне; ночные паузы между соседними днями разрывом не
+// считаются. Если же две свечи в один и тот же день стоят дальше, чем на шаг
+// интервала, — это внутридневной пропуск, слоты не добавляем. rightBoundaryTs —
+// timestamp крайней левой уже загруженной свечи (при докрутке истории влево),
+// чтобы не потерять разрыв на стыке батчей. Недели и месяцы уже агрегируют дни,
+// поэтому для них разрывы не строим.
+function withGaps(candles: SuperCandle[], interval: string, rightBoundaryTs?: number): SuperCandle[] {
+  if (interval === IntervalType.Week || interval === IntervalType.Month) return candles
+  if (candles.length === 0) return candles
+
+  const barsPerDay = gapBarsPerTradingDay(interval)
+  const step = intervalMs(interval)
+  const out: SuperCandle[] = []
+
+  const pushGaps = (fromTs: number, toTs: number, refPrice: number) => {
+    const maxSlots = Math.floor((toTs - fromTs) / step) - 1
+    if (maxSlots <= 0) return
+    const missingDays = mskDayNumber(toTs) - mskDayNumber(fromTs) - 1
+    let slots: number
+    if (missingDays > 0) {
+      // Пропущены целые календарные дни (выходные/праздники).
+      slots = Math.min(missingDays * barsPerDay, maxSlots, MAX_GAP_SLOTS)
+    } else if (missingDays === -1) {
+      // Пропуск внутри одного дня — ширина равна числу пропущенных баров.
+      slots = Math.min(maxSlots, MAX_GAP_SLOTS)
+    } else {
+      // Соседние календарные дни (ночная пауза) — разрывом не считаем.
+      return
+    }
+    for (let k = 0; k < slots; k++) {
+      out.push(gapBar(fromTs + step * (k + 1), refPrice))
+    }
+  }
+
+  for (const c of candles) {
+    const prev = out.length > 0 ? out[out.length - 1] : null
+    if (prev != null) {
+      pushGaps(prev.timestamp, c.timestamp, prev.close)
+    }
+    out.push(c)
+  }
+  const last = candles[candles.length - 1]
+  if (rightBoundaryTs != null && rightBoundaryTs > last.timestamp) {
+    pushGaps(last.timestamp, rightBoundaryTs, last.close)
+  }
+  return out
 }
 
 interface FizOIPoint {
@@ -192,7 +291,74 @@ function fmtLots(n: number | undefined): string {
   return (n ?? 0).toLocaleString('ru-RU')
 }
 
-registerIndicator<ActiveTradesPoint>({
+// Объём с MA (5/10/20). Переопределяем встроенный VOL, чтобы средние считались
+// только по реальным барам и не размывались барами-разрывами.
+interface VolPoint {
+  volume: number
+  open: number
+  close: number
+  ma1?: number
+  ma2?: number
+  ma3?: number
+}
+
+const VOL_MA_PARAMS = [5, 10, 20]
+
+registerIndicator<VolPoint | null>({
+  name: 'VOL',
+  shortName: 'VOL',
+  series: 'volume',
+  calcParams: VOL_MA_PARAMS,
+  shouldFormatBigNumber: true,
+  precision: 0,
+  minValue: 0,
+  figures: [
+    { key: 'ma1', title: 'MA5: ', type: 'line' },
+    { key: 'ma2', title: 'MA10: ', type: 'line' },
+    { key: 'ma3', title: 'MA20: ', type: 'line' },
+    {
+      key: 'volume',
+      title: 'VOLUME: ',
+      type: 'bar',
+      baseValue: 0,
+      styles: (params) => {
+        const override = params.indicator.styles?.bars?.[0]
+        const base = params.defaultStyles?.bars?.[0]
+        const noChange = override?.noChangeColor ?? base?.noChangeColor ?? '#76808F'
+        const current = params.data.current
+        let color = noChange
+        if (current != null && Number.isFinite(current.open) && Number.isFinite(current.close)) {
+          color = current.close > current.open
+            ? override?.upColor ?? base?.upColor ?? noChange
+            : current.close < current.open
+              ? override?.downColor ?? base?.downColor ?? noChange
+              : noChange
+        }
+        return { color }
+      },
+    },
+  ],
+  calc: dataList => {
+    const realVolumes: number[] = []
+    return mapRealBars<VolPoint>(dataList, c => {
+      const volume = c.volume ?? 0
+      realVolumes.push(volume)
+      const point: VolPoint = { volume, open: c.open, close: c.close }
+      VOL_MA_PARAMS.forEach((p, i) => {
+        if (realVolumes.length >= p) {
+          let sum = 0
+          for (let k = realVolumes.length - p; k < realVolumes.length; k++) {
+            sum += realVolumes[k]
+          }
+          ;(point as unknown as Record<string, number>)[`ma${i + 1}`] = sum / p
+        }
+      })
+      return point
+    })
+  },
+})
+
+registerIndicator<ActiveTradesPoint | null>({
   name: 'volume_bs',
   shortName: 'Активные сделки',
   series: 'volume',
@@ -210,18 +376,18 @@ registerIndicator<ActiveTradesPoint>({
       },
     }
   ],
-  calc: dataList => dataList.map(c => {
-    const k = c as unknown as SuperCandle
-    return {
-      ...k,
-      val_net: (k.val_b ?? 0) - (k.val_s ?? 0),
-    } as ActiveTradesPoint
-  }),
+  calc: dataList => mapRealBars<ActiveTradesPoint>(dataList, c => ({
+    ...c,
+    val_net: (c.val_b ?? 0) - (c.val_s ?? 0),
+  })),
   createTooltipDataSource: ({ indicator, crosshair }) => {
     const legends: TooltipLegend[] = []
     const data = crosshair.dataIndex != null
       ? indicator.result[crosshair.dataIndex]
       : undefined
+    if (data == null) {
+      return { name: 'Активные сделки', calcParamsText: '', features: [], legends }
+    }
     if (data?.val_net != null) {
       legends.push({ title: 'нетто: ', value: fmtRubles(data.val_net) })
     }
@@ -242,7 +408,7 @@ registerIndicator<ActiveTradesPoint>({
 // с начала недели. Рисуется красными/зелёными столбиками.
 type VolBsCumPoint = SuperCandle & { net?: number }
 
-registerIndicator<VolBsCumPoint>({
+registerIndicator<VolBsCumPoint | null>({
   name: 'volume_bs_cum',
   shortName: 'Накопл. объём активных сделок',
   series: 'volume',
@@ -266,20 +432,19 @@ registerIndicator<VolBsCumPoint>({
   calc: dataList => {
     let cum = 0
     let prevKey = ''
-    return dataList.map(c => {
-      const k = c as unknown as SuperCandle
-      const key = accumulationPeriodKey(k.timestamp)
+    return mapRealBars<VolBsCumPoint>(dataList, c => {
+      const key = periodKey(c.timestamp)
       if (key !== prevKey) {
         cum = 0
         prevKey = key
       }
       // Нет данных по покупкам/продажам (напр. интервал 1m или тикер из
       // tr.candles) — не рисуем фантомный нулевой бар.
-      if (k.volume_b == null && k.volume_s == null) {
-        return { ...k } as VolBsCumPoint
+      if (c.volume_b == null && c.volume_s == null) {
+        return { ...c }
       }
-      cum += (k.volume_b ?? 0) - (k.volume_s ?? 0)
-      return { ...k, net: cum } as VolBsCumPoint
+      cum += (c.volume_b ?? 0) - (c.volume_s ?? 0)
+      return { ...c, net: cum }
     })
   },
   createTooltipDataSource: ({ indicator, crosshair }) => {
@@ -295,7 +460,7 @@ registerIndicator<VolBsCumPoint>({
 })
 
 // Открытый интерес физлиц в рублях (данные FUTOI из tr.futoi)
-registerIndicator<FizOIPoint>({
+registerIndicator<FizOIPoint | null>({
   name: 'fiz_oi',
   shortName: 'Открытый интерес физлиц',
   series: 'volume',
@@ -305,7 +470,7 @@ registerIndicator<FizOIPoint>({
     { key: 'ruble_long', title: 'ОИ физлиц (лонг, ₽): ', type: 'line', styles: () => ({ color: "#26A69A" })},
     { key: 'ruble_short', title: 'ОИ физлиц (шорт, ₽): ', type: 'line', styles: () => ({ color: "#EF5350" })},
   ],
-  calc: dataList => dataList.map(c => {
+  calc: dataList => mapRealBars<FizOIPoint>(dataList, c => {
     if (fizOIDailyMode) {
       return forwardFillDailyPoint(c.timestamp)
     }
@@ -330,7 +495,7 @@ registerIndicator<FizOIPoint>({
 })
 
 // Дисбаланс позиций физлиц: (fiz_long - fiz_short) / (fiz_long + fiz_short)
-registerIndicator<FizOIPoint>({
+registerIndicator<FizOIPoint | null>({
   name: 'fiz_imbalance',
   shortName: 'Дисбаланс физлиц',
   series: 'volume',
@@ -349,7 +514,7 @@ registerIndicator<FizOIPoint>({
       },
     }
   ],
-  calc: dataList => dataList.map(c => {
+  calc: dataList => mapRealBars<FizOIPoint>(dataList, c => {
     if (fizOIDailyMode) {
       return forwardFillDailyPoint(c.timestamp)
     }
@@ -379,7 +544,7 @@ registerIndicator<FizOIPoint>({
 // Спред между средней ценой покупателей и продавцов: pr_vwap_b - pr_vwap_s
 type SpreadPoint = SuperCandle & { spread?: number }
 
-registerIndicator<SpreadPoint>({
+registerIndicator<SpreadPoint | null>({
   name: 'pr_vwap_spread',
   shortName: 'Спред VWAP',
   series: 'normal',
@@ -396,14 +561,13 @@ registerIndicator<SpreadPoint>({
       },
     },
   ],
-  calc: dataList => dataList.map(c => {
-    const k = c as unknown as SuperCandle
-    const b = k.pr_vwap_b
-    const s = k.pr_vwap_s
+  calc: dataList => mapRealBars<SpreadPoint>(dataList, c => {
+    const b = c.pr_vwap_b
+    const s = c.pr_vwap_s
     return {
-      ...k,
+      ...c,
       spread: (b != null && s != null) ? b - s : undefined,
-    } as SpreadPoint
+    }
   }),
   createTooltipDataSource: ({ indicator, crosshair }) => {
     const legends: TooltipLegend[] = []
@@ -453,8 +617,8 @@ registerOverlay({
   },
 })
 
-// Полупрозрачная заливка выходного дня (субботы/воскресенья). Две точки: первая
-// и последняя свеча этого дня.
+// Полупрозрачная заливка выходных. Один оверлей рисует все участки: точки идут
+// парами (начало, конец) на каждый выходной участок.
 registerOverlay({
   name: 'weekendHighlight',
   totalStep: 2,
@@ -462,26 +626,27 @@ registerOverlay({
   needDefaultXAxisFigure: false,
   needDefaultYAxisFigure: false,
   createPointFigures: ({ chart, coordinates, bounding }) => {
-    if (coordinates.length < 2) {
-      return []
-    }
-    // Заливаем от левого края первой свечи до правого края последней.
     const halfBar = chart.getBarSpace().halfBar
-    const x0 = coordinates[0].x - halfBar
-    const x1 = coordinates[1].x + halfBar
-    return [{
-      type: 'polygon',
-      attrs: {
-        coordinates: [
-          { x: x0, y: 0 },
-          { x: x1, y: 0 },
-          { x: x1, y: bounding.height },
-          { x: x0, y: bounding.height },
-        ],
-      },
-      styles: { style: 'fill', color: 'rgba(255, 183, 77, 0.12)' },
-      ignoreEvent: true,
-    }]
+    const figures = []
+    for (let i = 0; i + 1 < coordinates.length; i += 2) {
+      // Заливаем от левого края первой свечи до правого края последней.
+      const x0 = coordinates[i].x - halfBar
+      const x1 = coordinates[i + 1].x + halfBar
+      figures.push({
+        type: 'polygon',
+        attrs: {
+          coordinates: [
+            { x: x0, y: 0 },
+            { x: x1, y: 0 },
+            { x: x1, y: bounding.height },
+            { x: x0, y: bounding.height },
+          ],
+        },
+        styles: { style: 'fill', color: 'rgba(255, 183, 77, 0.12)' },
+        ignoreEvent: true,
+      })
+    }
+    return figures
   },
 })
 
@@ -535,19 +700,6 @@ const MIN_BASELINE_SAMPLES = 5
 // Страховка от лавины подсветок при слишком низком пороге доли рынка.
 const MAX_HIGHLIGHTS = 300
 
-// Длительность одного бара интервала в мс.
-function intervalMs(interval: string): number {
-  switch (interval) {
-    case IntervalType.Minute: return 60 * 1000
-    case IntervalType.FiveMinutes: return 5 * 60 * 1000
-    case IntervalType.Hour: return 60 * 60 * 1000
-    case IntervalType.Day: return 24 * 60 * 60 * 1000
-    case IntervalType.Week: return 7 * 24 * 60 * 60 * 1000
-    case IntervalType.Month: return 31 * 24 * 60 * 60 * 1000
-    default: return 24 * 60 * 60 * 1000
-  }
-}
-
 // Окно базы объёма. Не меньше 60 дней, но для недель/месяцев расширяется так,
 // чтобы в него помещалось MIN_BASELINE_SAMPLES баров (иначе аномалия мертва).
 function baselineWindowMs(): number {
@@ -586,7 +738,7 @@ function computeVolumeBaselines(dataList: SuperCandle[]): Map<number, { mean: nu
   const windowMs = baselineWindowMs()
   const result = new Map<number, { mean: number; cut: number }>()
   const groups = new Map<string, { ts: number[]; val: number[]; start: number; sum: number; sumsq: number }>()
-  for (const c of dataList) {
+  for (const c of realBars(dataList)) {
     const key = intraday ? mskTimeKey(c.timestamp) : ''
     let group = groups.get(key)
     if (group == null) {
@@ -651,7 +803,7 @@ function recomputeHighlightTimes(chart: Chart, shareThreshold: number) {
   const dataList = chart.getDataList() as SuperCandle[]
   const next = new Set<number>()
   volumeBaseline = computeVolumeBaselines(dataList)
-  for (const c of dataList) {
+  for (const c of realBars(dataList)) {
     const share = marketShares.get(c.timestamp)
     const byShare = share != null && share >= shareThreshold
     const base = volumeBaseline.get(c.timestamp)
@@ -663,36 +815,23 @@ function recomputeHighlightTimes(chart: Chart, shareThreshold: number) {
   highlightTimes = next
 }
 
-// id единственного оверлея подсветки (создаётся лениво, живёт между синками).
-interface VolumeHighlightState {
+// id единственного оверлея (создаётся лениво, живёт между синками).
+interface PointsOverlayState {
   overlayId: string | null
 }
 
-// Перерисовывает рамки видимых подсвеченных свечей в одном оверлее. Вне видимого
-// диапазона рамки не рисуются (иначе при мелком зуме их могут быть тысячи).
-function syncVolumeHighlights(chart: Chart, state: VolumeHighlightState) {
-  const dataList = chart.getDataList() as SuperCandle[]
-  const points: Array<{ timestamp: number; value: number }> = []
-  if (dataList.length > 0 && highlightTimes.size > 0) {
-    const range = chart.getVisibleRange()
-    const from = Math.max(0, range.realFrom)
-    const to = Math.min(dataList.length - 1, range.realTo - 1)
-    for (let i = from; i <= to && points.length < MAX_HIGHLIGHTS * 2; i++) {
-      const c = dataList[i]
-      if (highlightTimes.has(c.timestamp)) {
-        points.push({ timestamp: c.timestamp, value: c.high })
-        points.push({ timestamp: c.timestamp, value: c.low })
-      }
-    }
-  }
+// Рисует набор фигур одним оверлеем (точки идут парами). Пустой набор удаляет
+// оверлей: override не умеет очищать точки (пустой массив игнорируется).
+function syncPointsOverlay(chart: Chart, state: PointsOverlayState, name: string, points: Array<{ timestamp: number; value?: number }>) {
   if (points.length === 0) {
-    // override не умеет очищать точки (пустой массив игнорируется), поэтому
-    // когда подсветок нет — оверлей удаляем.
-    removeVolumeHighlights(chart, state)
+    if (state.overlayId != null) {
+      chart.removeOverlay({ id: state.overlayId })
+      state.overlayId = null
+    }
     return
   }
   if (state.overlayId == null) {
-    const overlayId = chart.createOverlay({ name: 'volumeHighlights', points }) as string | null
+    const overlayId = chart.createOverlay({ name, points }) as string | null
     if (overlayId != null) {
       state.overlayId = overlayId
     }
@@ -701,69 +840,42 @@ function syncVolumeHighlights(chart: Chart, state: VolumeHighlightState) {
   chart.overrideOverlay({ id: state.overlayId, points })
 }
 
-function removeVolumeHighlights(chart: Chart, state: VolumeHighlightState) {
-  if (state.overlayId != null) {
-    chart.removeOverlay({ id: state.overlayId })
-    state.overlayId = null
+// Перерисовывает рамки видимых подсвеченных свечей в одном оверлее. Вне видимого
+// диапазона рамки не рисуются (иначе при мелком зуме их могут быть тысячи).
+function syncVolumeHighlights(chart: Chart, state: PointsOverlayState) {
+  const dataList = chart.getDataList() as SuperCandle[]
+  const points: Array<{ timestamp: number; value: number }> = []
+  if (dataList.length > 0 && highlightTimes.size > 0) {
+    const range = chart.getVisibleRange()
+    const from = Math.max(0, range.realFrom)
+    const to = Math.min(dataList.length - 1, range.realTo - 1)
+    for (let i = from; i <= to && points.length < MAX_HIGHLIGHTS * 2; i++) {
+      const c = dataList[i]
+      if (!isGapBar(c) && highlightTimes.has(c.timestamp)) {
+        points.push({ timestamp: c.timestamp, value: c.high })
+        points.push({ timestamp: c.timestamp, value: c.low })
+      }
+    }
   }
+  syncPointsOverlay(chart, state, 'volumeHighlights', points)
 }
 
 // true, если таймстамп попадает на субботу или воскресенье (по МСК).
 function isWeekend(ts: number): boolean {
-  const day = new Date(mskDateKey(ts) + 'T00:00:00Z').getUTCDay()
-  return day === 0 || day === 6
+  return isWeekendDayNumber(mskDayNumber(ts))
 }
 
-interface WeekendHighlight {
-  overlayId: string
-  startTs: number
-  endTs: number
-}
-
-// Создаёт подсветку выходного дня или расширяет уже созданную, если подгрузка
-// истории вперёд (влево) добавила более ранние свечи этого же дня.
-function upsertWeekendHighlight(chart: Chart, weekends: Map<string, WeekendHighlight>, dateKey: string, startTs: number, endTs: number) {
-  const existing = weekends.get(dateKey)
-  if (!existing) {
-    const overlayId = chart.createOverlay({ name: 'weekendHighlight', points: [{ timestamp: startTs }, { timestamp: endTs }] }) as string | null
-    if (overlayId != null) {
-      weekends.set(dateKey, { overlayId, startTs, endTs })
-    }
-    return
-  }
-  if (existing.startTs !== startTs || existing.endTs !== endTs) {
-    chart.overrideOverlay({ id: existing.overlayId, points: [{ timestamp: startTs }, { timestamp: endTs }] })
-    existing.startTs = startTs
-    existing.endTs = endTs
-  }
-}
-
-// Ключ периода, между которым рисуется разделитель: на внутридневных интервалах
-// это календарный день (МСК), на дневках — неделя (понедельник). Вызывается
-// только для внутридневных и дневного интервалов (неделя/месяц отсекаются в
-// syncPeriodSeparators).
-function separatorPeriodKey(ts: number): string {
-  if (currentInterval === IntervalType.Day) {
-    return mskMonday(ts)
-  }
-  return mskDateKey(ts)
-}
-
-// Рисует разделители периодов и подсветку выходных для уже загруженных свечей.
-// Отслеживает уже созданные timestamps/даты, чтобы не плодить дубли при подгрузке
-// истории вперёд.
-function syncPeriodSeparators(chart: Chart, createdSeparators: Set<number>, createdWeekends: Map<string, WeekendHighlight>) {
+// Рисует вертикальные разделители на границах периодов для уже загруженных
+// свечей. Отслеживает уже созданные timestamps, чтобы не плодить дубли при
+// подгрузке истории вперёд.
+function syncPeriodSeparators(chart: Chart, createdSeparators: Set<number>) {
   const dataList = chart.getDataList() as SuperCandle[]
   if (currentInterval === IntervalType.Week || currentInterval === IntervalType.Month) {
     return
   }
   let prevKey = ''
-  let prevDateKey: string | null = null
-  let dayStartTs = 0
-  let prevTs = 0
-  for (const c of dataList) {
-    const key = separatorPeriodKey(c.timestamp)
-    const dateKey = mskDateKey(c.timestamp)
+  for (const c of realBars(dataList)) {
+    const key = periodKey(c.timestamp)
 
     // Разделитель на границе периода (день/неделя).
     if (prevKey !== '' && key !== prevKey && !createdSeparators.has(c.timestamp)) {
@@ -771,25 +883,97 @@ function syncPeriodSeparators(chart: Chart, createdSeparators: Set<number>, crea
       chart.createOverlay({ name: 'periodSeparator', points: [{ timestamp: c.timestamp }] })
     }
 
-    // Подсветка выходного дня целиком — по переходу на новый календарный день
-    // финализируем предыдущий, если он суббота/воскресенье.
-    if (prevDateKey !== null && dateKey !== prevDateKey) {
-      if (isWeekend(prevTs)) {
-        upsertWeekendHighlight(chart, createdWeekends, prevDateKey, dayStartTs, prevTs)
-      }
-      dayStartTs = c.timestamp
-    } else if (prevDateKey === null) {
-      dayStartTs = c.timestamp
-    }
-
     prevKey = key
-    prevDateKey = dateKey
-    prevTs = c.timestamp
   }
-  // Последний (ещё не финализированный) день.
-  if (prevDateKey !== null && isWeekend(prevTs)) {
-    upsertWeekendHighlight(chart, createdWeekends, prevDateKey, dayStartTs, prevTs)
+}
+
+// Выходной ли календарный день с номером d (дней от эпохи; UTC-полночь этого
+// номера совпадает с датой МСК).
+function isWeekendDayNumber(d: number): boolean {
+  const day = new Date(d * 86400000).getUTCDay()
+  return day === 0 || day === 6
+}
+
+// Есть ли среди пропущенных календарных дней разрыва суббота/воскресенье.
+// Пропущенные дни считаем по граничным реальным свечам; на краю загруженных
+// данных (одной границы нет) — по датам самих баров-разрывов.
+function gapHasWeekend(before: SuperCandle | null, after: SuperCandle | null, startTs: number, endTs: number): boolean {
+  if (before != null && after != null) {
+    const a = mskDayNumber(before.timestamp)
+    const b = mskDayNumber(after.timestamp)
+    // Внутридневной пропуск: обе свечи в один день — выходной ли сам этот день.
+    if (a === b) {
+      return isWeekendDayNumber(a)
+    }
+    for (let d = a + 1; d < b; d++) {
+      if (isWeekendDayNumber(d)) return true
+    }
+    return false
   }
+  // Край загруженных данных: проверяем дни, покрытые разрывом, включительно.
+  const a = mskDayNumber(startTs)
+  const b = mskDayNumber(endTs)
+  for (let d = a; d <= b; d++) {
+    if (isWeekendDayNumber(d)) return true
+  }
+  return false
+}
+
+// Полупрозрачная заливка выходных (сб/вс). Подсвечиваем и реальные бары
+// выходной сессии, и неторговые выходные (сжатые бары-разрывы, среди
+// пропущенных дней которых есть выходной); ширина заливки совпадает с шириной
+// участка. Все участки рисуются одним оверлеем, поэтому дубли при подгрузке
+// истории вперёд невозможны.
+function syncWeekendHighlights(chart: Chart, state: PointsOverlayState) {
+  if (currentInterval === IntervalType.Week || currentInterval === IntervalType.Month) {
+    return
+  }
+  const dataList = chart.getDataList() as SuperCandle[]
+  const weekendish = new Array<boolean>(dataList.length).fill(false)
+
+  // Реальные свечи выходного дня (торги выходной сессии).
+  for (let i = 0; i < dataList.length; i++) {
+    if (!isGapBar(dataList[i]) && isWeekend(dataList[i].timestamp)) {
+      weekendish[i] = true
+    }
+  }
+  // Неторговые участки, содержащие выходной день.
+  let i = 0
+  while (i < dataList.length) {
+    if (!isGapBar(dataList[i])) {
+      i++
+      continue
+    }
+    let j = i
+    while (j < dataList.length && isGapBar(dataList[j])) {
+      j++
+    }
+    const before = i > 0 ? dataList[i - 1] : null
+    const after = j < dataList.length ? dataList[j] : null
+    if (gapHasWeekend(before, after, dataList[i].timestamp, dataList[j - 1].timestamp)) {
+      for (let k = i; k < j; k++) {
+        weekendish[k] = true
+      }
+    }
+    i = j
+  }
+  // Склеиваем подряд идущие выходные бары в пары точек (начало, конец участка).
+  const points: Array<{ timestamp: number }> = []
+  i = 0
+  while (i < dataList.length) {
+    if (!weekendish[i]) {
+      i++
+      continue
+    }
+    let j = i
+    while (j < dataList.length && weekendish[j]) {
+      j++
+    }
+    points.push({ timestamp: dataList[i].timestamp })
+    points.push({ timestamp: dataList[j - 1].timestamp })
+    i = j
+  }
+  syncPointsOverlay(chart, state, 'weekendHighlight', points)
 }
 
 function intervalToPeriod(interval: string): Period {
@@ -845,8 +1029,9 @@ export default function ChartType () {
   // состояния (включена ли подсветка, порог доли рынка 0..1).
   const highlightVolumeRef = useRef(highlightVolume)
   const shareThresholdRef = useRef(shareThresholdPct / 100)
-  // Единственный оверлей подсветки; пересоздаётся вместе с чартом.
-  const volumeHighlightStateRef = useRef<VolumeHighlightState>({ overlayId: null })
+  // Единственные оверлеи подсветки/заливки; пересоздаются вместе с чартом.
+  const volumeHighlightStateRef = useRef<PointsOverlayState>({ overlayId: null })
+  const weekendHighlightStateRef = useRef<PointsOverlayState>({ overlayId: null })
   // Пересчёт множества подсветок + отрисовка (назначается в основном эффекте).
   const refreshVolumeHighlightsRef = useRef<() => void>(() => {})
   // Всплывашка с причиной подсветки. Содержимое (без координат) в state — чтобы
@@ -956,9 +1141,9 @@ export default function ChartType () {
     // Разделители периодов уже созданные для текущего чарта (сбрасываются вместе
     // с пересозданием чарта при смене тикера/интервала).
     const createdSeparators = new Set<number>()
-    const createdWeekends = new Map<string, WeekendHighlight>()
-    // Старый оверлей уничтожен вместе с чартом — начинаем с чистого состояния.
+    // Старые оверлеи уничтожены вместе с чартом — начинаем с чистого состояния.
     volumeHighlightStateRef.current = { overlayId: null }
+    weekendHighlightStateRef.current = { overlayId: null }
 
     // Пересчитываем множество подсветок и рисуем его для видимого диапазона.
     const refreshVolumeHighlights = () => {
@@ -1017,7 +1202,7 @@ export default function ChartType () {
         return
       }
       const candle = (c.getDataList() as SuperCandle[])[Math.round(dataIndex)]
-      if (candle == null || !highlightTimes.has(candle.timestamp)) {
+      if (candle == null || isGapBar(candle) || !highlightTimes.has(candle.timestamp)) {
         hideVolumeTipRef.current()
         return
       }
@@ -1130,8 +1315,11 @@ export default function ChartType () {
               await loadMetrics(latestTime)
               loadMarketShares(latestTime).then(refreshVolumeHighlights)
               if (cancelled) return
-              callback(candles, { forward: true, backward: false })
-              if (chart.current) syncPeriodSeparators(chart.current, createdSeparators, createdWeekends)
+              callback(withGaps(candles, interval), { forward: true, backward: false })
+              if (chart.current) {
+                syncPeriodSeparators(chart.current, createdSeparators)
+                syncWeekendHighlights(chart.current, weekendHighlightStateRef.current)
+              }
               refreshVolumeHighlights()
             })
             .catch(error => {
@@ -1151,8 +1339,11 @@ export default function ChartType () {
                 loadMarketShares(new Date(timestamp)).then(refreshVolumeHighlights)
               }
               if (cancelled) return
-              callback(candles, { forward: candles.length !== 0, backward: false })
-              if (chart.current) syncPeriodSeparators(chart.current, createdSeparators, createdWeekends)
+              callback(withGaps(candles, interval, timestamp), { forward: candles.length !== 0, backward: false })
+              if (chart.current) {
+                syncPeriodSeparators(chart.current, createdSeparators)
+                syncWeekendHighlights(chart.current, weekendHighlightStateRef.current)
+              }
               refreshVolumeHighlights()
             })
             .catch(error => {
@@ -1189,7 +1380,7 @@ export default function ChartType () {
       refreshVolumeHighlightsRef.current()
     } else {
       hideVolumeTipRef.current()
-      removeVolumeHighlights(c, volumeHighlightStateRef.current)
+      syncPointsOverlay(c, volumeHighlightStateRef.current, 'volumeHighlights', [])
     }
   }, [highlightVolume, shareThresholdPct, ticker, interval])
 

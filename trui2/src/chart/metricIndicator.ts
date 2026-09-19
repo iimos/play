@@ -1,5 +1,5 @@
 import { registerIndicator, TooltipLegend } from 'klinecharts'
-import { MetricPoint } from '../data/index'
+import { MetricPoint, mapRealBars } from '../data/index'
 
 function formatValue (v: number): string {
   if (!Number.isFinite(v)) return String(v)
@@ -53,7 +53,7 @@ export function makeMetricIndicator (expression: string): MetricIndicatorSpec {
   const indicatorName = `sql_metric_${id}`
   const paneId = `pane_metric_${id}`
 
-  registerIndicator<{ value: number | null }>({
+  registerIndicator<{ value: number | null } | null>({
     name: indicatorName,
     shortName: expression,
     series: 'normal',
@@ -63,7 +63,7 @@ export function makeMetricIndicator (expression: string): MetricIndicatorSpec {
     ],
     calc: dataList => {
       const values = metricValues.get(key)
-      return dataList.map(c => ({ value: values?.get(c.timestamp) ?? null }))
+      return mapRealBars<{ value: number | null }>(dataList, c => ({ value: values?.get(c.timestamp) ?? null }))
     },
     createTooltipDataSource: ({ indicator, crosshair }) => {
       const legends: TooltipLegend[] = []

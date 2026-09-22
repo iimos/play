@@ -315,6 +315,7 @@ CREATE TABLE tr.security_info (
     facevalue            Float64 COMMENT 'Номинальная стоимость (FACEVALUE)',
     faceunit             LowCardinality(String) COMMENT 'Валюта номинала (FACEUNIT)',
     asset_code           LowCardinality(String) COMMENT 'Базовый актив фьючерса (ASSETCODE)',
+    contract_name        LowCardinality(String) COMMENT 'Наименование контракта базового актива (CONTRACTNAME)',
     last_tradedate       Nullable(Date) COMMENT 'Дата последней торговли фьючерса (LASTTRADEDATE)',
     last_deldate         Nullable(Date) COMMENT 'Дата исполнения фьючерса (LASTDELDATE)',
     updated_at           DateTime DEFAULT now() COMMENT 'Время последнего обновления записи'

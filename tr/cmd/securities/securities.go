@@ -45,8 +45,9 @@ func Load(ctx context.Context) error {
 	secids = dedupe(append(secids, bondSecids...))
 
 	var (
-		mu    sync.Mutex
-		infos []store.SecurityInfo
+		mu      sync.Mutex
+		infos   []store.SecurityInfo
+		skipped int
 	)
 
 	gr, gctx := errgroup.WithContext(ctx)
@@ -57,7 +58,11 @@ func Load(ctx context.Context) error {
 		gr.Go(func() error {
 			info, ok, err := fetchSecurityInfo(gctx, client, secid)
 			if err != nil {
-				return fmt.Errorf("%s: %w", secid, err)
+				mu.Lock()
+				skipped++
+				mu.Unlock()
+				fmt.Printf("  %s: error: %v (skipped)\n", secid, err)
+				return nil
 			}
 			if !ok {
 				fmt.Printf("  %s: not found\n", secid)
@@ -74,7 +79,7 @@ func Load(ctx context.Context) error {
 		return err
 	}
 
-	fmt.Printf("Fetched %d/%d securities\n", len(infos), len(secids))
+	fmt.Printf("Fetched %d/%d securities (skipped %d)\n", len(infos), len(secids), skipped)
 
 	if err := storage.StoreSecurityInfo(ctx, infos); err != nil {
 		return fmt.Errorf("store security info: %w", err)
@@ -134,7 +139,10 @@ func fetchSecurityInfo(ctx context.Context, client *http.Client, secid string) (
 
 	var b boardInfo
 	if info.Group == "futures_forts" {
-		b = fetchFuturesInfo(ctx, client, info.SecID, info.PrimaryBoardID)
+		b, err = fetchFuturesInfo(ctx, client, info.SecID, info.PrimaryBoardID)
+		if err != nil {
+			return store.SecurityInfo{}, false, err
+		}
 	} else {
 		b = fetchBoardInfo(ctx, client, info.Group, info.PrimaryBoardID, info.SecID)
 	}
@@ -145,6 +153,7 @@ func fetchSecurityInfo(ctx context.Context, client *http.Client, secid string) (
 	info.FaceValue = b.FaceValue
 	info.FaceUnit = b.FaceUnit
 	info.AssetCode = b.AssetCode
+	info.ContractName = b.ContractName
 	info.LastTradeDate = b.LastTradeDate
 	info.LastDelDate = b.LastDelDate
 
@@ -217,6 +226,7 @@ type boardInfo struct {
 	FaceValue       float64
 	FaceUnit        string
 	AssetCode       string
+	ContractName    string
 	LastTradeDate   *time.Time
 	LastDelDate     *time.Time
 }
@@ -270,15 +280,39 @@ func fetchBoardInfo(ctx context.Context, client *http.Client, group, boardid, se
 	return b
 }
 
-// fetchFuturesInfo получает статические параметры фьючерса. Для торгуемых
-// контрактов берёт полные данные с борда (включая decimals/minstep), для
-// истёкших (которых уже нет в борд-листинге) — из detail-эндпоинта.
-func fetchFuturesInfo(ctx context.Context, client *http.Client, secid, boardid string) boardInfo {
+// fetchFuturesInfo получает статические параметры фьючерса: торговые — с борда,
+// недостающие (у истёкших контрактов, которых уже нет в борд-листинге) —
+// из detail-эндпоинта. CONTRACTNAME есть только в detail-описании, поэтому
+// запрашивается всегда.
+func fetchFuturesInfo(ctx context.Context, client *http.Client, secid, boardid string) (boardInfo, error) {
 	b := fetchBoardInfo(ctx, client, "futures_forts", boardid, secid)
-	if b.LotSize != 0 || b.AssetCode != "" || b.LastTradeDate != nil {
-		return b
+	d, err := fetchFuturesDescription(ctx, client, secid)
+	if err != nil {
+		return boardInfo{}, err
 	}
 
+	b.ContractName = d.ContractName
+	if b.LotSize == 0 {
+		b.LotSize = d.LotSize
+	}
+	if b.AssetCode == "" {
+		b.AssetCode = d.AssetCode
+	}
+	if b.FaceUnit == "" {
+		b.FaceUnit = d.FaceUnit
+	}
+	if b.LastTradeDate == nil {
+		b.LastTradeDate = d.LastTradeDate
+	}
+	if b.LastDelDate == nil {
+		b.LastDelDate = d.LastDelDate
+	}
+	return b, nil
+}
+
+// fetchFuturesDescription получает статические параметры фьючерса из
+// detail-эндпоинта /iss/securities/{secid} (блок description).
+func fetchFuturesDescription(ctx context.Context, client *http.Client, secid string) (boardInfo, error) {
 	u := "https://iss.moex.com/iss/securities/" + url.PathEscape(secid) + ".json?" + url.Values{
 		"iss.json": {"extended"},
 		"iss.meta": {"off"},
@@ -287,9 +321,10 @@ func fetchFuturesInfo(ctx context.Context, client *http.Client, secid, boardid s
 
 	body, err := httpjson.GetJSON(ctx, client, u)
 	if err != nil {
-		return boardInfo{}
+		return boardInfo{}, err
 	}
 
+	var b boardInfo
 	gjson.GetBytes(body, "1.description").ForEach(func(_, r gjson.Result) bool {
 		switch r.Get("name").String() {
 		case "LOTSIZE":
@@ -298,6 +333,8 @@ func fetchFuturesInfo(ctx context.Context, client *http.Client, secid, boardid s
 			b.AssetCode = r.Get("value").String()
 		case "FACEUNIT":
 			b.FaceUnit = r.Get("value").String()
+		case "CONTRACTNAME":
+			b.ContractName = r.Get("value").String()
 		case "LSTTRADE":
 			if t, err := parseISODate(r.Get("value").String()); err == nil {
 				b.LastTradeDate = &t
@@ -310,7 +347,7 @@ func fetchFuturesInfo(ctx context.Context, client *http.Client, secid, boardid s
 		return true
 	})
 
-	return b
+	return b, nil
 }
 
 func parseISODate(s string) (time.Time, error) {

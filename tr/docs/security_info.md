@@ -39,6 +39,7 @@ CREATE TABLE tr.security_info (
     facevalue            Float64,
     faceunit             LowCardinality(String),
     asset_code           LowCardinality(String),
+    contract_name        LowCardinality(String),
     last_tradedate       Nullable(Date),
     last_deldate         Nullable(Date),
     updated_at           DateTime DEFAULT now()
@@ -71,6 +72,7 @@ ORDER BY secid;
 | `facevalue` | `Float64` | номинальная стоимость (`FACEVALUE`) |
 | `faceunit` | `String` | валюта номинала (`FACEUNIT`) |
 | `asset_code` | `String` | базовый актив фьючерса (`ASSETCODE`: `AI92`, `GOLD`, ...; у не-фьючерсов пусто) |
+| `contract_name` | `String` | наименование контракта базового актива (`CONTRACTNAME`, напр. «Фьючерсный контракт на нефть Брэнт (мини)»; у не-фьючерсов пусто) |
 | `last_tradedate` | `Nullable(Date)` | дата последней торговли фьючерса (экспирация; `NULL` у не-фьючерсов) |
 | `last_deldate` | `Nullable(Date)` | дата исполнения фьючерса (`NULL` у не-фьючерсов) |
 | `updated_at` | `DateTime` | время последнего обновления записи |
@@ -176,7 +178,10 @@ LEFT ANTI JOIN tr.security_info i ON i.secid = s.secid;
 берутся из `/iss/engines/{engine}/markets/{market}/boards/{board}/securities/{secid}`,
 для фьючерсов (включая истёкшие) — из `/iss/securities/{secid}` (блок `description`:
 `LOTSIZE`, `ASSETCODE`, `LSTTRADE`, `LSTDELDATE`). Engine/market выводятся из
-`sec_group`, борд — из `primary_boardid`.
+`sec_group`, борд — из `primary_boardid`. Поле `contract_name` (наименование
+контракта базового актива, напр. «Фьючерсный контракт на нефть Брэнт (мини)»)
+есть только в `description`, поэтому у фьючерсов оно запрашивается отдельно,
+даже когда торговые параметры взяты с борда.
 
 Поля могут быть пустыми (нулями/`NULL`) в трёх случаях:
 

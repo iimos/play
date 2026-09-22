@@ -29,6 +29,7 @@ type SecurityInfo struct {
 	FaceValue          float64
 	FaceUnit           string
 	AssetCode          string
+	ContractName       string
 	LastTradeDate      *time.Time
 	LastDelDate        *time.Time
 }
@@ -42,7 +43,7 @@ func (s *Store) StoreSecurityInfo(ctx context.Context, infos []SecurityInfo) err
 	    emitent_id, emitent_title, emitent_inn, emitent_okpo,
 	    sec_type, sec_group, primary_boardid, marketprice_boardid,
 	    lotsize, trading_currency, decimals, minstep, facevalue, faceunit,
-	    asset_code, last_tradedate, last_deldate
+	    asset_code, contract_name, last_tradedate, last_deldate
 	)`)
 	if err != nil {
 		return err
@@ -53,7 +54,7 @@ func (s *Store) StoreSecurityInfo(ctx context.Context, infos []SecurityInfo) err
 			i.EmitentID, i.EmitentTitle, i.EmitentINN, i.EmitentOKPO,
 			i.Type, i.Group, i.PrimaryBoardID, i.MarketpriceBoardID,
 			i.LotSize, i.TradingCurrency, i.Decimals, i.MinStep, i.FaceValue, i.FaceUnit,
-			i.AssetCode, i.LastTradeDate, i.LastDelDate,
+			i.AssetCode, i.ContractName, i.LastTradeDate, i.LastDelDate,
 		)
 		if err != nil {
 			return err

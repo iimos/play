@@ -6,4 +6,5 @@ type LoadOptions struct {
 	ForceReload bool
 	StartDate   time.Time
 	EndDate     time.Time
+	Watch       bool // не используется
 }

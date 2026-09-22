@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/iimos/play/tr/cmd/watch"
 	"github.com/iimos/play/tr/httpjson"
 	"github.com/iimos/play/tr/store"
 	"github.com/iimos/play/tr/tz"
@@ -22,6 +23,7 @@ type LoadOptions struct {
 	ForceReload bool
 	StartDate   time.Time
 	EndDate     time.Time
+	Watch       bool
 }
 
 func Load(ctx context.Context, opts LoadOptions) error {
@@ -94,6 +96,27 @@ func Load(ctx context.Context, opts LoadOptions) error {
 		}
 
 		runtime.GC()
+	}
+
+	if opts.Watch {
+		var tracker watch.Tracker
+		return watch.RunHourly(ctx, func(ctx context.Context) error {
+			now := time.Now()
+			for _, d := range tracker.Days(now) {
+				err := watch.ReloadDay(ctx, "watch bond_daily", d,
+					func(ctx context.Context, d time.Time) ([]store.BondDaily, error) {
+						return fetchBondDaily(ctx, client, d)
+					},
+					storage.DeleteBondDailyPartition,
+					storage.StoreBondDaily,
+				)
+				if err != nil {
+					return err
+				}
+			}
+			tracker.Commit(now)
+			return nil
+		})
 	}
 	return nil
 }

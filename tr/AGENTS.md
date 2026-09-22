@@ -23,6 +23,8 @@ go run main.go load            # Load all (supercandles, futoi, etc)
 # --force        Force reload all dates (delete and reload)
 # --start {date} Start date (format: YYYY-MM-DD)
 # --end {date}   End date (format: YYYY-MM-DD, defaults to today)
+# --watch        Keep running: reload the current day every 5 minutes
+#                (daily data every hour). Incompatible with --start/--end.
 # Note: Last date in table is always reloaded automatically
 ```
 

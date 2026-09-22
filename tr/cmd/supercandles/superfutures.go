@@ -12,6 +12,7 @@ import (
 
 	"github.com/iimos/play/tr/moexalgo"
 	"github.com/iimos/play/tr/store"
+	"github.com/iimos/play/tr/tz"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 )
@@ -47,14 +48,14 @@ func LoadFutures(ctx context.Context, opts LoadOptions) error {
 	if start.IsZero() {
 		if lastTableDate.IsZero() {
 			// Table is empty, start from 10 days ago
-			start = time.Now().AddDate(0, 0, -10)
+			start = time.Now().In(tz.MSK).AddDate(0, 0, -10)
 		} else {
 			// Use last date from table as start date
 			start = lastTableDate
 		}
 	}
 	if end.IsZero() {
-		end = time.Now()
+		end = time.Now().In(tz.MSK)
 	}
 
 	// Normalize dates to start of day for comparison
@@ -74,7 +75,7 @@ func LoadFutures(ctx context.Context, opts LoadOptions) error {
 		if !shouldReload {
 			count, err := storage.CountSuperFOCandlesForDate(ctx, d)
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			if count > 0 {
@@ -114,6 +115,10 @@ func LoadFutures(ctx context.Context, opts LoadOptions) error {
 		}
 
 		runtime.GC()
+	}
+
+	if opts.Watch {
+		return watchFO(ctx, storage, moexSess)
 	}
 	return nil
 }

@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/iimos/play/tr/cmd/bonddaily"
@@ -39,27 +41,47 @@ func main() {
 		_, _ = fmt.Fprintf(os.Stderr, "  load-superfx    - load currency supercandles\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-futoi      - load futures open interest (FUTOI)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-iss-openpositions - load daily futures open positions by phys/legal (ISS statistics)\n")
-		_, _ = fmt.Fprintf(os.Stderr, "  load            - load all (supercandles, futoi, openpositions)\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  load            - load all (supercandles, futoi, openpositions, bond daily)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-securities - load securities metadata (names, emitents, etc.)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-bond-daily    - load daily bond candles with bond attributes\n")
 		_, _ = fmt.Fprintf(os.Stderr, "flags:\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --force         - force reload all dates (delete and reload)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --start {date}  - start date (format: YYYY-MM-DD, defaults to last date in table)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --end {date}    - end date (format: YYYY-MM-DD, defaults to today)\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  --watch         - keep running: reload the current day every 5 minutes\n")
+		_, _ = fmt.Fprintf(os.Stderr, "                    (daily data every hour); incompatible with --start/--end\n")
 		os.Exit(1)
 	}
 
 	cmd := os.Args[1]
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	// После первого сигнала возвращаем дефолтную обработку, чтобы повторный
+	// Ctrl-C мог принудительно завершить процесс.
+	go func() {
+		<-ctx.Done()
+		stop()
+	}()
 
 	// Parse flags
 	flags := flag.NewFlagSet(cmd, flag.ExitOnError)
 	forceFlag := flags.Bool("force", false, "force reload all dates (delete and reload)")
 	startFlag := flags.String("start", "", "start date (format: YYYY-MM-DD, defaults to last date in table)")
 	endFlag := flags.String("end", "", "end date (format: YYYY-MM-DD, defaults to today)")
+	watchFlag := flags.Bool("watch", false, "keep running and reload the current day periodically")
 
 	// Parse flags from os.Args[2:]
 	flags.Parse(os.Args[2:])
+
+	if *watchFlag && (*startFlag != "" || *endFlag != "") {
+		_, _ = fmt.Fprintln(os.Stderr, "--watch is not compatible with --start/--end")
+		os.Exit(1)
+	}
+
+	if *watchFlag && !watchSupported(cmd) {
+		_, _ = fmt.Fprintf(os.Stderr, "--watch is not supported for command %s\n", cmd)
+		os.Exit(1)
+	}
 
 	// Parse dates
 	var startDate, endDate time.Time
@@ -88,10 +110,12 @@ func main() {
 		ForceReload bool
 		StartDate   time.Time
 		EndDate     time.Time
+		Watch       bool
 	}{
 		ForceReload: *forceFlag,
 		StartDate:   startDate,
 		EndDate:     endDate,
+		Watch:       *watchFlag,
 	}
 
 	switch cmd {
@@ -125,8 +149,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err != nil {
+	// При отмене (Ctrl-C/SIGTERM) выходим штатно: ошибка могла прийти в виде
+	// cause контекста (напр. "interrupt signal received"), а не context.Canceled.
+	if err != nil && ctx.Err() == nil {
 		_, _ = fmt.Fprintf(os.Stderr, "error: %s\n", err.Error())
 		os.Exit(1)
 	}
+}
+
+// watchSupported сообщает, поддерживает ли команда режим --watch.
+func watchSupported(cmd string) bool {
+	switch cmd {
+	case "load", "load-supereq", "load-superfo", "load-superfx", "load-futoi",
+		"load-iss-openpositions", "load-bond-daily":
+		return true
+	}
+	return false
 }

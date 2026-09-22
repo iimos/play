@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/iimos/play/tr/cmd/watch"
 	"github.com/iimos/play/tr/moexalgo"
 	"github.com/iimos/play/tr/store"
 	"github.com/iimos/play/tr/tz"
@@ -20,6 +21,7 @@ type LoadOptions struct {
 	ForceReload bool
 	StartDate   time.Time
 	EndDate     time.Time
+	Watch       bool
 }
 
 func Load(ctx context.Context, opts LoadOptions) error {
@@ -75,7 +77,7 @@ func Load(ctx context.Context, opts LoadOptions) error {
 		if !shouldReload {
 			count, err := storage.CountOpenPositionsForDate(ctx, d)
 			if err != nil {
-				panic(err)
+				return err
 			}
 			if count > 0 {
 				fmt.Printf(": EXISTS; %d rows\n", count)
@@ -104,6 +106,31 @@ func Load(ctx context.Context, opts LoadOptions) error {
 		}
 
 		runtime.GC()
+	}
+
+	if opts.Watch {
+		var tracker watch.Tracker
+		return watch.RunHourly(ctx, func(ctx context.Context) error {
+			now := time.Now()
+			for _, d := range tracker.Days(now) {
+				err := watch.ReloadDay(ctx, "watch openpositions", d,
+					func(ctx context.Context, d time.Time) ([]*moexalgo.OpenPosition, error) {
+						assets, err := fetchAssets(ctx, moexSess)
+						if err != nil {
+							return nil, err
+						}
+						return fetchOpenPositions(ctx, moexSess, d, assets)
+					},
+					storage.DeleteOpenPositionsPartition,
+					storage.StoreOpenPositions,
+				)
+				if err != nil {
+					return err
+				}
+			}
+			tracker.Commit(now)
+			return nil
+		})
 	}
 	return nil
 }

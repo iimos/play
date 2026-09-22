@@ -10,8 +10,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/iimos/play/tr/cmd/watch"
 	"github.com/iimos/play/tr/moexalgo"
 	"github.com/iimos/play/tr/store"
+	"github.com/iimos/play/tr/tz"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -19,6 +21,9 @@ type LoadOptions struct {
 	ForceReload bool
 	StartDate   time.Time
 	EndDate     time.Time
+	// Watch включает режим постоянного обновления: после первичной загрузки
+	// каждые 5 минут целиком перезаливается текущий день.
+	Watch bool
 }
 
 func Load(ctx context.Context, opts LoadOptions) error {
@@ -47,13 +52,13 @@ func Load(ctx context.Context, opts LoadOptions) error {
 
 	if start.IsZero() {
 		if lastTableDate.IsZero() {
-			start = time.Now().AddDate(0, 0, -10)
+			start = time.Now().In(tz.MSK).AddDate(0, 0, -10)
 		} else {
 			start = lastTableDate
 		}
 	}
 	if end.IsZero() {
-		end = time.Now()
+		end = time.Now().In(tz.MSK)
 	}
 
 	start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
@@ -69,7 +74,7 @@ func Load(ctx context.Context, opts LoadOptions) error {
 		if !shouldReload {
 			count, err := storage.CountFutoiForDate(ctx, d)
 			if err != nil {
-				panic(err)
+				return err
 			}
 			if count > 0 {
 				fmt.Printf(": EXISTS; %d rows\n", count)
@@ -99,7 +104,33 @@ func Load(ctx context.Context, opts LoadOptions) error {
 
 		runtime.GC()
 	}
+
+	if opts.Watch {
+		return watchFutoi(ctx, storage, moexSess)
+	}
 	return nil
+}
+
+// watchFutoi каждые 5 минут целиком перезаливает текущий день открытых позиций.
+func watchFutoi(ctx context.Context, storage *store.Store, sess *moexalgo.Session) error {
+	var tracker watch.Tracker
+	return watch.Run5m(ctx, func(ctx context.Context) error {
+		now := time.Now()
+		for _, d := range tracker.Days(now) {
+			err := watch.ReloadDay(ctx, "watch futoi", d,
+				func(ctx context.Context, d time.Time) ([]*moexalgo.Futoi, error) {
+					return fetchFutoi(ctx, sess, d)
+				},
+				storage.DeleteFutoiPartition,
+				storage.StoreFutoi,
+			)
+			if err != nil {
+				return err
+			}
+		}
+		tracker.Commit(now)
+		return nil
+	})
 }
 
 // fetchTickers возвращает список тикеров, активных на указанную дату.

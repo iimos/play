@@ -387,28 +387,27 @@ registerIndicator<ActiveTradesPoint | null>({
       },
     }
   ],
-  calc: dataList => mapRealBars<ActiveTradesPoint>(dataList, c => ({
-    ...c,
-    val_net: (c.val_b ?? 0) - (c.val_s ?? 0),
-  })),
+  // Нет данных по покупкам/продажам (напр. дневные свечи индекса из
+  // index_candles) — не рисуем фантомную нулевую панель.
+  calc: dataList => mapRealBars<ActiveTradesPoint>(dataList, c =>
+    (c.val_b == null && c.val_s == null)
+      ? { ...c }
+      : { ...c, val_net: (c.val_b ?? 0) - (c.val_s ?? 0) }),
   createTooltipDataSource: ({ indicator, crosshair }) => {
     const legends: TooltipLegend[] = []
     const data = crosshair.dataIndex != null
       ? indicator.result[crosshair.dataIndex]
       : undefined
-    if (data == null) {
-      return { name: 'Активные сделки', calcParamsText: '', features: [], legends }
-    }
     if (data?.val_net != null) {
       legends.push({ title: 'нетто: ', value: fmtRubles(data.val_net) })
-    }
-    legends.push({ title: 'vol_b (лоты): ', value: fmtLots(data?.volume_b) })
-    legends.push({ title: 'vol_s (лоты): ', value: fmtLots(data?.volume_s) })
-    if (data?.val_b != null) {
-      legends.push({ title: 'val_b: ', value: fmtRubles(data.val_b) })
-    }
-    if (data?.val_s != null) {
-      legends.push({ title: 'val_s: ', value: fmtRubles(data.val_s) })
+      legends.push({ title: 'vol_b (лоты): ', value: fmtLots(data?.volume_b) })
+      legends.push({ title: 'vol_s (лоты): ', value: fmtLots(data?.volume_s) })
+      if (data?.val_b != null) {
+        legends.push({ title: 'val_b: ', value: fmtRubles(data.val_b) })
+      }
+      if (data?.val_s != null) {
+        legends.push({ title: 'val_s: ', value: fmtRubles(data.val_s) })
+      }
     }
     return { name: 'Активные сделки', calcParamsText: '', features: [], legends }
   },

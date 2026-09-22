@@ -92,6 +92,9 @@ export const SEC_GROUP_TO_TABLE: Record<string, string> = {
   stock_shares: 'tr.super_eq',
   stock_ppif: 'tr.super_eq',
   stock_dr: 'tr.super_eq',
+  // Индексы MOEX (IMOEX, RTSI, MOEXBMI, ...): суперсвечи синтезируются из
+  // super_eq + index_weights, ключ — indexid (а не secid).
+  stock_index: 'tr.super_index',
 }
 
 // Резолвит таблицу суперсвечей по типу инструмента. Нужно для SQL-метрик,
@@ -111,6 +114,42 @@ export async function resolveSecGroup(secid: string): Promise<string | null> {
   const rows: any[] = await res.json()
   const group: string | undefined = rows[0]?.sec_group
   return group ?? null
+}
+
+// Кэш идентификаторов индексов (sec_group='stock_index'). Инструменты-индексы
+// хранятся в отдельных таблицах (index_candles/super_index) с ключом indexid,
+// поэтому загрузку свечей/метрик надо роутить иначе, чем для бумаг.
+let indexIds: Set<string> | null = null
+let indexIdsPromise: Promise<Set<string> | null> | null = null
+
+export async function isIndexId(secid: string): Promise<boolean> {
+  if (indexIds != null) {
+    return indexIds.has(secid)
+  }
+  if (indexIdsPromise == null) {
+    indexIdsPromise = clickhouse
+      .query({
+        query: `select secid from tr.security_info FINAL where sec_group = 'stock_index'`,
+        format: "JSONEachRow",
+      })
+      .then(res => res.json<{ secid: string }>())
+      .then(rows => new Set(rows.map(r => r.secid)))
+      .catch(err => {
+        // Транзиентный сбой справочника не должен ломать загрузку обычных бумаг:
+        // считаем инструмент не-индексом и попробуем перезапросить позже.
+        console.error('Не удалось получить список индексов:', err)
+        return null
+      })
+  }
+  const loaded = await indexIdsPromise
+  if (loaded == null) {
+    // Сбрасываем неудачный промис, чтобы следующая попытка перезапросила список
+    // (сам indexIds при этом остаётся null).
+    indexIdsPromise = null
+    return false
+  }
+  indexIds = loaded
+  return indexIds.has(secid)
 }
 
 // Начало окна загрузки: `bars` свечей интервала `interval` назад от `till`.
@@ -214,7 +253,106 @@ export async function fetchSuperCandles(ticker: string, till: Date, interval: st
   })
 }
 
+// Свечи индекса. Днёвки/недели/месяцы берём из tr.index_candles (interval=24;
+// у индексов volume=0, а оборот по бумагам индекса лежит в value, что мы и
+// кладём в volume, т.к. для индекса «объём» — это оборот в ₽). Внутридневные
+// интервалы — из tr.super_index (5-минутные синтезированные суперсвечи с
+// покупками/продажами и метриками заявок/стакана).
+export async function fetchIndexCandles(indexid: string, till: Date, interval: string, bars = 6000): Promise<SuperCandle[]> {
+  // super_index — 5-минутный, минутного интервала у индексов нет.
+  if (interval === IntervalType.Minute) {
+    return []
+  }
+  if (interval === IntervalType.Day || interval === IntervalType.Week || interval === IntervalType.Month) {
+    return fetchIndexDailyCandles(indexid, till, interval, bars)
+  }
+  return fetchIndexSuperCandles(indexid, till, interval, bars)
+}
+
+async function fetchIndexDailyCandles(indexid: string, till: Date, interval: string, bars: number): Promise<SuperCandle[]> {
+  const from = windowFrom(till, interval, bars)
+  const res = await clickhouse.query({
+    query: `
+    select toStartOfInterval(time, interval '${interval2sql(interval)}') timeslot,
+           argMin(open, time) open,
+           max(high) high,
+           min(low) low,
+           argMax(close, time) close,
+           sum(value) value
+    from tr.index_candles
+    where indexid='${indexid}'
+      and interval = 24
+      and time >= ${sqlWindowStart(from, interval)}
+      and time < parseDateTimeBestEffort('${till.toISOString()}')
+    group by timeslot
+    order by timeslot asc`,
+    format: "JSONEachRow",
+  })
+  const rows: any[] = await res.json()
+  return rows.map(x => ({
+    timestamp: parseMskTime(x.timeslot),
+    open: Number(x.open),
+    high: Number(x.high),
+    low: Number(x.low),
+    close: Number(x.close),
+    volume: Number(x.value),
+  }))
+}
+
+async function fetchIndexSuperCandles(indexid: string, till: Date, interval: string, bars: number): Promise<SuperCandle[]> {
+  const from = windowFrom(till, interval, bars)
+  const res = await clickhouse.query({
+    query: `
+    select toStartOfInterval(time, interval '${interval2sql(interval)}') timeslot,
+           argMin(pr_open, time) open,
+           max(pr_high) high,
+           min(pr_low) low,
+           argMax(pr_close, time) close,
+           sum(val) volume,
+           sum(vol_b) volume_b,
+           sum(vol_s) volume_s,
+           sum(val_b) val_b_sum,
+           sum(val_s) val_s_sum,
+           sum(pr_vwap_b * val_b) / nullIf(sum(val_b), 0) pr_vwap_b,
+           sum(pr_vwap_s * val_s) / nullIf(sum(val_s), 0) pr_vwap_s
+    from tr.super_index
+    where indexid='${indexid}'
+      and time >= ${sqlWindowStart(from, interval)}
+      and time < parseDateTimeBestEffort('${till.toISOString()}')
+      and pr_open > 0
+    group by timeslot
+    order by timeslot asc`,
+    format: "JSONEachRow",
+  })
+  const rows: any[] = await res.json()
+  return rows.map(x => {
+    const candle: SuperCandle = {
+      timestamp: parseMskTime(x.timeslot),
+      open: Number(x.open),
+      high: Number(x.high),
+      low: Number(x.low),
+      close: Number(x.close),
+      // Оборот по бумагам индекса — это «объём индекса».
+      volume: Number(x.volume),
+      volume_b: Number(x.volume_b),
+      volume_s: Number(x.volume_s),
+      val_b: Number(x.val_b_sum),
+      val_s: Number(x.val_s_sum),
+    }
+    if (x.pr_vwap_b != null) {
+      candle.pr_vwap_b = Number(x.pr_vwap_b)
+    }
+    if (x.pr_vwap_s != null) {
+      candle.pr_vwap_s = Number(x.pr_vwap_s)
+    }
+    return candle
+  })
+}
+
 export async function fetchCandles(ticker: string, till: Date, interval: string, bars = 6000): Promise<SuperCandle[]> {
+  if (await isIndexId(ticker)) {
+    return fetchIndexCandles(ticker, till, interval, bars)
+  }
   if (notSuperCandles.get(ticker) !== true && interval !== IntervalType.Minute) {
     return fetchSuperCandles(ticker, till, interval, bars)
   }
@@ -256,6 +394,10 @@ export async function fetchCandles(ticker: string, till: Date, interval: string,
 // timeslot, как и у свечей). Таблица резолвится по типу инструмента; если тип
 // неизвестен — перебираем таблицы, пропуская те, где нет нужных колонок.
 export async function fetchMetric(ticker: string, till: Date, interval: string, expression: string, bars = 6000): Promise<MetricPoint[]> {
+  // Индексы живут в tr.super_index с ключом indexid — отдельный запрос.
+  if (await isIndexId(ticker)) {
+    return fetchIndexMetric(ticker, till, interval, expression, bars)
+  }
   const from = windowFrom(till, interval, bars)
   const tables = [await resolveSuperTable(ticker), 'tr.super_eq', 'tr.super_fo', 'tr.super_fx']
     .filter((v, i, a) => v != null && a.indexOf(v) === i) as string[]
@@ -296,6 +438,30 @@ export async function fetchMetric(ticker: string, till: Date, interval: string, 
     }
   }
   return []
+}
+
+// SQL-метрика по индексу: агрегат над сырыми колонками tr.super_index с
+// группировкой по timeslot (та же семантика, что у fetchMetric для бумаг).
+async function fetchIndexMetric(indexid: string, till: Date, interval: string, expression: string, bars: number): Promise<MetricPoint[]> {
+  const from = windowFrom(till, interval, bars)
+  const query = `
+    select toStartOfInterval(time, interval '${interval2sql(interval)}') timeslot,
+           (${expression}) as value
+    from tr.super_index
+    where indexid='${indexid}'
+      and time >= ${sqlWindowStart(from, interval)}
+      and time < parseDateTimeBestEffort('${till.toISOString()}')
+      and pr_open > 0
+    group by timeslot
+    order by timeslot asc`
+  const res = await clickhouse.query({ query, format: "JSONEachRow" })
+  const rows: any[] = await res.json()
+  return rows
+    .filter(r => r.value != null && Number.isFinite(Number(r.value)))
+    .map(r => ({
+      timestamp: parseMskTime(r.timeslot),
+      value: Number(r.value),
+    }))
 }
 
 // Доля инструмента в суммарном обороте всех акций рынка (в рублях) по каждому
@@ -347,6 +513,8 @@ export async function fetchLatestTime(): Promise<Date> {
               select max(time) time from tr.super_fo
               union all
               select max(time) time from tr.super_fx
+              union all
+              select max(time) time from tr.super_index
             )`,
     format: "JSONEachRow",
   })  

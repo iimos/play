@@ -20,6 +20,7 @@ interface SecurityOption {
 const selectStyles = { menu: (styles: object) => ({ ...styles, zIndex: 999 }) }
 
 const groupOrder: { key: string; label: string }[] = [
+  { key: 'stock_index', label: 'Индексы' },
   { key: 'stock_shares', label: 'Акции' },
   { key: 'futures_forts', label: 'Фьючерсы' },
   { key: 'currency_selt', label: 'Валюты' },

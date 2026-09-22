@@ -552,26 +552,47 @@ export interface Security {
   secid: string
   shortname: string
   name: string
+  contract_name: string
   emitent_title: string
   sec_type: string
   sec_group: string
+  last_tradedate: string
+}
+
+interface SecurityRow {
+  secid: string
+  shortname: string
+  name: string
+  contract_name: string
+  emitent_title: string
+  sec_type: string
+  sec_group: string
+  last_tradedate: string | null
 }
 
 export async function fetchSecurities(): Promise<Security[]> {
+  // Истёкшие фьючерсы (last_tradedate в прошлом) не отдаём. Дату сравниваем на
+  // сервере (today() в МСК), чтобы граница не зависела от таймзоны клиента.
+  // Бессрочные контракты имеют дату в далёком будущем и остаются.
   const res = await clickhouse.query({
-    query: `select secid, shortname, name, emitent_title, sec_type, sec_group
+    query: `select secid, shortname, name, contract_name, emitent_title, sec_type, sec_group, last_tradedate
             from tr.security_info FINAL
+            where sec_group != 'futures_forts'
+               or last_tradedate is null
+               or last_tradedate >= today()
             order by secid`,
     format: "JSONEachRow",
   })  
-  const rows: any[] = await res.json()
+  const rows = await res.json<SecurityRow>()
   return rows.map(x => ({
     secid: x.secid ?? '',
     shortname: x.shortname ?? '',
     name: x.name ?? '',
+    contract_name: x.contract_name ?? '',
     emitent_title: x.emitent_title ?? '',
     sec_type: x.sec_type ?? '',
     sec_group: x.sec_group ?? '',
+    last_tradedate: x.last_tradedate ?? '',
   }))
 }
 

@@ -12,7 +12,9 @@ interface SecurityOption {
   secid: string
   shortname: string
   name: string
+  contract_name: string
   emitent_title: string
+  last_tradedate: string
 }
 
 const selectStyles = { menu: (styles: object) => ({ ...styles, zIndex: 999 }) }
@@ -30,7 +32,9 @@ function toOption(s: Security): SecurityOption {
     secid: s.secid,
     shortname: s.shortname,
     name: s.name,
+    contract_name: s.contract_name,
     emitent_title: s.emitent_title,
+    last_tradedate: s.last_tradedate,
   }
 }
 
@@ -52,6 +56,19 @@ export default function TickerSelector({ onSelect }: Props) {
       if (!byGroup.has(key)) byGroup.set(key, [])
       byGroup.get(key)!.push(toOption(s))
     }
+
+    // Фьючерсы — по сроку исполнения: ближайший контракт сверху.
+    // Бессрочные (last_tradedate в далёком будущем) окажутся в конце.
+    byGroup.get('futures_forts')?.sort((a, b) => {
+      if (!a.last_tradedate || !b.last_tradedate) {
+        if (a.last_tradedate === b.last_tradedate) return a.secid.localeCompare(b.secid)
+        return a.last_tradedate ? -1 : 1
+      }
+      if (a.last_tradedate !== b.last_tradedate) {
+        return a.last_tradedate < b.last_tradedate ? -1 : 1
+      }
+      return a.secid.localeCompare(b.secid)
+    })
 
     const grouped = groupOrder
       .map(g => ({ label: g.label, options: byGroup.get(g.key) ?? [] }))
@@ -79,13 +96,17 @@ export default function TickerSelector({ onSelect }: Props) {
           d.secid.toLowerCase().includes(q) ||
           d.shortname.toLowerCase().includes(q) ||
           d.name.toLowerCase().includes(q) ||
+          d.contract_name.toLowerCase().includes(q) ||
           d.emitent_title.toLowerCase().includes(q)
         )
       }}
       formatOptionLabel={option => (
         <span>
           <span style={{ fontWeight: 600 }}>{option.secid}</span>
-          {option.shortname && <span style={{ color: '#666' }}> · {option.shortname}</span>}
+          {option.contract_name && <span style={{ color: '#666' }}> · {option.contract_name}</span>}
+          {option.shortname && (
+            <span style={{ color: option.contract_name ? '#999' : '#666' }}> · {option.shortname}</span>
+          )}
         </span>
       )}
     />

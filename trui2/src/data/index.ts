@@ -113,8 +113,23 @@ export async function resolveSecGroup(secid: string): Promise<string | null> {
   return group ?? null
 }
 
-export async function fetchSuperCandles(ticker: string, till: Date, interval: string): Promise<SuperCandle[]> {
-  const from = new Date(till.getTime() - 6000*intervalMs(interval))
+// Начало окна загрузки: `bars` свечей интервала `interval` назад от `till`.
+// Для начальной загрузки берём 6000 баров, для периодического обновления —
+// только несколько последних.
+function windowFrom(till: Date, interval: string, bars: number): Date {
+  return new Date(till.getTime() - bars*intervalMs(interval))
+}
+
+// Начало окна в SQL, выровненное по границе интервала. Без выравнивания самый
+// старый бакет попадает в выборку частичным и перезаписывает уже загруженное
+// полное значение метрики/OI/доли рынка (Map.set по timestamp), т.к. при доборе
+// вперёд результаты мержатся, а не заменяются целиком.
+function sqlWindowStart(from: Date, interval: string): string {
+  return `toStartOfInterval(parseDateTimeBestEffort('${from.toISOString()}'), interval '${interval2sql(interval)}')`
+}
+
+export async function fetchSuperCandles(ticker: string, till: Date, interval: string, bars = 6000): Promise<SuperCandle[]> {
+  const from = windowFrom(till, interval, bars)
 
   let rows: any[] = []
 
@@ -145,7 +160,7 @@ export async function fetchSuperCandles(ticker: string, till: Date, interval: st
     query += `
     from ${table}
     where secid='${ticker}' 
-      and time >= parseDateTimeBestEffort('${from.toISOString()}')
+      and time >= ${sqlWindowStart(from, interval)}
       and time < parseDateTimeBestEffort('${till.toISOString()}')
       and pr_open > 0 -- filter out empty rows
     group by timeslot
@@ -199,12 +214,12 @@ export async function fetchSuperCandles(ticker: string, till: Date, interval: st
   })
 }
 
-export async function fetchCandles(ticker: string, till: Date, interval: string): Promise<SuperCandle[]> {
+export async function fetchCandles(ticker: string, till: Date, interval: string, bars = 6000): Promise<SuperCandle[]> {
   if (notSuperCandles.get(ticker) !== true && interval !== IntervalType.Minute) {
-    return fetchSuperCandles(ticker, till, interval)
+    return fetchSuperCandles(ticker, till, interval, bars)
   }
 
-  const from = new Date(till.getTime() - 6000*intervalMs(interval))
+  const from = windowFrom(till, interval, bars)
 
   const res = await clickhouse.query({
     query: `
@@ -216,7 +231,7 @@ export async function fetchCandles(ticker: string, till: Date, interval: string)
            sum(volume) volume
     from tr.candles
     where ticker='${ticker}' 
-      and time >= parseDateTimeBestEffort('${from.toISOString()}')
+      and time >= ${sqlWindowStart(from, interval)}
       and time < parseDateTimeBestEffort('${till.toISOString()}')
     group by timeslot
     order by timeslot asc`,
@@ -240,8 +255,8 @@ export async function fetchCandles(ticker: string, till: Date, interval: string)
 // с его алиасами. Выражение — агрегат над сырыми колонками (группировка по
 // timeslot, как и у свечей). Таблица резолвится по типу инструмента; если тип
 // неизвестен — перебираем таблицы, пропуская те, где нет нужных колонок.
-export async function fetchMetric(ticker: string, till: Date, interval: string, expression: string): Promise<MetricPoint[]> {
-  const from = new Date(till.getTime() - 6000*intervalMs(interval))
+export async function fetchMetric(ticker: string, till: Date, interval: string, expression: string, bars = 6000): Promise<MetricPoint[]> {
+  const from = windowFrom(till, interval, bars)
   const tables = [await resolveSuperTable(ticker), 'tr.super_eq', 'tr.super_fo', 'tr.super_fx']
     .filter((v, i, a) => v != null && a.indexOf(v) === i) as string[]
 
@@ -252,7 +267,7 @@ export async function fetchMetric(ticker: string, till: Date, interval: string, 
            (${expression}) as value
     from ${table}
     where secid='${ticker}' 
-      and time >= parseDateTimeBestEffort('${from.toISOString()}')
+      and time >= ${sqlWindowStart(from, interval)}
       and time < parseDateTimeBestEffort('${till.toISOString()}')
       and pr_open > 0
     group by timeslot
@@ -286,8 +301,8 @@ export async function fetchMetric(ticker: string, till: Date, interval: string, 
 // Доля инструмента в суммарном обороте всех акций рынка (в рублях) по каждому
 // таймслоту выбранного интервала. value ∈ [0..1]. Инструменты вне stock_shares
 // не покрываются — вернётся пустой список.
-export async function fetchMarketShares(ticker: string, till: Date, interval: string): Promise<MetricPoint[]> {
-  const from = new Date(till.getTime() - 6000*intervalMs(interval))
+export async function fetchMarketShares(ticker: string, till: Date, interval: string, bars = 6000): Promise<MetricPoint[]> {
+  const from = windowFrom(till, interval, bars)
   const res = await clickhouse.query({
     query: `
     select p.timeslot timeslot, p.val / t.total_val as share
@@ -297,7 +312,7 @@ export async function fetchMarketShares(ticker: string, till: Date, interval: st
              sum(val) val
       from tr.super_eq
       where secid = '${ticker}'
-        and time >= parseDateTimeBestEffort('${from.toISOString()}')
+        and time >= ${sqlWindowStart(from, interval)}
         and time < parseDateTimeBestEffort('${till.toISOString()}')
         and pr_open > 0
       group by timeslot, secid
@@ -307,7 +322,7 @@ export async function fetchMarketShares(ticker: string, till: Date, interval: st
              sum(val) total_val
       from tr.super_eq
       where secid in (select secid from tr.security_info FINAL where sec_group = 'stock_shares')
-        and time >= parseDateTimeBestEffort('${from.toISOString()}')
+        and time >= ${sqlWindowStart(from, interval)}
         and time < parseDateTimeBestEffort('${till.toISOString()}')
         and pr_open > 0
       group by timeslot
@@ -433,7 +448,7 @@ function fizOIPriceSubquery(futoiTicker: string, from: Date, till: Date, interva
         from tr.super_fo
         where match(secid, '^${futoiTicker}([FGHJKMNQUVXZ][0-9])?$')
           and pr_close > 0
-          and time >= parseDateTimeBestEffort('${from.toISOString()}')
+          and time >= ${sqlWindowStart(from, interval)}
           and time < parseDateTimeBestEffort('${till.toISOString()}')
         group by timeslot, secid
       )
@@ -468,7 +483,7 @@ async function fetchFizOIFromFutoi(futoiTicker: string, from: Date, till: Date, 
                argMax(pos_short, time) as pos_short
         from tr.futoi
         where ticker='${futoiTicker}'
-          and time >= parseDateTimeBestEffort('${from.toISOString()}')
+          and time >= ${sqlWindowStart(from, interval)}
           and time < parseDateTimeBestEffort('${till.toISOString()}')
         group by timeslot, clgroup
       )
@@ -519,7 +534,7 @@ async function fetchFizOIFromIssOpenPositions(asset: string, futoiTicker: string
                argMax(open_position_short, time) as open_position_short
         from tr.iss_openpositions
         where asset='${asset}'
-          and time >= parseDateTimeBestEffort('${from.toISOString()}')
+          and time >= ${sqlWindowStart(from, interval)}
           and time < parseDateTimeBestEffort('${till.toISOString()}')
         group by timeslot, clgroup
       )
@@ -538,8 +553,8 @@ async function fetchFizOIFromIssOpenPositions(asset: string, futoiTicker: string
 // Открытый интерес физлиц по фьючерсам. Сначала пробуем tr.futoi (5-минутные
 // срезы). Если по активу данных нет — падаем в tr.iss_openpositions (только
 // дневные срезы).
-export async function fetchFizOI(futoiTicker: string, asset: string | null, till: Date, interval: string): Promise<FizOIResult> {
-  const from = new Date(till.getTime() - 6000*intervalMs(interval))
+export async function fetchFizOI(futoiTicker: string, asset: string | null, till: Date, interval: string, bars = 6000): Promise<FizOIResult> {
+  const from = windowFrom(till, interval, bars)
 
   const data = await fetchFizOIFromFutoi(futoiTicker, from, till, interval)
   if (data.length > 0 || asset == null) {

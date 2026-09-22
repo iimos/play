@@ -59,6 +59,17 @@ const DEFAULT_ENABLED: Record<VolumeIndicatorId, boolean> = {
   pr_vwap_spread: true,
 }
 
+// Периодическая подгрузка новых свечей: как часто опрашиваем источник и сколько
+// последних баров перезапрашиваем (перекрытие нужно, чтобы обновлялась ещё
+// формирующаяся крайняя свеча).
+const REALTIME_POLL_MS = 10_000
+const REALTIME_WINDOW_BARS = 4
+// Если с последней загруженной свечи прошло больше баров, чем это, считаем, что
+// вкладка долго не опрашивалась (сон/троттлинг), и перезагружаем окно целиком.
+// Это и бэкфиллит пропущенные свечи, и не даёт пошагово пересчитывать десятки
+// тысяч баров-разрывов (что подвешивало бы UI).
+const REALTIME_MAX_APPEND_BARS = 200
+
 // OI физлиц (FUTOI) по инструменту, заполняется перед созданием индикатора fiz_oi
 let fizOIMap = new Map<number, FizOIPoint>()
 // Дневные срезы (iss_openpositions) для forward-fill на внутридневных интервалах.
@@ -1236,11 +1247,12 @@ export default function ChartType () {
       }
     }
 
-    // Докрутка OI вперёд при подгрузке истории.
-    async function loadOIForward(till: Date) {
+    // Докрутка OI вперёд при подгрузке истории (bars ограничивает окно при
+    // периодическом обновлении).
+    async function loadOIForward(till: Date, bars?: number) {
       if (!futoiTickerRef.current) return
       try {
-        const oiResult = await fetchFizOI(futoiTickerRef.current, futoiAssetRef.current, till, interval)
+        const oiResult = await fetchFizOI(futoiTickerRef.current, futoiAssetRef.current, till, interval, bars)
         if (!cancelled) {
           applyFizOIResult(oiResult, false)
         }
@@ -1263,11 +1275,12 @@ export default function ChartType () {
       }
     }
 
-    // Докрутка SQL-метрик вперёд при подгрузке истории.
-    async function loadMetricsForward(till: Date) {
+    // Докрутка SQL-метрик вперёд при подгрузке истории (bars ограничивает окно
+    // при периодическом обновлении).
+    async function loadMetricsForward(till: Date, bars?: number) {
       for (const m of metrics) {
         try {
-          const points = await fetchMetric(ticker, till, interval, m.expression)
+          const points = await fetchMetric(ticker, till, interval, m.expression, bars)
           if (cancelled) return
           appendMetricValues(m.key, points)
         } catch (error) {
@@ -1279,7 +1292,7 @@ export default function ChartType () {
     // Доля инструмента в обороте всех акций. Считается только для акций
     // (sec_group='stock_shares') и не на 1m: исходные суперсвечи 5-минутные,
     // поэтому минутные таймслоты не совпадут со свечами графика.
-    async function loadMarketShares(till: Date) {
+    async function loadMarketShares(till: Date, bars?: number) {
       try {
         if (interval === IntervalType.Minute) {
           setStockSharesAvailable(false)
@@ -1290,11 +1303,20 @@ export default function ChartType () {
         const available = group === 'stock_shares'
         setStockSharesAvailable(available)
         if (!available) return
-        const points = await fetchMarketShares(ticker, till, interval)
+        const points = await fetchMarketShares(ticker, till, interval, bars)
         if (cancelled) return
         applyMarketShares(points)
       } catch (error) {
         console.error('Ошибка загрузки долей рынка:', error)
+      }
+    }
+
+    // Таймер периодической подгрузки новых свечей (заводится в subscribeBar).
+    let pollTimer: ReturnType<typeof setTimeout> | null = null
+    const stopPolling = () => {
+      if (pollTimer !== null) {
+        clearTimeout(pollTimer)
+        pollTimer = null
       }
     }
 
@@ -1316,11 +1338,17 @@ export default function ChartType () {
               loadMarketShares(latestTime).then(refreshVolumeHighlights)
               if (cancelled) return
               callback(withGaps(candles, interval), { forward: true, backward: false })
-              if (chart.current) {
-                syncPeriodSeparators(chart.current, createdSeparators)
-                syncWeekendHighlights(chart.current, weekendHighlightStateRef.current)
+              // Отрисовка не должна отклонять промис: иначе .catch ниже вызвал
+              // бы callback повторно и завёл вторую цепочку опроса.
+              try {
+                if (chart.current) {
+                  syncPeriodSeparators(chart.current, createdSeparators)
+                  syncWeekendHighlights(chart.current, weekendHighlightStateRef.current)
+                }
+                refreshVolumeHighlights()
+              } catch (error) {
+                console.error('Ошибка отрисовки:', error)
               }
-              refreshVolumeHighlights()
             })
             .catch(error => {
               console.error('Ошибка загрузки данных:', error)
@@ -1340,11 +1368,15 @@ export default function ChartType () {
               }
               if (cancelled) return
               callback(withGaps(candles, interval, timestamp), { forward: candles.length !== 0, backward: false })
-              if (chart.current) {
-                syncPeriodSeparators(chart.current, createdSeparators)
-                syncWeekendHighlights(chart.current, weekendHighlightStateRef.current)
+              try {
+                if (chart.current) {
+                  syncPeriodSeparators(chart.current, createdSeparators)
+                  syncWeekendHighlights(chart.current, weekendHighlightStateRef.current)
+                }
+                refreshVolumeHighlights()
+              } catch (error) {
+                console.error('Ошибка отрисовки:', error)
               }
-              refreshVolumeHighlights()
             })
             .catch(error => {
               console.error('Ошибка загрузки данных:', error)
@@ -1357,10 +1389,104 @@ export default function ChartType () {
           callback([], { forward: false, backward: false })
         }
       },
+      // KLineChart вызывает subscribeBar сразу после начальной загрузки и
+      // unsubscribeBar — при setDataLoader. При смене тикера/интервала эффект
+      // пересоздаёт чарт, а при dispose unsubscribeBar не вызывается вовсе —
+      // в обоих случаях таймер гасит cleanup эффекта. Пока
+      // подписка активна — периодически тянем хвост свечей и доливаем их через
+      // updateBar: бар с существующим timestamp заменяет последнюю свечу, с
+      // новым — добавляется. Перед доливкой обновляем OI/метрики/доли, иначе
+      // индикаторы посчитают новые бары по старым данным.
+      subscribeBar: ({ callback: updateBar }) => {
+        stopPolling()
+        const schedule = () => {
+          if (!cancelled) {
+            pollTimer = setTimeout(poll, REALTIME_POLL_MS)
+          }
+        }
+        const poll = async () => {
+          // В фоновой вкладке не опрашиваем; после возврата следующий тик
+          // сам решит, нужна ли полная перезагрузка (см. REALTIME_MAX_APPEND_BARS).
+          if (cancelled || document.hidden) {
+            schedule()
+            return
+          }
+          let reloaded = false
+          try {
+            const till = new Date()
+            const step = intervalMs(interval)
+            const c = chart.current
+            // Последняя загруженная реальная свеча — к ней пристраиваем новые,
+            // чтобы не потерять разрывы на неторговых днях.
+            let anchor: SuperCandle | null = null
+            if (c) {
+              const existing = c.getDataList() as SuperCandle[]
+              for (let i = existing.length - 1; i >= 0; i--) {
+                if (!isGapBar(existing[i])) { anchor = existing[i]; break }
+              }
+            }
+
+            // Опорный момент — не стенные часы, а последняя доступная свеча
+            // (её даёт пробный запрос хвоста). Иначе в неторговое время
+            // (ночь/выходные/холл) разрыв от anchor до "сейчас" всегда больше
+            // порога, и resetData зацикливается без задержки.
+            let candles = await fetchCandles(ticker, till, interval, REALTIME_WINDOW_BARS)
+            if (cancelled) return
+            if (candles.length === 0) return
+            const newestTs = candles[candles.length - 1].timestamp
+            const spanBars = anchor != null
+              ? Math.ceil((newestTs - anchor.timestamp) / step) + 1
+              : REALTIME_WINDOW_BARS
+
+            if (anchor != null && spanBars > REALTIME_MAX_APPEND_BARS) {
+              // Долгая пауза с реальным пропуском рыночных данных (сон/
+              // троттлинг): перезагружаем окно целиком, чтобы догрузить
+              // пропущенные свечи и разрывы одним batch-коллбэком.
+              c?.resetData()
+              reloaded = true
+              return
+            }
+
+            const bars = Math.max(REALTIME_WINDOW_BARS, spanBars)
+            if (spanBars > REALTIME_WINDOW_BARS) {
+              candles = await fetchCandles(ticker, till, interval, bars)
+              if (cancelled) return
+              if (candles.length === 0) return
+            }
+
+            await loadOIForward(till, bars)
+            await loadMetricsForward(till, bars)
+            await loadMarketShares(till, bars)
+            if (cancelled) return
+            if (c) {
+              const seq = anchor != null ? withGaps([anchor, ...candles], interval) : candles
+              for (let i = anchor != null ? 1 : 0; i < seq.length; i++) {
+                updateBar(seq[i])
+              }
+              syncPeriodSeparators(c, createdSeparators)
+              syncWeekendHighlights(c, weekendHighlightStateRef.current)
+            }
+            refreshVolumeHighlights()
+          } catch (error) {
+            console.error('Ошибка обновления данных:', error)
+          } finally {
+            if (!reloaded) {
+              schedule()
+            }
+          }
+        }
+        // Первый тик — с той же задержкой: после resetData это гарантирует
+        // backoff и исключает зацикливание, а сразу после init опрос избыточен.
+        schedule()
+      },
+      unsubscribeBar: () => {
+        stopPolling()
+      },
     })
 
     return () => {
       cancelled = true
+      stopPolling()
       if (chart.current) {
         chart.current.unsubscribeAction('onVisibleRangeChange', resyncVisibleHighlights)
         chart.current.unsubscribeAction('onCrosshairChange', onCrosshairChange)

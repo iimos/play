@@ -322,3 +322,104 @@ CREATE TABLE tr.security_info (
 ) ENGINE = ReplacingMergeTree(updated_at)
 COMMENT 'Справочник метаданных ценных бумаг Московской биржи'
 ORDER BY secid;
+
+CREATE TABLE tr.index_candles (
+    indexid  LowCardinality(String) COMMENT 'Код индекса (IMOEX, RTSI, MOEXBMI, ...)',
+    interval UInt16 COMMENT 'Интервал свечи в минутах (1, 10, 60, 24)',
+    time     DateTime CODEC(DoubleDelta(1), LZ4) COMMENT 'Начало интервала',
+    end      DateTime COMMENT 'Конец интервала',
+    open     Float64 COMMENT 'Значение индекса на открытие интервала',
+    close    Float64 COMMENT 'Значение индекса на закрытие интервала',
+    high     Float64 COMMENT 'Максимальное значение индекса',
+    low      Float64 COMMENT 'Минимальное значение индекса',
+    value    Float64 COMMENT 'Оборот по бумагам индекса, ₽',
+    volume   Float64 COMMENT 'Объем в лотах (у индексов 0)'
+) ENGINE = MergeTree()
+PARTITION BY Date(time)
+ORDER BY (indexid, interval, time)
+COMMENT 'Свечи индексов MOEX (сам индекс, а не фьючерс): OHLC + оборот';
+
+CREATE TABLE tr.index_weights (
+    indexid            LowCardinality(String) COMMENT 'Код индекса (IMOEX, RTSI, MOEXBMI, ...)',
+    tradedate          Date COMMENT 'Торговая дата',
+    ticker             LowCardinality(String) COMMENT 'Тикер бумаги в индексе',
+    shortname          String COMMENT 'Краткое наименование бумаги',
+    secid              LowCardinality(String) COMMENT 'Код бумаги (secid)',
+    weight             Float64 COMMENT 'Вес бумаги в индексе, %',
+    tradingsession     Int32 COMMENT 'Код торговой сессии (ISS tradingsession)',
+    trade_session_date Date COMMENT 'Дата торговой сессии'
+) ENGINE = MergeTree()
+PARTITION BY tradedate
+ORDER BY (indexid, tradedate, ticker)
+COMMENT 'Веса бумаг в индексах MOEX по дням (ISS index analytics)';
+
+CREATE TABLE tr.super_index (
+      indexid       LowCardinality(String) COMMENT 'Код индекса (IMOEX, RTSI, MOEXBMI, ...)',
+      time          DateTime CODEC(DoubleDelta(1), LZ4) COMMENT 'Начало 5-минутного интервала',
+      ref_close     Float64 COMMENT 'Уровень индекса-якоря (закрытие предыдущего торгового дня)',
+
+      -- tradestats: уровень индекса (синтез) и агрегаты по бумагам
+      pr_open            Float32 COMMENT 'Уровень индекса на открытие интервала',
+      pr_high            Float32 COMMENT 'Максимум индекса за интервал',
+      pr_low             Float32 COMMENT 'Минимум индекса за интервал',
+      pr_close           Float32 COMMENT 'Уровень индекса на закрытие интервала',
+      pr_std             Float32 COMMENT 'Взвешенная по весам волатильность бумаг, %',
+      vol                UInt64 COMMENT 'Суммарный объем в лотах',
+      val                Float64 COMMENT 'Суммарный оборот в рублях',
+      trades             UInt64 COMMENT 'Суммарное количество сделок',
+      pr_vwap            Float32 COMMENT 'Уровень индекса, построенный по средневзвешенным ценам бумаг',
+      pr_change          Float32 COMMENT 'Изменение уровня индекса за интервал, % = 100*(pr_close-pr_open)/pr_open',
+      trades_b           UInt64 COMMENT 'Суммарное количество сделок на покупку',
+      trades_s           UInt64 COMMENT 'Суммарное количество сделок на продажу',
+      val_b              Float64 COMMENT 'Суммарный объем покупок в рублях',
+      val_s              Float64 COMMENT 'Суммарный объем продаж в рублях',
+      vol_b              UInt64 COMMENT 'Суммарный объем покупок в лотах',
+      vol_s              UInt64 COMMENT 'Суммарный объем продаж в лотах',
+      disb               Float32 COMMENT 'Дисбаланс покупок/продаж по индексу (1 — только покупки, -1 — только продажи)',
+      pr_vwap_b          Float32 COMMENT 'Взвешенная средневзвешенная цена покупок',
+      pr_vwap_s          Float32 COMMENT 'Взвешенная средневзвешенная цена продаж',
+
+      -- obstats: метрики стакана, взвешенные по обороту бумаг
+      spread_bbo         Float32 COMMENT 'Спред лучших цен (best ask − best bid), базисные пункты',
+      spread_lv10        Float32 COMMENT 'Спред на 10-м уровне стакана, базисные пункты',
+      spread_1mio        Float32 COMMENT 'Спред на сделку в 1 млн ₽, базисные пункты',
+      levels_b           UInt64 COMMENT 'Суммарное количество уровней цен на покупку',
+      levels_s           UInt64 COMMENT 'Суммарное количество уровней цен на продажу',
+      imbalance_vol_bbo  Float32 COMMENT 'Дисбаланс объема по лучшим ценам (bid vs ask)',
+      imbalance_val_bbo  Float32 COMMENT 'Дисбаланс объема в рублях по лучшим ценам',
+      imbalance_vol      Float32 COMMENT 'Дисбаланс объема по всему стакану',
+      imbalance_val      Float32 COMMENT 'Дисбаланс объема в рублях по всему стакану',
+      vwap_b             Float32 COMMENT 'Взвешенная средневзвешенная цена заявок на покупку по всему стакану',
+      vwap_s             Float32 COMMENT 'Взвешенная средневзвешенная цена заявок на продажу по всему стакану',
+      vwap_b_1mio        Float32 COMMENT 'Взвешенная средневзвешенная цена покупки на сумму 1 млн ₽',
+      vwap_s_1mio        Float32 COMMENT 'Взвешенная средневзвешенная цена продажи на сумму 1 млн ₽',
+
+      -- orderstats: метрики заявок, суммы по бумагам индекса
+      put_orders_b       UInt64 COMMENT 'Суммарное количество заявок на покупку, выставленных в стакан',
+      put_orders_s       UInt64 COMMENT 'Суммарное количество заявок на продажу, выставленных в стакан',
+      put_val_b          Float64 COMMENT 'Суммарная стоимость выставленных заявок на покупку, ₽',
+      put_val_s          Float64 COMMENT 'Суммарная стоимость выставленных заявок на продажу, ₽',
+      put_vol_b          UInt64 COMMENT 'Суммарный объем выставленных заявок на покупку, лоты',
+      put_vol_s          UInt64 COMMENT 'Суммарный объем выставленных заявок на продажу, лоты',
+      put_vwap_b         Float32 COMMENT 'Взвешенная средневзвешенная цена выставленных заявок на покупку',
+      put_vwap_s         Float32 COMMENT 'Взвешенная средневзвешенная цена выставленных заявок на продажу',
+      put_vol            UInt64 COMMENT 'Суммарный объем выставленных заявок, лоты',
+      put_val            Float64 COMMENT 'Суммарная стоимость выставленных заявок, ₽',
+      put_orders         UInt64 COMMENT 'Суммарное количество выставленных заявок',
+      cancel_orders_b    UInt64 COMMENT 'Суммарное количество снятых заявок на покупку',
+      cancel_orders_s    UInt64 COMMENT 'Суммарное количество снятых заявок на продажу',
+      cancel_val_b       Float64 COMMENT 'Суммарная стоимость снятых заявок на покупку, ₽',
+      cancel_val_s       Float64 COMMENT 'Суммарная стоимость снятых заявок на продажу, ₽',
+      cancel_vol_b       UInt64 COMMENT 'Суммарный объем снятых заявок на покупку, лоты',
+      cancel_vol_s       UInt64 COMMENT 'Суммарный объем снятых заявок на продажу, лоты',
+      cancel_vwap_b      Float32 COMMENT 'Взвешенная средневзвешенная цена снятых заявок на покупку',
+      cancel_vwap_s      Float32 COMMENT 'Взвешенная средневзвешенная цена снятых заявок на продажу',
+      cancel_vol         UInt64 COMMENT 'Суммарный объем снятых заявок, лоты',
+      cancel_val         Float64 COMMENT 'Суммарная стоимость снятых заявок, ₽',
+      cancel_orders      UInt64 COMMENT 'Суммарное количество снятых заявок',
+
+      constituents       UInt16 COMMENT 'Число бумаг, учтенных в синтезе'
+) ENGINE = MergeTree()
+PARTITION BY Date(time)
+ORDER BY (indexid, time)
+COMMENT 'Суперсвечи (5-минутные) по индексам: синтез из super_eq и index_weights';

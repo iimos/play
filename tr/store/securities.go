@@ -75,6 +75,14 @@ func (s *Store) DistinctSecIDs(ctx context.Context) ([]string, error) {
 			SELECT secid FROM super_fx
 			UNION ALL
 			SELECT ticker AS secid FROM candles
+			-- индексы MOEX (IMOEX, RTSI, MOEXBMI, ...): их indexid хранится в
+			-- index_candles / index_weights / super_index
+			UNION ALL
+			SELECT indexid AS secid FROM index_candles
+			UNION ALL
+			SELECT indexid AS secid FROM index_weights
+			UNION ALL
+			SELECT indexid AS secid FROM super_index
 		)
 		ORDER BY secid
 	`)

@@ -1,10 +1,12 @@
 package store
 
 import (
-	"github.com/ClickHouse/clickhouse-go/v2"
-	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"context"
 	"os"
 	"time"
+
+	"github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )
 
 var ClickhouseURL = "127.0.0.1:9000"
@@ -61,4 +63,17 @@ func coalesce[T any](x *T) *T {
 		return &empty
 	}
 	return x
+}
+
+// lastDate выполняет запрос, возвращающий одну дату, и нормализует пустой
+// результат (ClickHouse отдаёт 1970-01-01 вместо NULL).
+func (s *Store) lastDate(ctx context.Context, query string, args ...any) (time.Time, error) {
+	var d time.Time
+	if err := s.conn.QueryRow(ctx, query, args...).Scan(&d); err != nil {
+		return time.Time{}, err
+	}
+	if d.Year() < 2000 {
+		return time.Time{}, nil
+	}
+	return d, nil
 }

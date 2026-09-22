@@ -213,6 +213,8 @@ func engineMarketByGroup(group string) (engine, market string, ok bool) {
 		return "stock", "shares", true
 	case group == "stock_bonds":
 		return "stock", "bonds", true
+	case group == "stock_index":
+		return "stock", "index", true
 	}
 	return "", "", false
 }

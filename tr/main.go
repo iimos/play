@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/iimos/play/tr/cmd/bonddaily"
 	"github.com/iimos/play/tr/cmd/candles"
 	"github.com/iimos/play/tr/cmd/futoi"
+	"github.com/iimos/play/tr/cmd/indexdata"
+	"github.com/iimos/play/tr/cmd/indexsuper"
 	"github.com/iimos/play/tr/cmd/openpositions"
 	"github.com/iimos/play/tr/cmd/securities"
 	"github.com/iimos/play/tr/cmd/supercandles"
@@ -44,10 +47,14 @@ func main() {
 		_, _ = fmt.Fprintf(os.Stderr, "  load            - load all (supercandles, futoi, openpositions, bond daily)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-securities - load securities metadata (names, emitents, etc.)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-bond-daily    - load daily bond candles with bond attributes\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  load-index      - load index candles and constituent weights (IMOEX, RTSI, MOEXBMI)\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  build-index-super  - synthesize index supercandles from stock supercandles and weights\n")
 		_, _ = fmt.Fprintf(os.Stderr, "flags:\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --force         - force reload all dates (delete and reload)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --start {date}  - start date (format: YYYY-MM-DD, defaults to last date in table)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --end {date}    - end date (format: YYYY-MM-DD, defaults to today)\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  --index {ids}   - comma-separated index ids (default: all available;\n")
+		_, _ = fmt.Fprintf(os.Stderr, "                    fallback IMOEX,RTSI,MOEXBMI if ISS list unavailable)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --watch         - keep running: reload the current day every 5 minutes\n")
 		_, _ = fmt.Fprintf(os.Stderr, "                    (daily data every hour); incompatible with --start/--end\n")
 		os.Exit(1)
@@ -69,6 +76,7 @@ func main() {
 	startFlag := flags.String("start", "", "start date (format: YYYY-MM-DD, defaults to last date in table)")
 	endFlag := flags.String("end", "", "end date (format: YYYY-MM-DD, defaults to today)")
 	watchFlag := flags.Bool("watch", false, "keep running and reload the current day periodically")
+	indexFlag := flags.String("index", "", "comma-separated index ids (default: IMOEX,RTSI,MOEXBMI)")
 
 	// Parse flags from os.Args[2:]
 	flags.Parse(os.Args[2:])
@@ -118,6 +126,22 @@ func main() {
 		Watch:       *watchFlag,
 	}
 
+	indices := parseIndices(*indexFlag)
+	indexOpts := indexdata.LoadOptions{
+		ForceReload: opts.ForceReload,
+		StartDate:   opts.StartDate,
+		EndDate:     opts.EndDate,
+		Watch:       opts.Watch,
+		Indices:     indices,
+	}
+	superIndexOpts := indexsuper.LoadOptions{
+		ForceReload: opts.ForceReload,
+		StartDate:   opts.StartDate,
+		EndDate:     opts.EndDate,
+		Watch:       opts.Watch,
+		Indices:     indices,
+	}
+
 	switch cmd {
 	case "load-supereq":
 		err = supercandles.LoadStocks(ctx, opts)
@@ -129,12 +153,17 @@ func main() {
 		err = futoi.Load(ctx, opts)
 	case "load-iss-openpositions":
 		err = openpositions.Load(ctx, opts)
+	case "load-index":
+		err = indexdata.Load(ctx, indexOpts)
+	case "build-index-super":
+		err = indexsuper.Build(ctx, superIndexOpts)
 	case "load":
 		gr, grctx := errgroup.WithContext(ctx)
 		gr.Go(func() error { return supercandles.LoadAll(grctx, opts) })
 		gr.Go(func() error { return futoi.Load(grctx, opts) })
 		gr.Go(func() error { return openpositions.Load(grctx, opts) })
 		gr.Go(func() error { return bonddaily.Load(grctx, opts) })
+		gr.Go(func() error { return indexdata.Load(grctx, indexOpts) })
 		err = gr.Wait()
 	case "load-candles": // deprecated
 		err = candles.Load(ctx, opts)
@@ -161,8 +190,23 @@ func main() {
 func watchSupported(cmd string) bool {
 	switch cmd {
 	case "load", "load-supereq", "load-superfo", "load-superfx", "load-futoi",
-		"load-iss-openpositions", "load-bond-daily":
+		"load-iss-openpositions", "load-bond-daily", "load-index", "build-index-super":
 		return true
 	}
 	return false
+}
+
+// parseIndices разбирает список кодов индексов из флага --index.
+func parseIndices(s string) []string {
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+	var res []string
+	for _, part := range strings.Split(s, ",") {
+		part = strings.ToUpper(strings.TrimSpace(part))
+		if part != "" {
+			res = append(res, part)
+		}
+	}
+	return res
 }

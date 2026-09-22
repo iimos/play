@@ -9,10 +9,16 @@
 - Наполнение: команда `go run main.go load-securities`
 - Обновление: по требованию (см. раздел «Актуальность»)
 
-`load-securities` собирает тикеры из двух источников: (1) таблиц данных
-(`super_eq`/`super_fo`/`super_fx`/`candles`) и (2) полного листинга облигаций
-(`engines/stock/markets/bonds/securities.json`). Благодаря второму источнику в
-справочник попадают и облигации, даже если по ним ещё нет рыночных данных.
+`load-securities` собирает тикеры из двух источников:
+1. Таблицы данных: `super_eq`/`super_fo`/`super_fx`/`candles`, а также
+   идентификаторы индексов из `index_candles`/`index_weights`/`super_index`.
+2. Полный листинг облигаций (`engines/stock/markets/bonds/securities.json`) —
+   благодаря ему в справочник попадают и облигации, даже если по ним ещё нет
+   рыночных данных.
+
+Индексы (`IMOEX`, `RTSI`, `MOEXBMI`, ...) попадают в справочник в виде записей
+с `sec_type`/`sec_group` = `stock_index` и торговыми параметрами с борда
+(SNDX — рублёвые индексы, RTSI — долларовые).
 
 ## Таблица `tr.security_info`
 

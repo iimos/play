@@ -17,12 +17,15 @@ go run main.go load-superfo    # Load futures supercandles
 go run main.go load-superfx    # Load currency supercandles
 go run main.go load-futoi      # Load futures open interest (FUTOI)
 go run main.go load-iss-openpositions # Load daily futures open positions by phys/legal (ISS statistics)
+go run main.go load-index      # Load index candles + constituent weights (IMOEX, RTSI, MOEXBMI)
+go run main.go build-index-super # Synthesize index supercandles from stock supercandles + weights
 go run main.go load            # Load all (supercandles, futoi, etc)
 
 # Available flags:
 # --force        Force reload all dates (delete and reload)
 # --start {date} Start date (format: YYYY-MM-DD)
 # --end {date}   End date (format: YYYY-MM-DD, defaults to today)
+# --index {ids}  Comma-separated index ids (default: all available); load-index/build-index-super
 # --watch        Keep running: reload the current day every 5 minutes
 #                (daily data every hour). Incompatible with --start/--end.
 # Note: Last date in table is always reloaded automatically
@@ -74,8 +77,12 @@ Main tables:
 `tr.futoi` - Futures open interest (FUTOI): открытые позиции по фьючерсам в разрезе физ/юр лиц
 `tr.iss_openpositions` - Дневные открытые позиции по фьючерсам в разрезе физ/юр лиц (ISS statistics openpositions)
 `tr.security_info` - Securities metadata (ReplacingMergeTree, в запросах нужен FINAL)
+`tr.index_candles` - Свечи индексов MOEX (сам индекс, не фьючерс): OHLC + оборот ₽
+`tr.index_weights` - Веса бумаг в индексах MOEX по дням (ISS index analytics)
+`tr.super_index` - Синтез 5-минутных суперсвечей индексов из super_eq + index_weights
 
-Все таблицы используют партиционирование по дням: `PARTITION BY Date(time)`.
+Все таблицы используют партиционирование по дням: `PARTITION BY Date(time)`
+(исключение: `index_weights` — `PARTITION BY tradedate`).
 
 Access: `clickhouse client -f CSVWithNames -q "select 1"` (default on localhost:9000)
 

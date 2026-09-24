@@ -44,24 +44,60 @@ func (s *Store) GetLastIndexWeightsDate(ctx context.Context) (time.Time, error) 
 	return s.lastDate(ctx, "SELECT max(tradedate) FROM index_weights")
 }
 
-// GetLastIndexWeightsDateFor возвращает максимальную торговую дату весов одного индекса.
-func (s *Store) GetLastIndexWeightsDateFor(ctx context.Context, indexID string) (time.Time, error) {
-	return s.lastDate(ctx, "SELECT max(tradedate) FROM index_weights WHERE indexid = ?", indexID)
+// LastIndexWeightsDates возвращает максимальную торговую дату весов по каждому индексу.
+func (s *Store) LastIndexWeightsDates(ctx context.Context) (map[string]time.Time, error) {
+	rows, err := s.conn.Query(ctx, "SELECT indexid, max(tradedate) FROM index_weights GROUP BY indexid")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	res := map[string]time.Time{}
+	for rows.Next() {
+		var (
+			indexID string
+			d       time.Time
+		)
+		if err := rows.Scan(&indexID, &d); err != nil {
+			return nil, err
+		}
+		res[indexID] = d
+	}
+	return res, rows.Err()
 }
 
-func (s *Store) CountIndexWeightsForDate(ctx context.Context, indexID string, date time.Time) (uint64, error) {
+func (s *Store) CountIndexWeightsPartition(ctx context.Context, date time.Time) (uint64, error) {
 	var count uint64
 	err := s.conn.QueryRow(ctx,
-		"SELECT count() FROM index_weights WHERE indexid = ? AND tradedate = ?",
-		indexID, date.Format(time.DateOnly),
+		"SELECT count() FROM index_weights WHERE tradedate = ?",
+		date.Format(time.DateOnly),
 	).Scan(&count)
 	return count, err
 }
 
-// DeleteIndexWeightsFor удаляет веса одного индекса за дату (точечно).
-func (s *Store) DeleteIndexWeightsFor(ctx context.Context, indexID string, date time.Time) error {
-	return s.conn.Exec(ctx,
-		"ALTER TABLE index_weights DELETE WHERE indexid = ? AND tradedate = ? SETTINGS mutations_sync = 2",
-		indexID, date.Format(time.DateOnly),
+// PartitionIndexWeightIndexIDs возвращает индексы, у которых есть веса за день.
+func (s *Store) PartitionIndexWeightIndexIDs(ctx context.Context, date time.Time) ([]string, error) {
+	rows, err := s.conn.Query(ctx,
+		"SELECT DISTINCT indexid FROM index_weights WHERE tradedate = ?",
+		date.Format(time.DateOnly),
 	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+// DropIndexWeightsPartition удаляет партицию дня весов индексов.
+func (s *Store) DropIndexWeightsPartition(ctx context.Context, date time.Time) error {
+	return s.conn.Exec(ctx, "ALTER TABLE index_weights DROP PARTITION ?", date.Format(time.DateOnly))
 }

@@ -58,7 +58,6 @@ func Build(ctx context.Context, opts LoadOptions) error {
 
 	client := &http.Client{Timeout: 30 * time.Second}
 
-	// Пусто -> основные индексы, "all" -> все доступные (см. moexindex.Resolve).
 	indices, err := moexindex.Resolve(ctx, client, opts.Indices)
 	if err != nil {
 		return fmt.Errorf("resolve indices: %w", err)

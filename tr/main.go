@@ -47,14 +47,13 @@ func main() {
 		_, _ = fmt.Fprintf(os.Stderr, "  load            - load all (supercandles, futoi, openpositions, bond daily)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-securities - load securities metadata (names, emitents, etc.)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-bond-daily    - load daily bond candles with bond attributes\n")
-		_, _ = fmt.Fprintf(os.Stderr, "  load-index      - load index candles and constituent weights (IMOEX, RTSI, MOEXBMI)\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  load-index      - load index candles and constituent weights (all available indices)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  build-index-super  - synthesize index supercandles from stock supercandles and weights\n")
 		_, _ = fmt.Fprintf(os.Stderr, "flags:\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --force         - force reload all dates (delete and reload)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --start {date}  - start date (format: YYYY-MM-DD, defaults to last date in table)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --end {date}    - end date (format: YYYY-MM-DD, defaults to today)\n")
-		_, _ = fmt.Fprintf(os.Stderr, "  --index {ids}   - comma-separated index ids (default: all available;\n")
-		_, _ = fmt.Fprintf(os.Stderr, "                    fallback IMOEX,RTSI,MOEXBMI if ISS list unavailable)\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  --index {ids}   - comma-separated index ids (build-index-super only)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --watch         - keep running: reload the current day every 5 minutes\n")
 		_, _ = fmt.Fprintf(os.Stderr, "                    (daily data every hour); incompatible with --start/--end\n")
 		os.Exit(1)
@@ -76,7 +75,7 @@ func main() {
 	startFlag := flags.String("start", "", "start date (format: YYYY-MM-DD, defaults to last date in table)")
 	endFlag := flags.String("end", "", "end date (format: YYYY-MM-DD, defaults to today)")
 	watchFlag := flags.Bool("watch", false, "keep running and reload the current day periodically")
-	indexFlag := flags.String("index", "", "comma-separated index ids (default: IMOEX,RTSI,MOEXBMI)")
+	indexFlag := flags.String("index", "", "comma-separated index ids (build-index-super only)")
 
 	// Parse flags from os.Args[2:]
 	flags.Parse(os.Args[2:])
@@ -132,7 +131,6 @@ func main() {
 		StartDate:   opts.StartDate,
 		EndDate:     opts.EndDate,
 		Watch:       opts.Watch,
-		Indices:     indices,
 	}
 	superIndexOpts := indexsuper.LoadOptions{
 		ForceReload: opts.ForceReload,
@@ -154,6 +152,9 @@ func main() {
 	case "load-iss-openpositions":
 		err = openpositions.Load(ctx, opts)
 	case "load-index":
+		if *indexFlag != "" {
+			_, _ = fmt.Fprintln(os.Stderr, "warning: --index is ignored for load-index: the whole day is reloaded for all available indices")
+		}
 		err = indexdata.Load(ctx, indexOpts)
 	case "build-index-super":
 		err = indexsuper.Build(ctx, superIndexOpts)

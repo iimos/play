@@ -257,6 +257,9 @@ func (s *Store) IndexDailyClose(ctx context.Context, indexID string, date time.T
 
 // IndexIntradaySession возвращает окно торгов индекса по 10-минутным свечам:
 // начало первой и конец последней свечи. ok=false, если интрадей не загружен.
+// Дневные свечи для этого не годятся: у interval=24 time/end — это 00:00–23:59
+// календарного дня, а не границы сессии. Глубже окна загрузки интрадея его нет —
+// вызывающий использует фолбэк основной сессии (см. build-index-super).
 func (s *Store) IndexIntradaySession(ctx context.Context, indexID string, date time.Time) (time.Time, time.Time, bool, error) {
 	var first, last time.Time
 	err := s.conn.QueryRow(ctx, `

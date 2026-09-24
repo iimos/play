@@ -17,7 +17,7 @@ go run main.go load-superfo    # Load futures supercandles
 go run main.go load-superfx    # Load currency supercandles
 go run main.go load-futoi      # Load futures open interest (FUTOI)
 go run main.go load-iss-openpositions # Load daily futures open positions by phys/legal (ISS statistics)
-go run main.go load-index      # Load index candles + constituent weights (IMOEX, RTSI, MOEXBMI)
+go run main.go load-index      # Load index candles + constituent weights (all available indices; reloads whole day via DROP PARTITION)
 go run main.go build-index-super # Synthesize index supercandles from stock supercandles + weights
 go run main.go load            # Load all (supercandles, futoi, etc)
 
@@ -25,7 +25,7 @@ go run main.go load            # Load all (supercandles, futoi, etc)
 # --force        Force reload all dates (delete and reload)
 # --start {date} Start date (format: YYYY-MM-DD)
 # --end {date}   End date (format: YYYY-MM-DD, defaults to today)
-# --index {ids}  Comma-separated index ids (default: all available); load-index/build-index-super
+# --index {ids}  Comma-separated index ids (build-index-super only; ignored by load-index)
 # --watch        Keep running: reload the current day every 5 minutes
 #                (daily data every hour). Incompatible with --start/--end.
 # Note: Last date in table is always reloaded automatically

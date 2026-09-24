@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"runtime"
 	"strconv"
 	"sync"
 	"time"
@@ -33,6 +32,8 @@ const (
 	// intradayInterval — интрадей-интервал свечей индекса (минут).
 	intradayInterval = 10
 	// intradayDays — за сколько последних дней грузить интрадей-свечи.
+	// ISS отдаёт 10-минутные свечи только за последние ~60 дней, глубже
+	// интрадей недоступен и при релоаде удаляется безвозвратно.
 	intradayDays = 60
 )
 
@@ -49,7 +50,6 @@ type LoadOptions struct {
 	StartDate   time.Time
 	EndDate     time.Time
 	Watch       bool
-	Indices     []string
 }
 
 func Load(ctx context.Context, opts LoadOptions) error {
@@ -61,26 +61,27 @@ func Load(ctx context.Context, opts LoadOptions) error {
 
 	client := &http.Client{Timeout: 30 * time.Second}
 
-	// Пусто -> основные индексы, "all" -> все доступные (см. moexindex.Resolve).
-	indices, err := moexindex.Resolve(ctx, client, opts.Indices)
+	infos, err := moexindex.Discover(ctx, client)
 	if err != nil {
-		return fmt.Errorf("resolve indices: %w", err)
+		return fmt.Errorf("discover indices: %w", err)
 	}
+	indices := indexIDs(infos)
 
 	// Последняя загруженная дата по каждому индексу: её всегда перезаливаем.
-	lastCandle := map[string]time.Time{}
-	lastWeight := map[string]time.Time{}
-	for _, idx := range indices {
-		if t, err := storage.GetLastIndexCandleDateFor(ctx, idx); err != nil {
-			return err
-		} else {
-			lastCandle[idx] = t
-		}
-		if t, err := storage.GetLastIndexWeightsDateFor(ctx, idx); err != nil {
-			return err
-		} else {
-			lastWeight[idx] = t
-		}
+	lastCandle, err := storage.LastIndexCandleDates(ctx)
+	if err != nil {
+		return err
+	}
+	lastWeight, err := storage.LastIndexWeightsDates(ctx)
+	if err != nil {
+		return err
+	}
+	lastDates := map[string]struct{}{}
+	for _, t := range lastCandle {
+		lastDates[t.In(tz.MSK).Format(time.DateOnly)] = struct{}{}
+	}
+	for _, t := range lastWeight {
+		lastDates[t.In(tz.MSK).Format(time.DateOnly)] = struct{}{}
 	}
 
 	start := opts.StartDate
@@ -100,184 +101,166 @@ func Load(ctx context.Context, opts LoadOptions) error {
 	start = dayMSK(start)
 	end = dayMSK(end)
 
-	fmt.Printf("Loading index data (%v) from %s to %s\n",
-		indices, start.Format(time.DateOnly), end.Format(time.DateOnly))
+	fmt.Printf("Loading index data (%d indices) from %s to %s\n",
+		len(indices), start.Format(time.DateOnly), end.Format(time.DateOnly))
 
 	intradayFrom := end.AddDate(0, 0, -intradayDays)
 
 	for d := end; !d.Before(start); d = d.AddDate(0, 0, -1) {
+		reload := opts.ForceReload
+		if !reload {
+			candleCount, err := storage.CountIndexCandlesPartition(ctx, d)
+			if err != nil {
+				return err
+			}
+			weightCount, err := storage.CountIndexWeightsPartition(ctx, d)
+			if err != nil {
+				return err
+			}
+			_, isLast := lastDates[d.In(tz.MSK).Format(time.DateOnly)]
+			reload = candleCount == 0 || weightCount == 0 || isLast
+		}
+		if !reload {
+			continue
+		}
+
 		withIntraday := !d.Before(intradayFrom)
 
-		candles, err := loadDayCandles(ctx, storage, client, indices, d, withIntraday, opts.ForceReload, lastCandle)
+		candles, weights, err := loadDay(ctx, storage, client, infos, d, withIntraday)
 		if err != nil {
 			return err
 		}
-		weights, err := loadDayWeights(ctx, storage, client, indices, d, opts.ForceReload, lastWeight)
-		if err != nil {
-			return err
-		}
-		fmt.Printf("> %s: candles %s, weights %s\n", d.Format(time.DateOnly), candles, weights)
-
-		runtime.GC()
+		fmt.Printf("> %s: candles %d, weights %d\n", d.Format(time.DateOnly), candles, weights)
 	}
 
 	if opts.Watch {
-		return watchIndexData(ctx, storage, client, indices)
+		return watchIndexData(ctx, storage, client, infos)
 	}
 	return nil
 }
 
-// loadDayCandles догружает свечи индексов за дату. Для каждого индекса и
-// интервала удаляются только его собственные строки (не весь партишен), чтобы
-// не задеть остальные индексы. Индексы обрабатываются параллельно.
-func loadDayCandles(
+// loadDay перезагружает день целиком: параллельно качает активные индексы в
+// память, дропает партицию дня и вставляет одним батчем.
+func loadDay(
 	ctx context.Context,
 	storage *store.Store,
 	client *http.Client,
-	indices []string,
+	infos []moexindex.Info,
 	d time.Time,
-	withIntraday, force bool,
-	lastByIndex map[string]time.Time,
-) (int, error) {
+	withIntraday bool,
+) (int, int, error) {
+	// interval=24 грузим всегда, interval=10 — только в пределах intradayDays.
+	// Дневная свеча MOEX идёт от 00:00 до 23:59 и не содержит границ сессии,
+	// поэтому окно торгов индекса (IndexIntradaySession) строится по 10-минутным,
+	// а глубже intradayDays используется фолбэк основной сессии.
 	intervals := []uint16{24}
 	if withIntraday {
 		intervals = append(intervals, intradayInterval)
 	}
 
+	active := activeInfos(infos, d)
+	if len(active) == 0 {
+		return 0, 0, nil
+	}
+
 	var (
-		mu    sync.Mutex
-		total int
+		mu      sync.Mutex
+		candles []store.IndexCandle
+		weights []store.IndexWeight
 	)
-	gr, ctx := errgroup.WithContext(ctx)
+	gr, gctx := errgroup.WithContext(ctx)
 	gr.SetLimit(indexWorkers)
-	for _, indexID := range indices {
-		indexID := indexID
+	for _, info := range active {
+		info := info
 		gr.Go(func() error {
-			n, err := loadIndexCandles(ctx, storage, client, indexID, d, intervals, force, lastByIndex[indexID])
+			var localCandles []store.IndexCandle
+			for _, iv := range intervals {
+				rows, err := fetchCandles(gctx, client, info.ID, d, iv)
+				if err != nil {
+					return fmt.Errorf("fetch %s candles interval=%d for %s: %w",
+						info.ID, iv, d.Format(time.DateOnly), err)
+				}
+				localCandles = append(localCandles, rows...)
+			}
+			rows, err := fetchWeights(gctx, client, info.ID, d)
 			if err != nil {
-				return err
+				return fmt.Errorf("fetch %s weights for %s: %w", info.ID, d.Format(time.DateOnly), err)
 			}
 			mu.Lock()
-			total += n
+			candles = append(candles, localCandles...)
+			weights = append(weights, rows...)
 			mu.Unlock()
 			return nil
 		})
 	}
 	if err := gr.Wait(); err != nil {
-		return total, err
+		return 0, 0, err
 	}
-	return total, nil
+
+	downloaded := make(map[string]struct{}, len(active))
+	for _, info := range active {
+		downloaded[info.ID] = struct{}{}
+	}
+	if err := warnMissingIndices(ctx, storage, d, downloaded); err != nil {
+		return 0, 0, err
+	}
+
+	// DROP PARTITION сносит весь день, включая interval=10. Для дней старше
+	// intradayDays он уже не перекачивается (ISS его не отдаёт), так что лежавший
+	// там интрадей теряется безвозвратно. Это сознательно: interval=10 нужен лишь
+	// для окна сессии при build-index-super, а старые дни либо не пересобираются,
+	// либо обходятся фолбэком 09:00–19:00.
+	if len(candles) > 0 {
+		if err := storage.DropIndexCandlesPartition(ctx, d); err != nil {
+			return 0, 0, fmt.Errorf("drop candles partition %s: %w", d.Format(time.DateOnly), err)
+		}
+		if err := storage.StoreIndexCandles(ctx, candles); err != nil {
+			return 0, 0, fmt.Errorf("store candles for %s: %w", d.Format(time.DateOnly), err)
+		}
+	}
+	if len(weights) > 0 {
+		if err := storage.DropIndexWeightsPartition(ctx, d); err != nil {
+			return 0, 0, fmt.Errorf("drop weights partition %s: %w", d.Format(time.DateOnly), err)
+		}
+		if err := storage.StoreIndexWeights(ctx, weights); err != nil {
+			return 0, 0, fmt.Errorf("store weights for %s: %w", d.Format(time.DateOnly), err)
+		}
+	}
+	return len(candles), len(weights), nil
 }
 
-func loadIndexCandles(
-	ctx context.Context,
-	storage *store.Store,
-	client *http.Client,
-	indexID string,
-	d time.Time,
-	intervals []uint16,
-	force bool,
-	lastDate time.Time,
-) (int, error) {
-	total := 0
-	for _, iv := range intervals {
-		reload := force || sameDay(lastDate, d)
-		if !reload {
-			count, err := storage.CountIndexCandlesForDate(ctx, indexID, d, iv)
-			if err != nil {
-				return total, err
-			}
-			if count > 0 {
-				continue
-			}
-		}
-
-		rows, err := fetchCandles(ctx, client, indexID, d, iv)
-		if err != nil {
-			return total, fmt.Errorf("fetch %s candles interval=%d for %s: %w",
-				indexID, iv, d.Format(time.DateOnly), err)
-		}
-		if len(rows) == 0 {
+// warnMissingIndices предупреждает об индексах, у которых есть строки за день,
+// но которых нет в скачанном наборе: DROP PARTITION удалит и их строки.
+func warnMissingIndices(ctx context.Context, storage *store.Store, d time.Time, downloaded map[string]struct{}) error {
+	candleIDs, err := storage.PartitionIndexCandleIndexIDs(ctx, d)
+	if err != nil {
+		return err
+	}
+	weightIDs, err := storage.PartitionIndexWeightIndexIDs(ctx, d)
+	if err != nil {
+		return err
+	}
+	var missing []string
+	for _, id := range append(candleIDs, weightIDs...) {
+		if _, ok := downloaded[id]; ok {
 			continue
 		}
-		if err := storage.DeleteIndexCandlesFor(ctx, indexID, d, iv); err != nil {
-			return total, fmt.Errorf("delete %s candles interval=%d for %s: %w",
-				indexID, iv, d.Format(time.DateOnly), err)
-		}
-		if err := storage.StoreIndexCandles(ctx, rows); err != nil {
-			return total, fmt.Errorf("store %s candles interval=%d for %s: %w",
-				indexID, iv, d.Format(time.DateOnly), err)
-		}
-		total += len(rows)
+		missing = append(missing, id)
 	}
-	return total, nil
-}
-
-// loadDayWeights догружает веса индексов за дату (точечно по индексу).
-func loadDayWeights(
-	ctx context.Context,
-	storage *store.Store,
-	client *http.Client,
-	indices []string,
-	d time.Time,
-	force bool,
-	lastByIndex map[string]time.Time,
-) (int, error) {
-	var (
-		mu    sync.Mutex
-		total int
-	)
-	gr, ctx := errgroup.WithContext(ctx)
-	gr.SetLimit(indexWorkers)
-	for _, indexID := range indices {
-		indexID := indexID
-		gr.Go(func() error {
-			reload := force || sameDay(lastByIndex[indexID], d)
-			if !reload {
-				count, err := storage.CountIndexWeightsForDate(ctx, indexID, d)
-				if err != nil {
-					return err
-				}
-				if count > 0 {
-					return nil
-				}
-			}
-
-			rows, err := fetchWeights(ctx, client, indexID, d)
-			if err != nil {
-				return fmt.Errorf("fetch %s weights for %s: %w", indexID, d.Format(time.DateOnly), err)
-			}
-			if len(rows) == 0 {
-				return nil
-			}
-			if err := storage.DeleteIndexWeightsFor(ctx, indexID, d); err != nil {
-				return fmt.Errorf("delete %s weights for %s: %w", indexID, d.Format(time.DateOnly), err)
-			}
-			if err := storage.StoreIndexWeights(ctx, rows); err != nil {
-				return fmt.Errorf("store %s weights for %s: %w", indexID, d.Format(time.DateOnly), err)
-			}
-			mu.Lock()
-			total += len(rows)
-			mu.Unlock()
-			return nil
-		})
+	if len(missing) > 0 {
+		fmt.Printf("> %s: warning: индексы вне загружаемого набора, их строки дня будут удалены: %v\n",
+			d.Format(time.DateOnly), missing)
 	}
-	if err := gr.Wait(); err != nil {
-		return total, err
-	}
-	return total, nil
+	return nil
 }
 
 // watchIndexData периодически (раз в час) перезаливает текущий день.
-func watchIndexData(ctx context.Context, storage *store.Store, client *http.Client, indices []string) error {
+func watchIndexData(ctx context.Context, storage *store.Store, client *http.Client, infos []moexindex.Info) error {
 	var tracker watch.Tracker
 	return watch.RunHourly(ctx, func(ctx context.Context) error {
 		now := time.Now()
 		for _, d := range tracker.Days(now) {
-			if _, err := loadDayCandles(ctx, storage, client, indices, d, true, true, nil); err != nil {
-				return err
-			}
-			if _, err := loadDayWeights(ctx, storage, client, indices, d, true, nil); err != nil {
+			if _, _, err := loadDay(ctx, storage, client, infos, d, true); err != nil {
 				return err
 			}
 			fmt.Printf("watch index data: %s reloaded\n", d.Format(time.DateOnly))
@@ -285,6 +268,28 @@ func watchIndexData(ctx context.Context, storage *store.Store, client *http.Clie
 		tracker.Commit(now)
 		return nil
 	})
+}
+
+// indexIDs возвращает идентификаторы индексов, пропуская пустые.
+func indexIDs(infos []moexindex.Info) []string {
+	ids := make([]string, 0, len(infos))
+	for _, info := range infos {
+		if info.ID != "" {
+			ids = append(ids, info.ID)
+		}
+	}
+	return ids
+}
+
+// activeInfos возвращает индексы, действовавшие на дату d.
+func activeInfos(infos []moexindex.Info, d time.Time) []moexindex.Info {
+	res := make([]moexindex.Info, 0, len(infos))
+	for _, info := range infos {
+		if info.ID != "" && moexindex.ActiveOn(info, d) {
+			res = append(res, info)
+		}
+	}
+	return res
 }
 
 // fetchCandles выкачивает все страницы свечей одного индекса за дату.
@@ -424,9 +429,4 @@ func minLastDate(last map[string]time.Time, indices []string, cutoff time.Time) 
 func dayMSK(t time.Time) time.Time {
 	n := t.In(tz.MSK)
 	return time.Date(n.Year(), n.Month(), n.Day(), 0, 0, 0, 0, tz.MSK)
-}
-
-// sameDay сравнивает две даты по календарному дню (MSK).
-func sameDay(a, b time.Time) bool {
-	return !a.IsZero() && !b.IsZero() && a.In(tz.MSK).Format(time.DateOnly) == b.In(tz.MSK).Format(time.DateOnly)
 }

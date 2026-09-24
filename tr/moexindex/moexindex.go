@@ -23,9 +23,9 @@ const listURL = "https://iss.moex.com/iss/statistics/engines/stock/markets/index
 // (в т.ч. валютой номинала, CURRENCYID).
 const securitiesURL = "https://iss.moex.com/iss/engines/stock/markets/index/securities.json"
 
-// Main — основные индексы; используются как запасной вариант, если список
-// всех индексов получить не удалось.
-var Main = []string{"IMOEX", "RTSI", "MOEXBMI"}
+// tillGraceDays — люфт к верхней границе till из ISS: веса публикуются с
+// задержкой, тогда как свечи последующих дней уже доступны.
+const tillGraceDays = 10
 
 // Info — сведения об индексе из списка ISS.
 type Info struct {
@@ -33,6 +33,20 @@ type Info struct {
 	ShortName string
 	From      time.Time
 	Till      time.Time
+}
+
+// ActiveOn сообщает, действовал ли индекс на дату d. Пустая граница означает
+// отсутствие ограничения с этой стороны. Till в ISS — последняя дата
+// публикации весов, поэтому свечи последующих дней ещё доступны: верхнюю
+// границу расширяем на tillGraceDays.
+func ActiveOn(info Info, d time.Time) bool {
+	if !info.From.IsZero() && d.Before(info.From) {
+		return false
+	}
+	if !info.Till.IsZero() && d.After(info.Till.AddDate(0, 0, tillGraceDays)) {
+		return false
+	}
+	return true
 }
 
 // Discover возвращает все индексы, по которым доступна аналитика ISS.
@@ -98,16 +112,12 @@ func Currencies(ctx context.Context, client *http.Client) (map[string]string, er
 }
 
 // Resolve превращает выбор пользователя в список id индексов:
-//   - пусто                     -> все доступные (Discover), при ошибке — Main;
+//   - пусто                     -> все доступные (Discover);
 //   - содержит "all"            -> все доступные (Discover);
 //   - иначе                     -> нормализованный список.
 func Resolve(ctx context.Context, client *http.Client, requested []string) ([]string, error) {
 	if len(requested) == 0 {
-		ids, err := allIndices(ctx, client)
-		if err != nil {
-			return append([]string(nil), Main...), nil
-		}
-		return ids, nil
+		return allIndices(ctx, client)
 	}
 
 	for _, id := range requested {

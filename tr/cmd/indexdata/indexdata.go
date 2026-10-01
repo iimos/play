@@ -50,6 +50,9 @@ type LoadOptions struct {
 	StartDate   time.Time
 	EndDate     time.Time
 	Watch       bool
+	// AfterReload вызывается после успешной перезагрузки дня в watch-режиме
+	// (например, чтобы пересобрать производные данные). Не должен блокировать.
+	AfterReload func(day time.Time)
 }
 
 func Load(ctx context.Context, opts LoadOptions) error {
@@ -134,7 +137,7 @@ func Load(ctx context.Context, opts LoadOptions) error {
 	}
 
 	if opts.Watch {
-		return watchIndexData(ctx, storage, client, infos)
+		return watchIndexData(ctx, storage, client, infos, opts.AfterReload)
 	}
 	return nil
 }
@@ -255,13 +258,16 @@ func warnMissingIndices(ctx context.Context, storage *store.Store, d time.Time, 
 }
 
 // watchIndexData периодически (раз в час) перезаливает текущий день.
-func watchIndexData(ctx context.Context, storage *store.Store, client *http.Client, infos []moexindex.Info) error {
+func watchIndexData(ctx context.Context, storage *store.Store, client *http.Client, infos []moexindex.Info, after func(time.Time)) error {
 	var tracker watch.Tracker
 	return watch.RunHourly(ctx, func(ctx context.Context) error {
 		now := time.Now()
 		for _, d := range tracker.Days(now) {
 			if _, _, err := loadDay(ctx, storage, client, infos, d, true); err != nil {
 				return err
+			}
+			if after != nil {
+				after(d)
 			}
 			fmt.Printf("watch index data: %s reloaded\n", d.Format(time.DateOnly))
 		}

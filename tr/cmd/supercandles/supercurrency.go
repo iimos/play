@@ -118,7 +118,11 @@ func LoadCurrencies(ctx context.Context, opts LoadOptions) error {
 	}
 
 	if opts.Watch {
-		return watchFX(ctx, storage, moexSess)
+		// Первый build сразу после первичной загрузки, не дожидаясь тика watch.
+		if opts.AfterReload != nil {
+			opts.AfterReload(end)
+		}
+		return watchFX(ctx, storage, moexSess, opts.AfterReload)
 	}
 	return nil
 }

@@ -10,7 +10,7 @@ import (
 )
 
 // watchEq каждые 5 минут целиком перезаливает текущий день по акциям.
-func watchEq(ctx context.Context, storage *store.Store, sess *moexalgo.Session) error {
+func watchEq(ctx context.Context, storage *store.Store, sess *moexalgo.Session, after func(time.Time)) error {
 	var tracker watch.Tracker
 	return watch.Run5m(ctx, func(ctx context.Context) error {
 		now := time.Now()
@@ -24,6 +24,9 @@ func watchEq(ctx context.Context, storage *store.Store, sess *moexalgo.Session) 
 			)
 			if err != nil {
 				return err
+			}
+			if after != nil {
+				after(d)
 			}
 		}
 		tracker.Commit(now)
@@ -54,7 +57,7 @@ func watchFO(ctx context.Context, storage *store.Store, sess *moexalgo.Session) 
 }
 
 // watchFX каждые 5 минут целиком перезаливает текущий день по валютам.
-func watchFX(ctx context.Context, storage *store.Store, sess *moexalgo.Session) error {
+func watchFX(ctx context.Context, storage *store.Store, sess *moexalgo.Session, after func(time.Time)) error {
 	var tracker watch.Tracker
 	return watch.Run5m(ctx, func(ctx context.Context) error {
 		now := time.Now()
@@ -68,6 +71,9 @@ func watchFX(ctx context.Context, storage *store.Store, sess *moexalgo.Session) 
 			)
 			if err != nil {
 				return err
+			}
+			if after != nil {
+				after(d)
 			}
 		}
 		tracker.Commit(now)

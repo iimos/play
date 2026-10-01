@@ -19,7 +19,8 @@ go run main.go load-futoi      # Load futures open interest (FUTOI)
 go run main.go load-iss-openpositions # Load daily futures open positions by phys/legal (ISS statistics)
 go run main.go load-index      # Load index candles + constituent weights (all available indices; reloads whole day via DROP PARTITION)
 go run main.go build-index-super # Synthesize index supercandles from stock supercandles + weights
-go run main.go load            # Load all (supercandles, futoi, etc)
+go run main.go load            # Load all (supercandles, futoi, etc) then rebuild super_index
+                               # With --watch: super_index is rebuilt live after each day reload
 
 # Available flags:
 # --force        Force reload all dates (delete and reload)

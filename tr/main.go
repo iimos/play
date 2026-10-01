@@ -44,7 +44,7 @@ func main() {
 		_, _ = fmt.Fprintf(os.Stderr, "  load-superfx    - load currency supercandles\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-futoi      - load futures open interest (FUTOI)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-iss-openpositions - load daily futures open positions by phys/legal (ISS statistics)\n")
-		_, _ = fmt.Fprintf(os.Stderr, "  load            - load all (supercandles, futoi, openpositions, bond daily)\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  load            - load all (supercandles, futoi, openpositions, bond daily) then rebuild index supercandles\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-securities - load securities metadata (names, emitents, etc.)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-bond-daily    - load daily bond candles with bond attributes\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-index      - load index candles and constituent weights (all available indices)\n")
@@ -126,6 +126,12 @@ func main() {
 	}
 
 	indices := parseIndices(*indexFlag)
+	superOpts := supercandles.LoadOptions{
+		ForceReload: opts.ForceReload,
+		StartDate:   opts.StartDate,
+		EndDate:     opts.EndDate,
+		Watch:       opts.Watch,
+	}
 	indexOpts := indexdata.LoadOptions{
 		ForceReload: opts.ForceReload,
 		StartDate:   opts.StartDate,
@@ -142,11 +148,11 @@ func main() {
 
 	switch cmd {
 	case "load-supereq":
-		err = supercandles.LoadStocks(ctx, opts)
+		err = supercandles.LoadStocks(ctx, superOpts)
 	case "load-superfo":
-		err = supercandles.LoadFutures(ctx, opts)
+		err = supercandles.LoadFutures(ctx, superOpts)
 	case "load-superfx":
-		err = supercandles.LoadCurrencies(ctx, opts)
+		err = supercandles.LoadCurrencies(ctx, superOpts)
 	case "load-futoi":
 		err = futoi.Load(ctx, opts)
 	case "load-iss-openpositions":
@@ -159,13 +165,40 @@ func main() {
 	case "build-index-super":
 		err = indexsuper.Build(ctx, superIndexOpts)
 	case "load":
+		// В watch-режиме синтез super_index запускается по хукам лоадеров
+		// (debounced Builder). --index для load игнорируется: собираются все индексы.
+		var builder *indexsuper.Builder
+		if opts.Watch {
+			b, berr := indexsuper.NewBuilder(ctx, nil)
+			if berr != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "warning: super_index build disabled: %v\n", berr)
+			} else {
+				builder = b
+				defer builder.Close()
+				superOpts.AfterReload = builder.Trigger
+				indexOpts.AfterReload = builder.Trigger
+			}
+		}
+
 		gr, grctx := errgroup.WithContext(ctx)
-		gr.Go(func() error { return supercandles.LoadAll(grctx, opts) })
+		if builder != nil {
+			gr.Go(func() error { return builder.Run(grctx) })
+		}
+		gr.Go(func() error { return supercandles.LoadAll(grctx, superOpts) })
 		gr.Go(func() error { return futoi.Load(grctx, opts) })
 		gr.Go(func() error { return openpositions.Load(grctx, opts) })
 		gr.Go(func() error { return bonddaily.Load(grctx, opts) })
 		gr.Go(func() error { return indexdata.Load(grctx, indexOpts) })
 		err = gr.Wait()
+
+		// Без watch источники уже загружены — собираем историю один раз.
+		if err == nil && !opts.Watch {
+			err = indexsuper.Build(ctx, indexsuper.LoadOptions{
+				ForceReload: opts.ForceReload,
+				StartDate:   opts.StartDate,
+				EndDate:     opts.EndDate,
+			})
+		}
 	case "load-candles": // deprecated
 		err = candles.Load(ctx, opts)
 	case "load-bond-daily":

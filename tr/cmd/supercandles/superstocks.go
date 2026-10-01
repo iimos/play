@@ -119,7 +119,11 @@ func LoadStocks(ctx context.Context, opts LoadOptions) error {
 	//fmt.Printf("data: %+v\n", data[0].OrderStat)
 
 	if opts.Watch {
-		return watchEq(ctx, storage, moexSess)
+		// Первый build сразу после первичной загрузки, не дожидаясь тика watch.
+		if opts.AfterReload != nil {
+			opts.AfterReload(end)
+		}
+		return watchEq(ctx, storage, moexSess, opts.AfterReload)
 	}
 
 	return nil

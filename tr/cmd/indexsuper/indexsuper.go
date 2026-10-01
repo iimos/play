@@ -8,6 +8,7 @@ import (
 	"math"
 	"net/http"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/iimos/play/tr/store"
 	"github.com/iimos/play/tr/tz"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/singleflight"
 )
 
 const (
@@ -64,11 +66,7 @@ func Build(ctx context.Context, opts LoadOptions) error {
 	}
 
 	// Валюта номинала нужна для корректного синтеза валютных индексов (RUBMI, RTS*, IMOEXCNY, ...).
-	currencies, err := moexindex.Currencies(ctx, client)
-	if err != nil {
-		fmt.Printf("warning: не удалось получить валюты индексов, использую эвристику: %v\n", err)
-		currencies = nil
-	}
+	currencies := loadCurrencies(ctx, client)
 
 	lastByIndex := map[string]time.Time{}
 	for _, idx := range indices {
@@ -97,27 +95,9 @@ func Build(ctx context.Context, opts LoadOptions) error {
 		indices, start.Format(time.DateOnly), end.Format(time.DateOnly))
 
 	for d := end; !d.Before(start); d = d.AddDate(0, 0, -1) {
-		rows, built, err := buildDay(ctx, storage, indices, d, opts.ForceReload, lastByIndex, currencies)
-		if err != nil {
+		if err := buildDayRows(ctx, storage, indices, d, opts.ForceReload, lastByIndex, currencies); err != nil {
 			return fmt.Errorf("build super_index for %s: %w", d.Format(time.DateOnly), err)
 		}
-
-		if len(rows) == 0 {
-			fmt.Printf("> %s super_index: NO DATA\n", d.Format(time.DateOnly))
-			continue
-		}
-
-		// Точечно заменяем данные только тех индексов, что пересобраны.
-		for _, indexID := range built {
-			if err := storage.DeleteSuperIndexFor(ctx, indexID, d); err != nil {
-				return fmt.Errorf("delete super_index %s %s: %w", indexID, d.Format(time.DateOnly), err)
-			}
-		}
-		if err := storage.StoreSuperIndex(ctx, rows); err != nil {
-			return fmt.Errorf("store super_index for %s: %w", d.Format(time.DateOnly), err)
-		}
-		fmt.Printf("> %s super_index: BUILT %d rows (%v)\n", d.Format(time.DateOnly), len(rows), built)
-
 		runtime.GC()
 	}
 
@@ -126,28 +106,238 @@ func Build(ctx context.Context, opts LoadOptions) error {
 		return watch.RunHourly(ctx, func(ctx context.Context) error {
 			now := time.Now()
 			for _, d := range tracker.Days(now) {
-				rows, built, err := buildDay(ctx, storage, indices, d, true, nil, currencies)
-				if err != nil {
+				if err := buildDayRows(ctx, storage, indices, d, true, nil, currencies); err != nil {
 					return err
 				}
-				if len(rows) == 0 {
-					continue
-				}
-				for _, indexID := range built {
-					if err := storage.DeleteSuperIndexFor(ctx, indexID, d); err != nil {
-						return err
-					}
-				}
-				if err := storage.StoreSuperIndex(ctx, rows); err != nil {
-					return err
-				}
-				fmt.Printf("watch super_index: %s rebuilt\n", d.Format(time.DateOnly))
 			}
 			tracker.Commit(now)
 			return nil
 		})
 	}
 	return nil
+}
+
+// loadCurrencies возвращает валюту номинала индексов; при ошибке — nil
+// (тогда используется эвристика по коду индекса).
+func loadCurrencies(ctx context.Context, client *http.Client) map[string]string {
+	currencies, err := moexindex.Currencies(ctx, client)
+	if err != nil {
+		fmt.Printf("warning: не удалось получить валюты индексов, использую эвристику: %v\n", err)
+		return nil
+	}
+	return currencies
+}
+
+// buildDayRows собирает super_index за один день и точечно заменяет данные
+// пересобранных индексов.
+func buildDayRows(
+	ctx context.Context,
+	storage *store.Store,
+	indices []string,
+	d time.Time,
+	force bool,
+	lastByIndex map[string]time.Time,
+	currencies map[string]string,
+) error {
+	rows, built, err := buildDay(ctx, storage, indices, d, force, lastByIndex, currencies)
+	if err != nil {
+		return err
+	}
+	if len(rows) == 0 {
+		fmt.Printf("> %s super_index: NO DATA\n", d.Format(time.DateOnly))
+		return nil
+	}
+
+	// Точечно заменяем данные только тех индексов, что пересобраны.
+	for _, indexID := range built {
+		if err := storage.DeleteSuperIndexFor(ctx, indexID, d); err != nil {
+			return fmt.Errorf("delete super_index %s %s: %w", indexID, d.Format(time.DateOnly), err)
+		}
+	}
+	if err := storage.StoreSuperIndex(ctx, rows); err != nil {
+		return fmt.Errorf("store super_index for %s: %w", d.Format(time.DateOnly), err)
+	}
+	fmt.Printf("> %s super_index: BUILT %d rows (%v)\n", d.Format(time.DateOnly), len(rows), built)
+	return nil
+}
+
+// debounce — пауза тишины после последнего триггера перед сборкой.
+const debounce = 20 * time.Second
+
+// Builder синтезирует super_index по триггерам от лоадеров: копит дни и собирает
+// их одной сериализованной операцией после короткой паузы тишины. Один worker
+// исключает наложение сборки на drop/insert источников и гонки между сборками.
+type Builder struct {
+	storage    *store.Store
+	indices    []string
+	currencies map[string]string
+
+	mu       sync.Mutex
+	pending  map[string]time.Time
+	wake     chan struct{}
+	attempts map[string]int // попытки сборки дня; трогает только goroutine Run
+}
+
+// NewBuilder резолвит индексы и валюты, открывает соединение с ClickHouse.
+// indices == nil означает все доступные индексы.
+func NewBuilder(ctx context.Context, indices []string) (*Builder, error) {
+	storage, err := store.New()
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resolved, err := moexindex.Resolve(ctx, client, indices)
+	if err != nil {
+		_ = storage.Close()
+		return nil, fmt.Errorf("resolve indices: %w", err)
+	}
+
+	return &Builder{
+		storage:    storage,
+		indices:    resolved,
+		currencies: loadCurrencies(ctx, client),
+		pending:    map[string]time.Time{},
+		wake:       make(chan struct{}, 1),
+		attempts:   map[string]int{},
+	}, nil
+}
+
+// Close закрывает соединение с ClickHouse.
+func (b *Builder) Close() error {
+	return b.storage.Close()
+}
+
+// Trigger неблокирующе регистрирует день для пересборки.
+func (b *Builder) Trigger(day time.Time) {
+	d := dayMSK(day)
+	b.mu.Lock()
+	b.pending[d.Format(time.DateOnly)] = d
+	b.mu.Unlock()
+
+	select {
+	case b.wake <- struct{}{}:
+	default:
+	}
+}
+
+// Run собирает накопленные дни после паузы тишины, пока не отменён ctx.
+func (b *Builder) Run(ctx context.Context) error {
+	timer := time.NewTimer(debounce)
+	timer.Stop()
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-b.wake:
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			timer.Reset(debounce)
+		case <-timer.C:
+			days := b.takePending()
+			if len(days) == 0 {
+				continue
+			}
+			failed, err := b.buildDays(ctx, days, true)
+			if err != nil {
+				return err
+			}
+			// Сбрасываем счётчики успешных дней и возвращаем неудавшиеся в
+			// очередь на повтор (сборка идемпотентна).
+			b.settle(days, failed)
+		}
+	}
+}
+
+// takePending забирает накопленные дни в порядке возрастания и очищает набор.
+func (b *Builder) takePending() []time.Time {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if len(b.pending) == 0 {
+		return nil
+	}
+	days := make([]time.Time, 0, len(b.pending))
+	for _, d := range b.pending {
+		days = append(days, d)
+	}
+	b.pending = map[string]time.Time{}
+	sort.Slice(days, func(i, j int) bool { return days[i].Before(days[j]) })
+	return days
+}
+
+// maxBuildAttempts ограничивает число повторов сборки одного дня, чтобы
+// постоянная ошибка не крутила очередь бесконечно.
+const maxBuildAttempts = 20
+
+// buildDays собирает указанные дни одной сериализованной операцией. Ошибка
+// одного дня не прерывает остальные: неудавшиеся дни возвращаются вызывающему
+// для повторной попытки (это исключает head-of-line blocking).
+func (b *Builder) buildDays(ctx context.Context, days []time.Time, force bool) ([]time.Time, error) {
+	// lastByIndex считаем на каждый вызов: после предыдущей сборки данные
+	// изменились (D1).
+	lastByIndex := map[string]time.Time{}
+	for _, idx := range b.indices {
+		t, err := b.storage.GetLastSuperIndexDateFor(ctx, idx)
+		if err != nil {
+			return nil, err
+		}
+		lastByIndex[idx] = t
+	}
+
+	var failed []time.Time
+	for _, d := range days {
+		d = dayMSK(d)
+		if err := buildDayRows(ctx, b.storage, b.indices, d, force, lastByIndex, b.currencies); err != nil {
+			if ctx.Err() != nil {
+				return failed, ctx.Err()
+			}
+			fmt.Printf("super_index build for %s: %v\n", d.Format(time.DateOnly), err)
+			failed = append(failed, d)
+		}
+	}
+	return failed, nil
+}
+
+// settle сбрасывает счётчики попыток для успешно собранных дней и возвращает
+// неудавшиеся дни в очередь, ограничивая число повторов.
+func (b *Builder) settle(days, failed []time.Time) {
+	failedSet := make(map[string]struct{}, len(failed))
+	for _, d := range failed {
+		failedSet[d.Format(time.DateOnly)] = struct{}{}
+	}
+
+	queued := false
+	b.mu.Lock()
+	for _, d := range days {
+		key := d.Format(time.DateOnly)
+		if _, bad := failedSet[key]; !bad {
+			delete(b.attempts, key)
+			continue
+		}
+		b.attempts[key]++
+		if b.attempts[key] > maxBuildAttempts {
+			fmt.Printf("super_index build for %s: сдаюсь после %d попыток подряд\n",
+				key, maxBuildAttempts+1)
+			delete(b.attempts, key)
+			continue
+		}
+		b.pending[key] = d
+		queued = true
+	}
+	b.mu.Unlock()
+
+	if queued {
+		select {
+		case b.wake <- struct{}{}:
+		default:
+		}
+	}
 }
 
 // buildDay возвращает строки super_index за дату и список индексов, для которых
@@ -195,20 +385,27 @@ func buildDay(
 		barsBySec[b.SecID] = append(barsBySec[b.SecID], b)
 	}
 
+	// Ошибка одного индекса не отменяет сборку остальных: строки успешных
+	// индексов сохраняются, а неудавшиеся логируются и будут досозданы при
+	// следующей сборке (одна таймаут-ошибка не должна терять весь день).
 	var (
 		mu    sync.Mutex
 		out   []store.SuperIndexRow
 		built []string
+		errs  []error
 	)
 	closes := newClosesCache()
-	gr, ctx := errgroup.WithContext(ctx)
+	gr, gctx := errgroup.WithContext(ctx)
 	gr.SetLimit(indexWorkers)
 	for _, indexID := range todo {
 		indexID := indexID
 		gr.Go(func() error {
-			rows, err := buildIndexDay(ctx, storage, indexID, d, barsBySec, closes, currencies)
+			rows, err := buildIndexDay(gctx, storage, indexID, d, barsBySec, closes, currencies)
 			if err != nil {
-				return fmt.Errorf("%s: %w", indexID, err)
+				mu.Lock()
+				errs = append(errs, fmt.Errorf("%s: %w", indexID, err))
+				mu.Unlock()
+				return nil
 			}
 			if len(rows) == 0 {
 				return nil
@@ -220,17 +417,28 @@ func buildDay(
 			return nil
 		})
 	}
-	if err := gr.Wait(); err != nil {
+	_ = gr.Wait()
+	// Отмена родительского ctx — единственный случай, когда день не собираем.
+	if err := ctx.Err(); err != nil {
 		return nil, nil, err
+	}
+	if len(errs) > 0 {
+		fmt.Printf("> %s super_index: не собрано индексов: %d\n", d.Format(time.DateOnly), len(errs))
+		for _, e := range errs {
+			fmt.Printf("    ! %v\n", e)
+		}
 	}
 	return out, built, nil
 }
 
 // closesCache кэширует последние цены бумаг по референсной дате, чтобы не
-// выполнять один и тот же запрос к super_eq для каждого индекса.
+// выполнять один и тот же запрос к super_eq для каждого индекса. При промахе
+// параллельные вызовы разделяют один запрос (single-flight), иначе все воркеры
+// одновременно били бы тяжёлым запросом по super_eq.
 type closesCache struct {
 	mu sync.Mutex
 	m  map[string]map[string]float64
+	g  singleflight.Group
 }
 
 func newClosesCache() *closesCache {
@@ -246,14 +454,20 @@ func (c *closesCache) get(ctx context.Context, s *store.Store, date, cutoff time
 	}
 	c.mu.Unlock()
 
-	v, err := s.StockMainCloses(ctx, cutoff.AddDate(0, 0, -staleDays), cutoff)
+	v, err, _ := c.g.Do(key, func() (any, error) {
+		closes, err := s.StockMainCloses(ctx, cutoff.AddDate(0, 0, -staleDays), cutoff)
+		if err != nil {
+			return nil, err
+		}
+		c.mu.Lock()
+		c.m[key] = closes
+		c.mu.Unlock()
+		return closes, nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	c.mu.Lock()
-	c.m[key] = v
-	c.mu.Unlock()
-	return v, nil
+	return v.(map[string]float64), nil
 }
 
 type constituent struct {
@@ -272,13 +486,22 @@ func buildIndexDay(
 	closes *closesCache,
 	currencies map[string]string,
 ) ([]store.SuperIndexRow, error) {
-	// Индекс не торговался в этот день — фактической дневной свечи нет.
-	dayClose, ok, err := storage.IndexDailyClose(ctx, indexID, d)
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		return nil, nil
+	now := time.Now()
+	isToday := sameDay(d, now)
+
+	// Дневное закрытие индекса (для валидации): гейт для прошедших дней, когда
+	// фактическая дневная свеча уже есть. За сегодня её может ещё не быть —
+	// торги доказываются интрадеем и барами бумаг (B3).
+	var dayClose float64
+	if !isToday {
+		close, ok, err := storage.IndexDailyClose(ctx, indexID, d)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, nil
+		}
+		dayClose = close
 	}
 
 	prevDate, err := storage.PrevTradingDate(ctx, indexID, d)
@@ -320,8 +543,40 @@ func buildIndexDay(
 		return nil, err
 	}
 	if !ok {
+		// За сегодня интрадей — единственное доказательство торгов (гейт B3).
+		if isToday {
+			// fmt.Printf(" [%s: нет интрадея за %s, пропуск]\n", indexID, d.Format(time.DateOnly))
+			return nil, nil
+		}
 		sessStart = atHour(d, fallbackStartHour)
 		sessEnd = atHour(d, fallbackEndHour)
+	}
+
+	// Верхняя граница окна: для текущего дня — не позже текущего момента, чтобы
+	// не рождать будущие бары, и не позже реального закрытия сессии. Интрадей за
+	// сегодня перезагружается раз в час и может отставать, поэтому ожидаемое
+	// закрытие берём по времени окончания сессии предыдущего торгового дня (B2).
+	windowEnd := sessEnd
+	if isToday {
+		var sessionClose time.Time
+		if _, prevEnd, ok, err := storage.IndexIntradaySession(ctx, indexID, prevDate); err != nil {
+			return nil, err
+		} else if ok {
+			sessionClose = time.Date(d.Year(), d.Month(), d.Day(),
+				prevEnd.Hour(), prevEnd.Minute(), prevEnd.Second(), prevEnd.Nanosecond(), tz.MSK)
+		}
+		windowEnd = todayWindowEnd(now, sessionClose)
+		if sessionClose.IsZero() && sessEnd.Before(windowEnd) {
+			// Закрытие предыдущего дня неизвестно: не выходим за сегодняшнюю
+			// сессию, иначе вечерние бары бумаг допишут после-close строки.
+			fmt.Printf(" [%s: нет закрытия за %s, окно ограничено сегодняшней сессией]",
+				indexID, prevDate.Format(time.DateOnly))
+			windowEnd = sessEnd
+		}
+		if !windowEnd.After(sessStart) {
+			// Сессия ещё не началась или уже закончилась.
+			return nil, nil
+		}
 	}
 
 	// Пересчет в валюту: USD-индексы (RTS*) и индекс в юанях (IMOEXCNY).
@@ -340,7 +595,7 @@ func buildIndexDay(
 			return nil, nil
 		}
 		fxLast = fxPrev
-		series, err := storage.FXCloseSeries(ctx, fxSec, sessStart, sessEnd)
+		series, err := storage.FXCloseSeries(ctx, fxSec, sessStart, windowEnd)
 		if err != nil {
 			return nil, err
 		}
@@ -374,15 +629,32 @@ func buildIndexDay(
 	// Индексируем бары бумаг по 5-минутным слотам внутри окна сессии.
 	// Ключ — Unix-время: сравнение time.Time как ключа учитывает таймзону.
 	barsAt := make(map[string]map[int64]store.StockBar, len(constituents))
+	var lastBarTime time.Time
 	for _, c := range constituents {
 		m := map[int64]store.StockBar{}
 		for _, b := range barsBySec[c.secID] {
-			if b.Time.Before(sessStart) || !b.Time.Before(sessEnd) {
+			if b.Time.Before(sessStart) || !b.Time.Before(windowEnd) {
 				continue
 			}
 			m[b.Time.Unix()] = b
+			if b.Time.After(lastBarTime) {
+				lastBarTime = b.Time
+			}
 		}
 		barsAt[c.secID] = m
+	}
+
+	// За сегодня строим только при наличии баров бумаг, а конец окна клампим по
+	// последнему бару и по windowEnd: без будущих и после-close фантомных строк (B2/B3).
+	if isToday {
+		if lastBarTime.IsZero() {
+			fmt.Printf(" [%s: нет баров бумаг за %s, пропуск]", indexID, d.Format(time.DateOnly))
+			return nil, nil
+		}
+		sessEnd = lastBarTime.Add(5 * time.Minute)
+		if sessEnd.After(windowEnd) {
+			sessEnd = windowEnd
+		}
 	}
 
 	// Последние известные цены (forward fill); инициализируем референсом,
@@ -631,6 +903,16 @@ func validate(rows []store.SuperIndexRow, indexID string, d time.Time, actual fl
 		fmt.Printf(" [%s %s: расхождение синтеза %.2f%% (синтез %.2f, факт %.2f)]",
 			indexID, d.Format(time.DateOnly), diffPct, got, actual)
 	}
+}
+
+// todayWindowEnd — верхняя граница окна текущего дня: не позже now (усечённого
+// до 5 минут) и не позже закрытия сессии (sessionClose; zero — не ограничивает).
+func todayWindowEnd(now, sessionClose time.Time) time.Time {
+	end := now.Truncate(5 * time.Minute)
+	if !sessionClose.IsZero() && sessionClose.Before(end) {
+		return sessionClose
+	}
+	return end
 }
 
 func atHour(d time.Time, hour int) time.Time {

@@ -42,6 +42,10 @@ func main() {
 		_, _ = fmt.Fprintf(os.Stderr, "  load-supereq    - load stock supercandles\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-superfo    - load futures supercandles\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-superfx    - load currency supercandles\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  load-supereq-latest - save snapshot of the open 5-min supercandle (stocks)\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  load-superfo-latest - save snapshot of the open 5-min supercandle (futures)\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  load-superfx-latest - save snapshot of the open 5-min supercandle (currency)\n")
+		_, _ = fmt.Fprintf(os.Stderr, "  load-latest     - save snapshots of the open 5-min supercandles (all markets)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-futoi      - load futures open interest (FUTOI)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load-iss-openpositions - load daily futures open positions by phys/legal (ISS statistics)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  load            - load all (supercandles, futoi, openpositions, bond daily) then rebuild index supercandles\n")
@@ -55,7 +59,8 @@ func main() {
 		_, _ = fmt.Fprintf(os.Stderr, "  --end {date}    - end date (format: YYYY-MM-DD, defaults to today)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --index {ids}   - comma-separated index ids (build-index-super only)\n")
 		_, _ = fmt.Fprintf(os.Stderr, "  --watch         - keep running: reload the current day every 5 minutes\n")
-		_, _ = fmt.Fprintf(os.Stderr, "                    (daily data every hour); incompatible with --start/--end\n")
+		_, _ = fmt.Fprintf(os.Stderr, "                    (daily data every hour; latest supercandles every 20s)\n")
+		_, _ = fmt.Fprintf(os.Stderr, "                    incompatible with --start/--end\n")
 		os.Exit(1)
 	}
 
@@ -153,6 +158,14 @@ func main() {
 		err = supercandles.LoadFutures(ctx, superOpts)
 	case "load-superfx":
 		err = supercandles.LoadCurrencies(ctx, superOpts)
+	case "load-supereq-latest":
+		err = supercandles.LoadLatestEq(ctx, superOpts)
+	case "load-superfo-latest":
+		err = supercandles.LoadLatestFO(ctx, superOpts)
+	case "load-superfx-latest":
+		err = supercandles.LoadLatestFx(ctx, superOpts)
+	case "load-latest":
+		err = supercandles.LoadLatestAll(ctx, superOpts)
 	case "load-futoi":
 		err = futoi.Load(ctx, opts)
 	case "load-iss-openpositions":
@@ -183,6 +196,10 @@ func main() {
 		gr, grctx := errgroup.WithContext(ctx)
 		if builder != nil {
 			gr.Go(func() error { return builder.Run(grctx) })
+		}
+		if opts.Watch {
+			// Держим снимки открытой пятиминутки в актуальном состоянии.
+			gr.Go(func() error { return supercandles.LoadLatestAll(grctx, superOpts) })
 		}
 		gr.Go(func() error { return supercandles.LoadAll(grctx, superOpts) })
 		gr.Go(func() error { return futoi.Load(grctx, opts) })
@@ -224,7 +241,8 @@ func main() {
 func watchSupported(cmd string) bool {
 	switch cmd {
 	case "load", "load-supereq", "load-superfo", "load-superfx", "load-futoi",
-		"load-iss-openpositions", "load-bond-daily", "load-index", "build-index-super":
+		"load-iss-openpositions", "load-bond-daily", "load-index", "build-index-super",
+		"load-latest", "load-supereq-latest", "load-superfo-latest", "load-superfx-latest":
 		return true
 	}
 	return false

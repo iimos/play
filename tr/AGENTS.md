@@ -15,6 +15,10 @@ go run main.go <command> [flags]
 go run main.go load-supereq    # Load stock supercandles
 go run main.go load-superfo    # Load futures supercandles  
 go run main.go load-superfx    # Load currency supercandles
+go run main.go load-supereq-latest # Snapshot of the open 5-min supercandle (stocks)
+go run main.go load-superfo-latest # Snapshot of the open 5-min supercandle (futures)
+go run main.go load-superfx-latest # Snapshot of the open 5-min supercandle (currency)
+go run main.go load-latest     # Snapshot of the open 5-min supercandles (all markets)
 go run main.go load-futoi      # Load futures open interest (FUTOI)
 go run main.go load-iss-openpositions # Load daily futures open positions by phys/legal (ISS statistics)
 go run main.go load-index      # Load index candles + constituent weights (all available indices; reloads whole day via DROP PARTITION)
@@ -28,7 +32,8 @@ go run main.go load            # Load all (supercandles, futoi, etc) then rebuil
 # --end {date}   End date (format: YYYY-MM-DD, defaults to today)
 # --index {ids}  Comma-separated index ids (build-index-super only; ignored by load-index)
 # --watch        Keep running: reload the current day every 5 minutes
-#                (daily data every hour). Incompatible with --start/--end.
+#                (daily data every hour; latest supercandles every 20s).
+#                Incompatible with --start/--end.
 # Note: Last date in table is always reloaded automatically
 ```
 
@@ -81,10 +86,11 @@ Main tables:
 `tr.index_candles` - Свечи индексов MOEX (сам индекс, не фьючерс): OHLC + оборот ₽
 `tr.index_weights` - Веса бумаг в индексах MOEX по дням (ISS index analytics)
 `tr.super_index` - Синтез 5-минутных суперсвечей индексов из super_eq + index_weights
+`tr.super_eq_latest` / `tr.super_fo_latest` / `tr.super_fx_latest` - Снимок открытой (текущей) 5-минутной суперсвечи (API `latest=1`), по одной живой строке на инструмент. `ReplacingMergeTree(updated_at)`, `ORDER BY (secid)`; читать через `FINAL`
 
 Все таблицы используют партиционирование по дням: `PARTITION BY Date(time)`
 (исключение: `index_weights` — `PARTITION BY tradedate`).
 
 Access: `clickhouse client -f CSVWithNames -q "select 1"` (default on localhost:9000)
 
-Более детальное описание данных есть в ./docs
+Описание данных находится в ./docs

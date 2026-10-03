@@ -128,6 +128,12 @@ func LoadCurrencies(ctx context.Context, opts LoadOptions) error {
 }
 
 func fetchFxStats(ctx context.Context, sess *moexalgo.Session, date time.Time) ([]*store.SuperCandleFx, error) {
+	return fetchFxStatsWithLatest(ctx, sess, date, false)
+}
+
+// fetchFxStatsWithLatest загружает пятиминутные суперсвечи по валютам. При
+// latest=true запрашивается только открытая пятиминутка (latest=1).
+func fetchFxStatsWithLatest(ctx context.Context, sess *moexalgo.Session, date time.Time, latest bool) ([]*store.SuperCandleFx, error) {
 	mu := sync.Mutex{}
 	stats := make(map[statKey]*store.SuperCandleFx, moexalgo.DefaultPageLimit)
 
@@ -143,10 +149,14 @@ func fetchFxStats(ctx context.Context, sess *moexalgo.Session, date time.Time) (
 	}
 
 	dateStr := date.Format(time.DateOnly)
+	url := "datashop/algopack/fx/%s.json?date=" + dateStr
+	if latest {
+		url += "&latest=1"
+	}
 
 	gr, ctx := errgroup.WithContext(ctx)
 	gr.Go(func() error {
-		err := moexalgo.GetAll(ctx, sess, "datashop/algopack/fx/tradestats.json?date="+dateStr, func(d *moexalgo.EqTradeStat) {
+		err := moexalgo.GetAll(ctx, sess, fmt.Sprintf(url, "tradestats"), func(d *moexalgo.EqTradeStat) {
 			if !d.IsEmpty() {
 				mu.Lock()
 				defer mu.Unlock()
@@ -156,7 +166,7 @@ func fetchFxStats(ctx context.Context, sess *moexalgo.Session, date time.Time) (
 		return err
 	})
 	gr.Go(func() error {
-		err := moexalgo.GetAll(ctx, sess, "datashop/algopack/fx/obstats.json?date="+dateStr, func(d *moexalgo.FOObStat) {
+		err := moexalgo.GetAll(ctx, sess, fmt.Sprintf(url, "obstats"), func(d *moexalgo.FOObStat) {
 			if !d.IsEmpty() {
 				mu.Lock()
 				defer mu.Unlock()
@@ -166,7 +176,7 @@ func fetchFxStats(ctx context.Context, sess *moexalgo.Session, date time.Time) (
 		return err
 	})
 	gr.Go(func() error {
-		err := moexalgo.GetAll(ctx, sess, "datashop/algopack/fx/orderstats.json?date="+dateStr, func(d *moexalgo.OrderStat) {
+		err := moexalgo.GetAll(ctx, sess, fmt.Sprintf(url, "orderstats"), func(d *moexalgo.OrderStat) {
 			if !d.IsEmpty() {
 				mu.Lock()
 				defer mu.Unlock()

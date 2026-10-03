@@ -32,6 +32,12 @@ func RunHourly(ctx context.Context, tick func(context.Context) error) error {
 	return run(ctx, hourlyInterval, hourlyOffset, tick)
 }
 
+// RunEvery запускает tick каждые every без привязки к календарным границам
+// (offset = 0). Используется для частого обновления открытой пятиминутки.
+func RunEvery(ctx context.Context, every time.Duration, tick func(context.Context) error) error {
+	return run(ctx, every, 0, tick)
+}
+
 // run вызывает tick на каждой границе every (смещённой на offset). Работает до
 // отмены ctx. Ошибки tick логируются и не прерывают цикл.
 func run(ctx context.Context, every, offset time.Duration, tick func(context.Context) error) error {

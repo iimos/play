@@ -124,6 +124,12 @@ func LoadFutures(ctx context.Context, opts LoadOptions) error {
 }
 
 func fetchFOStats(ctx context.Context, sess *moexalgo.Session, date time.Time) ([]*store.SuperCandleFO, error) {
+	return fetchFOStatsWithLatest(ctx, sess, date, false)
+}
+
+// fetchFOStatsWithLatest загружает пятиминутные суперсвечи по фьючерсам. При
+// latest=true запрашивается только открытая пятиминутка (latest=1).
+func fetchFOStatsWithLatest(ctx context.Context, sess *moexalgo.Session, date time.Time, latest bool) ([]*store.SuperCandleFO, error) {
 	mu := sync.Mutex{}
 	stats := make(map[statKey]*store.SuperCandleFO, moexalgo.DefaultPageLimit)
 
@@ -139,10 +145,14 @@ func fetchFOStats(ctx context.Context, sess *moexalgo.Session, date time.Time) (
 	}
 
 	dateStr := date.Format(time.DateOnly)
+	url := "datashop/algopack/fo/%s.json?date=" + dateStr
+	if latest {
+		url += "&latest=1"
+	}
 
 	gr, ctx := errgroup.WithContext(ctx)
 	gr.Go(func() error {
-		err := moexalgo.GetAll(ctx, sess, "datashop/algopack/fo/tradestats.json?date="+dateStr, func(d *moexalgo.FOTradeStat) {
+		err := moexalgo.GetAll(ctx, sess, fmt.Sprintf(url, "tradestats"), func(d *moexalgo.FOTradeStat) {
 			if !d.IsEmpty() {
 				mu.Lock()
 				defer mu.Unlock()
@@ -152,7 +162,7 @@ func fetchFOStats(ctx context.Context, sess *moexalgo.Session, date time.Time) (
 		return err
 	})
 	gr.Go(func() error {
-		err := moexalgo.GetAll(ctx, sess, "datashop/algopack/fo/obstats.json?date="+dateStr, func(d *moexalgo.FOObStat) {
+		err := moexalgo.GetAll(ctx, sess, fmt.Sprintf(url, "obstats"), func(d *moexalgo.FOObStat) {
 			if !d.IsEmpty() {
 				mu.Lock()
 				defer mu.Unlock()

@@ -423,3 +423,235 @@ CREATE TABLE tr.super_index (
 PARTITION BY Date(time)
 ORDER BY (indexid, time)
 COMMENT 'Суперсвечи (5-минутные) по индексам: синтез из super_eq и index_weights';
+
+
+-- ============================================================================
+-- Снимки текущей (открытой) пятиминутки (API latest=1).
+-- По одной живой строке на инструмент. Версия строки — updated_at (время
+-- загрузки, DEFAULT now()), поэтому новая публикация замещает предыдущую через
+-- ReplacingMergeTree. Строки неактуального интервала вычищаются загрузчиком.
+-- ============================================================================
+
+CREATE TABLE tr.super_eq_latest (
+      time          DateTime CODEC(DoubleDelta(1), LZ4) COMMENT 'Начало 5-минутного интервала',
+      secid         LowCardinality(String) COMMENT 'Код инструмента (тикер)',
+      updated_at    DateTime DEFAULT now() COMMENT 'Время загрузки снимка, версия строки',
+
+      -- tradestats: метрики сделок
+      pr_open            Float32,
+      pr_high            Float32,
+      pr_low             Float32,
+      pr_close           Float32,
+      pr_std             Float32,
+      vol                UInt32,
+      val                Float32,
+      trades             UInt32,
+      pr_vwap            Float32,
+      pr_change          Float32,
+      trades_b           UInt32,
+      trades_s           UInt32,
+      val_b              Float32,
+      val_s              Float32,
+      vol_b              UInt64,
+      vol_s              UInt64,
+      disb               Float32,
+      pr_vwap_b          Float32,
+      pr_vwap_s          Float32,
+      sec_pr_open        UInt32,
+      sec_pr_high        UInt32,
+      sec_pr_low         UInt32,
+      sec_pr_close       UInt32,
+
+      -- obstats: метрики стакана заявок
+      spread_bbo         Float32,
+      spread_lv10        Float32,
+      spread_1mio        Float32,
+      levels_b           UInt32,
+      levels_s           UInt32,
+      imbalance_vol_bbo  Float32,
+      imbalance_val_bbo  Float32,
+      imbalance_vol      Float32,
+      imbalance_val      Float32,
+      vwap_b             Float32,
+      vwap_s             Float32,
+      vwap_b_1mio        Float32,
+      vwap_s_1mio        Float32,
+
+      -- orderstats: метрики заявок
+      put_orders_b       UInt32,
+      put_orders_s       UInt32,
+      put_val_b          Float32,
+      put_val_s          Float32,
+      put_vol_b          UInt32,
+      put_vol_s          UInt32,
+      put_vwap_b         Float32,
+      put_vwap_s         Float32,
+      put_vol            UInt32,
+      put_val            Float32,
+      put_orders         UInt32,
+      cancel_orders_b    UInt32,
+      cancel_orders_s    UInt32,
+      cancel_val_b       Float32,
+      cancel_val_s       Float32,
+      cancel_vol_b       UInt32,
+      cancel_vol_s       UInt64,
+      cancel_vwap_b      Float32,
+      cancel_vwap_s      Float32,
+      cancel_vol         UInt64,
+      cancel_val         Float32,
+      cancel_orders      UInt64
+) ENGINE = ReplacingMergeTree(updated_at)
+PARTITION BY Date(time)
+ORDER BY (secid)
+COMMENT 'Снимок открытой 5-минутной суперсвечи по акциям (latest=1)';
+
+CREATE TABLE tr.super_fo_latest (
+       time          DateTime CODEC(DoubleDelta(1), LZ4) COMMENT 'Начало 5-минутного интервала',
+       secid         LowCardinality(String) COMMENT 'Код инструмента (тикер контракта)',
+       asset_code    LowCardinality(String) COMMENT 'Код базового актива (ASSETCODE)',
+       updated_at    DateTime DEFAULT now() COMMENT 'Время загрузки снимка, версия строки',
+
+       -- tradestats: метрики сделок
+       pr_open            Float32,
+       pr_high            Float32,
+       pr_low             Float32,
+       pr_close           Float32,
+       pr_std             Float32,
+       vol                UInt32,
+       val                Float32,
+       trades             UInt32,
+       pr_vwap            Float32,
+       pr_change          Float32,
+       trades_b           UInt32,
+       trades_s           UInt32,
+       val_b              Float32,
+       val_s              Float32,
+       vol_b              UInt64,
+       vol_s              UInt64,
+       disb               Float32,
+       pr_vwap_b          Float32,
+       pr_vwap_s          Float32,
+       im                 Float32,
+       oi_open            UInt32,
+       oi_high            UInt32,
+       oi_low             UInt32,
+       oi_close           UInt32,
+       sec_pr_open        UInt32,
+       sec_pr_high        UInt32,
+       sec_pr_low         UInt32,
+       sec_pr_close       UInt32,
+
+       -- obstats: метрики стакана заявок
+       mid_price      Float32,
+       micro_price    Float32,
+       spread_l1      Float32,
+       spread_l2      Float32,
+       spread_l3      Float32,
+       spread_l5      Float32,
+       spread_l10     Float32,
+       spread_l20     Float32,
+       levels_b       UInt32,
+       levels_s       UInt32,
+       vol_b_l1       UInt64,
+       vol_b_l2       UInt64,
+       vol_b_l3       UInt64,
+       vol_b_l5       UInt64,
+       vol_b_l10      UInt64,
+       vol_b_l20      UInt64,
+       vol_s_l1       UInt64,
+       vol_s_l2       UInt64,
+       vol_s_l3       UInt64,
+       vol_s_l5       UInt64,
+       vol_s_l10      UInt64,
+       vol_s_l20      UInt64,
+       vwap_b_l3      Float32,
+       vwap_b_l5      Float32,
+       vwap_b_l10     Float32,
+       vwap_b_l20     Float32,
+       vwap_s_l3      Float32,
+       vwap_s_l5      Float32,
+       vwap_s_l10     Float32,
+       vwap_s_l20     Float32
+) ENGINE = ReplacingMergeTree(updated_at)
+PARTITION BY Date(time)
+ORDER BY (secid)
+COMMENT 'Снимок открытой 5-минутной суперсвечи по фьючерсам (latest=1)';
+
+CREATE TABLE tr.super_fx_latest (
+     time          DateTime CODEC(DoubleDelta(1), LZ4) COMMENT 'Начало 5-минутного интервала',
+     secid         LowCardinality(String) COMMENT 'Код инструмента (тикер)',
+     updated_at    DateTime DEFAULT now() COMMENT 'Время загрузки снимка, версия строки',
+
+    -- tradestats: метрики сделок
+     pr_open            Float32,
+     pr_high            Float32,
+     pr_low             Float32,
+     pr_close           Float32,
+     pr_std             Float32,
+     vol                UInt64,
+     val                UInt64,
+     trades             UInt32,
+     pr_vwap            Float32,
+     pr_change          Float32,
+     trades_b           UInt32,
+     trades_s           UInt32,
+     val_b              Float32,
+     val_s              Float32,
+     vol_b              UInt64,
+     vol_s              UInt64,
+     disb               Float32,
+     pr_vwap_b          Float32,
+     pr_vwap_s          Float32,
+     sec_pr_open        UInt32,
+     sec_pr_high        UInt32,
+     sec_pr_low         UInt32,
+     sec_pr_close       UInt32,
+
+    -- obstats: метрики стакана заявок
+     mid_price      Float32,
+     micro_price    Float32,
+     spread_l1      Float32,
+     spread_l2      Float32,
+     spread_l3      Float32,
+     spread_l5      Float32,
+     spread_l10     Float32,
+     levels_b       UInt32,
+     levels_s       UInt32,
+     vol_b_l1       UInt64,
+     vol_b_l2       UInt64,
+     vol_b_l3       UInt64,
+     vol_b_l5       UInt64,
+     vol_b_l10      UInt64,
+     vol_s_l1       UInt64,
+     vol_s_l2       UInt64,
+     vol_s_l3       UInt64,
+     vol_s_l5       UInt64,
+     vol_s_l10      UInt64,
+     vwap_b_l3      Float32,
+     vwap_b_l5      Float32,
+     vwap_b_l10     Float32,
+     vwap_s_l3      Float32,
+     vwap_s_l5      Float32,
+     vwap_s_l10     Float32,
+
+    -- orderstats: метрики заявок
+     put_orders_b       UInt32,
+     put_orders_s       UInt32,
+     put_val_b          UInt64,
+     put_val_s          UInt64,
+     put_vol_b          UInt64,
+     put_vol_s          UInt64,
+     put_vwap_b         Float32,
+     put_vwap_s         Float32,
+     cancel_orders_b    UInt32,
+     cancel_orders_s    UInt32,
+     cancel_val_b       Float32,
+     cancel_val_s       Float32,
+     cancel_vol_b       UInt32,
+     cancel_vol_s       UInt64,
+     cancel_vwap_b      Float32,
+     cancel_vwap_s      Float32
+) ENGINE = ReplacingMergeTree(updated_at)
+PARTITION BY Date(time)
+ORDER BY (secid)
+COMMENT 'Снимок открытой 5-минутной суперсвечи по валютам (latest=1)';

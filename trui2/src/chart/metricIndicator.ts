@@ -19,7 +19,7 @@ export interface MetricIndicatorSpec {
 let metricSeq = 0
 
 // Значения метрик по ключу -> timestamp -> value. Модульный стейт рассчитан на
-// единственный экземпляр чарта (как fizOIMap в ChartType.tsx). Индикатор читает
+// единственный экземпляр чарта (как fizOIOwn в ChartType.tsx). Индикатор читает
 // отсюда по timestamp свечи, а заполняется через set/appendMetricValues из
 // ChartType при загрузке данных.
 const metricValues = new Map<string, Map<number, number>>()

@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useState, useRef } from 'react'
 import { Chart, init, dispose, registerIndicator, registerOverlay, CandleTooltipLegendsCustomCallback, Period, TooltipLegend, Point } from 'klinecharts'
 import Layout from '../Layout'
 import TickerSelector from './TickerSelector'
-import { fetchCandles, fetchLatestTime, fetchMetric, fetchMarketShares, IntervalType, SuperCandle, fetchFizOI, resolveFutoiTicker, resolveSecGroup, SEC_GROUP_TO_TABLE, FutOIData, FizOIResult, MetricPoint, isGapBar, mapRealBars, realBars, intervalMs } from '../data/index'
+import { fetchCandles, fetchLatestTime, fetchMetric, fetchMarketShares, IntervalType, SuperCandle, fetchFizOI, resolveFutoiTicker, resolveSecGroup, SEC_GROUP_TO_TABLE, FutOIData, FutOISource, FizOIResult, MetricPoint, isGapBar, mapRealBars, realBars, intervalMs } from '../data/index'
 import { makeMetricIndicator, MetricIndicatorSpec, setMetricValues, appendMetricValues, clearMetricValues, removeMetricValues } from './metricIndicator'
 
 // Легенды тултипа свечи по умолчанию (как во встроенном шаблоне). Нужны, чтобы
@@ -27,7 +27,7 @@ const klineStyle = {
   },
 }
 
-type VolumeIndicatorId = 'VOL' | 'volume_bs' | 'volume_bs_cum' | 'oi' | 'fiz_imbalance' | 'pr_vwap_spread'
+type VolumeIndicatorId = 'VOL' | 'volume_bs' | 'volume_bs_cum' | 'oi' | 'oi_const' | 'fiz_imbalance' | 'pr_vwap_spread'
 
 interface VolumeIndicatorDef {
   id: VolumeIndicatorId
@@ -35,6 +35,9 @@ interface VolumeIndicatorDef {
   indicatorName: string
   paneId: string
   requiresOI: boolean
+  // Тип ОИ для индикаторов, требующих данных: собственный ОИ инструмента или
+  // взвешенные бумаги, входящие в индекс. По умолчанию 'own'.
+  oiKind?: 'own' | 'constituents'
   // Интервалы, на которых индикатор скрыт (недоступен).
   hiddenOn?: string[]
 }
@@ -45,8 +48,9 @@ const VOLUME_INDICATORS: VolumeIndicatorDef[] = [
   { id: 'VOL', label: 'Объем', indicatorName: 'VOL', paneId: 'pane_vol', requiresOI: false },
   { id: 'volume_bs', label: 'Активные сделки', indicatorName: 'volume_bs', paneId: 'pane_volume_bs', requiresOI: false },
   { id: 'volume_bs_cum', label: 'Накопл. объём активных сделок', indicatorName: 'volume_bs_cum', paneId: 'pane_volume_bs_cum', requiresOI: false, hiddenOn: [IntervalType.Week, IntervalType.Month] },
-  { id: 'oi', label: 'Открытый интерес', indicatorName: 'fiz_oi', paneId: 'pane_oi', requiresOI: true },
-  { id: 'fiz_imbalance', label: 'Дисбаланс ОИ', indicatorName: 'fiz_imbalance', paneId: 'pane_fiz_imbalance', requiresOI: true },
+  { id: 'oi', label: 'Открытый интерес', indicatorName: 'fiz_oi', paneId: 'pane_oi', requiresOI: true, oiKind: 'own' },
+  { id: 'oi_const', label: 'ОИ акций индекса', indicatorName: 'fiz_oi_const', paneId: 'pane_oi_const', requiresOI: true, oiKind: 'constituents' },
+  { id: 'fiz_imbalance', label: 'Дисбаланс ОИ', indicatorName: 'fiz_imbalance', paneId: 'pane_fiz_imbalance', requiresOI: true, oiKind: 'own' },
   { id: 'pr_vwap_spread', label: 'Спред VWAP', indicatorName: 'pr_vwap_spread', paneId: 'pane_pr_vwap_spread', requiresOI: false },
 ]
 
@@ -55,8 +59,16 @@ const DEFAULT_ENABLED: Record<VolumeIndicatorId, boolean> = {
   volume_bs: true,
   volume_bs_cum: true,
   oi: true,
+  oi_const: true,
   fiz_imbalance: true,
   pr_vwap_spread: true,
+}
+
+// Доступны ли данные ОИ, требуемые индикатором: свой ряд инструмента или
+// ряд взвешенных бумаг индекса.
+function isIndicatorOIReady(ind: VolumeIndicatorDef, ownAvailable: boolean, constAvailable: boolean): boolean {
+  if (!ind.requiresOI) return true
+  return ind.oiKind === 'constituents' ? constAvailable : ownAvailable
 }
 
 // Периодическая подгрузка новых свечей: как часто опрашиваем источник и сколько
@@ -70,16 +82,24 @@ const REALTIME_WINDOW_BARS = 4
 // тысяч баров-разрывов (что подвешивало бы UI).
 const REALTIME_MAX_APPEND_BARS = 200
 
-// OI физлиц (FUTOI) по инструменту, заполняется перед созданием индикатора fiz_oi
-let fizOIMap = new Map<number, FizOIPoint>()
-// Дневные срезы (iss_openpositions) для forward-fill на внутридневных интервалах.
-let fizOIDaily: FizOIDailyPoint[] = []
-let fizOIDailyMode = false
+// Ряд ОИ: map для внутридневных FUTOI-таймслотов либо daily для дневных срезов
+// (iss_openpositions) с forward-fill на графике.
+interface FizOISeries {
+  map: Map<number, FizOIPoint>
+  daily: FizOIDailyPoint[]
+  dailyMode: boolean
+}
+
+// OI физлиц (FUTOI) по собственному инструменту, заполняется перед созданием
+// индикаторов fiz_oi/fiz_imbalance.
+let fizOIOwn: FizOISeries = { map: new Map(), daily: [], dailyMode: false }
+// OI акций, входящих в индекс (взвешенно) — отдельный ряд для индикатора fiz_oi_const.
+let fizOIConst: FizOISeries = { map: new Map(), daily: [], dailyMode: false }
 
 // Текущий интервал графика — нужен calc-функции volume_bs_cum, чтобы выбрать
 // период накопления (торговый день МСК на внутридневных, неделя на дневках).
 // Модульная переменная рассчитана на единственный экземпляр чарта (как и
-// fizOIMap/fizOIDailyMode выше).
+// fizOIOwn/fizOIConst выше).
 let currentInterval = IntervalType.Hour
 
 // Дата в таймзоне МСК (Europe/Moscow, UTC+3 без DST) в формате YYYY-MM-DD.
@@ -236,16 +256,30 @@ function fmtRubles(n: number): string {
 }
 
 function toFizOIPoint(d: FutOIData): FizOIPoint {
-  const total = d.total_long + d.total_short
-  const share = total > 0 ? Math.min(100, (d.fiz_long + d.fiz_short) / total * 100) : null
-  const sum = d.fiz_long + d.fiz_short
-  const oi_imbalance = sum > 0 ? (d.fiz_long - d.fiz_short) / sum : null
-  const hasPrice = d.price > 0
+  // Для агрегата по индексу контракты разных инструментов несопоставимы по
+  // номиналу, поэтому долю физлиц и дисбаланс считаем в ₽ (по стоимости
+  // контрактов), а не по «сырым» контрактам. Если цены нет — откатываемся на
+  // контракты.
+  const hasRuble = d.ruble_long != null && d.ruble_short != null
+    && d.ruble_total_long != null && d.ruble_total_short != null
+  let share: number | null
+  let oi_imbalance: number | null
+  if (hasRuble) {
+    const total = (d.ruble_total_long as number) + (d.ruble_total_short as number)
+    share = total > 0 ? Math.min(100, ((d.ruble_long as number) + (d.ruble_short as number)) / total * 100) : null
+    const sum = (d.ruble_long as number) + (d.ruble_short as number)
+    oi_imbalance = sum > 0 ? ((d.ruble_long as number) - (d.ruble_short as number)) / sum : null
+  } else {
+    const total = d.total_long + d.total_short
+    share = total > 0 ? Math.min(100, (d.fiz_long + d.fiz_short) / total * 100) : null
+    const sum = d.fiz_long + d.fiz_short
+    oi_imbalance = sum > 0 ? (d.fiz_long - d.fiz_short) / sum : null
+  }
   return {
     fiz_long: d.fiz_long,
     fiz_short: d.fiz_short,
-    ruble_long: hasPrice ? d.fiz_long * d.price : null,
-    ruble_short: hasPrice ? d.fiz_short * d.price : null,
+    ruble_long: d.ruble_long,
+    ruble_short: d.ruble_short,
     share,
     oi_imbalance,
   }
@@ -255,45 +289,45 @@ function emptyFizOIPoint(): FizOIPoint {
   return { fiz_long: null, fiz_short: null, ruble_long: null, ruble_short: null, share: null, oi_imbalance: null }
 }
 
-// Мержит результат fetchFizOI в модульное состояние. replace=true — новый
+// Мержит результат fetchFizOI в модульный ряд. replace=true — новый
 // инструмент/интервал (сброс), иначе — докрутка вперёд (добавление точек).
-function applyFizOIResult(result: FizOIResult, replace: boolean) {
+function applyFizOIResult(series: FizOISeries, result: FizOIResult, replace: boolean) {
   if (replace) {
-    fizOIMap = new Map()
-    fizOIDaily = []
+    series.map = new Map()
+    series.daily = []
   }
-  fizOIDailyMode = result.isDaily
+  series.dailyMode = result.isDaily
   if (result.isDaily) {
     // Докрутка вперёд перезапрашивает перекрывающийся диапазон — дедуплицируем
     // по timestamp, чтобы массив не разрастался дублями.
-    const seen = new Set(fizOIDaily.map(p => p.timestamp))
+    const seen = new Set(series.daily.map(p => p.timestamp))
     for (const d of result.data) {
       if (seen.has(d.timestamp)) continue
       seen.add(d.timestamp)
-      fizOIDaily.push({ timestamp: d.timestamp, point: toFizOIPoint(d) })
+      series.daily.push({ timestamp: d.timestamp, point: toFizOIPoint(d) })
     }
-    fizOIDaily.sort((a, b) => a.timestamp - b.timestamp)
+    series.daily.sort((a, b) => a.timestamp - b.timestamp)
   } else {
     for (const d of result.data) {
-      fizOIMap.set(d.timestamp, toFizOIPoint(d))
+      series.map.set(d.timestamp, toFizOIPoint(d))
     }
   }
 }
 
 // Для дневных срезов тянем последнее известное значение на весь день
 // (сплошная горизонтальная линия), т.к. внутри дня данных нет.
-function forwardFillDailyPoint(ts: number): FizOIPoint {
-  let lo = 0, hi = fizOIDaily.length - 1, ans = -1
+function forwardFillDailyPoint(series: FizOISeries, ts: number): FizOIPoint {
+  let lo = 0, hi = series.daily.length - 1, ans = -1
   while (lo <= hi) {
     const mid = (lo + hi) >> 1
-    if (fizOIDaily[mid].timestamp <= ts) {
+    if (series.daily[mid].timestamp <= ts) {
       ans = mid
       lo = mid + 1
     } else {
       hi = mid - 1
     }
   }
-  return ans >= 0 ? fizOIDaily[ans].point : emptyFizOIPoint()
+  return ans >= 0 ? series.daily[ans].point : emptyFizOIPoint()
 }
 
 type ActiveTradesPoint = SuperCandle & { val_net?: number }
@@ -481,10 +515,10 @@ registerIndicator<FizOIPoint | null>({
     { key: 'ruble_short', title: 'ОИ физлиц (шорт, ₽): ', type: 'line', styles: () => ({ color: "#EF5350" })},
   ],
   calc: dataList => mapRealBars<FizOIPoint>(dataList, c => {
-    if (fizOIDailyMode) {
-      return forwardFillDailyPoint(c.timestamp)
+    if (fizOIOwn.dailyMode) {
+      return forwardFillDailyPoint(fizOIOwn, c.timestamp)
     }
-    return fizOIMap.get(c.timestamp) ?? emptyFizOIPoint()
+    return fizOIOwn.map.get(c.timestamp) ?? emptyFizOIPoint()
   }),
   createTooltipDataSource: ({ indicator, crosshair }) => {
     const legends: TooltipLegend[] = []
@@ -501,6 +535,42 @@ registerIndicator<FizOIPoint | null>({
       legends.push({ title: 'Доля физлиц=', value: `${data.share.toFixed(1)}%` })
     }
     return { name: 'ОИ физлиц', calcParamsText: '', features: [], legends }
+  },
+})
+
+// Открытый интерес физлиц по акциям, входящим в индекс (взвешенно как в индексе).
+// Отдельный индикатор от fiz_oi (собственный ОИ индекса).
+registerIndicator<FizOIPoint | null>({
+  name: 'fiz_oi_const',
+  shortName: 'ОИ акций индекса',
+  series: 'volume',
+  precision: 0,
+  shouldFormatBigNumber: true,
+  figures: [
+    { key: 'ruble_long', title: 'ОИ физлиц (лонг, ₽): ', type: 'line', styles: () => ({ color: "#26A69A" })},
+    { key: 'ruble_short', title: 'ОИ физлиц (шорт, ₽): ', type: 'line', styles: () => ({ color: "#EF5350" })},
+  ],
+  calc: dataList => mapRealBars<FizOIPoint>(dataList, c => {
+    if (fizOIConst.dailyMode) {
+      return forwardFillDailyPoint(fizOIConst, c.timestamp)
+    }
+    return fizOIConst.map.get(c.timestamp) ?? emptyFizOIPoint()
+  }),
+  createTooltipDataSource: ({ indicator, crosshair }) => {
+    const legends: TooltipLegend[] = []
+    const data = crosshair.dataIndex != null
+      ? indicator.result[crosshair.dataIndex]
+      : undefined
+    if (data?.ruble_long != null) {
+      legends.push({ title: 'Лонг=', value: fmtRubles(data.ruble_long) })
+    }
+    if (data?.ruble_short != null) {
+      legends.push({ title: 'Шорт=', value: fmtRubles(data.ruble_short) })
+    }
+    if (data?.share != null) {
+      legends.push({ title: 'Доля физлиц=', value: `${data.share.toFixed(1)}%` })
+    }
+    return { name: 'ОИ акций индекса', calcParamsText: '', features: [], legends }
   },
 })
 
@@ -525,10 +595,10 @@ registerIndicator<FizOIPoint | null>({
     }
   ],
   calc: dataList => mapRealBars<FizOIPoint>(dataList, c => {
-    if (fizOIDailyMode) {
-      return forwardFillDailyPoint(c.timestamp)
+    if (fizOIOwn.dailyMode) {
+      return forwardFillDailyPoint(fizOIOwn, c.timestamp)
     }
-    return fizOIMap.get(c.timestamp) ?? emptyFizOIPoint()
+    return fizOIOwn.map.get(c.timestamp) ?? emptyFizOIPoint()
   }),
   createTooltipDataSource: ({ indicator, crosshair }) => {
     const legends: TooltipLegend[] = []
@@ -1021,6 +1091,7 @@ export default function ChartType () {
   const [interval, setInterval] = useState(initial.interval)
   const [enabled, setEnabled] = useState<Record<VolumeIndicatorId, boolean>>(DEFAULT_ENABLED)
   const [oiAvailable, setOIAvailable] = useState(false)
+  const [constituentsOIAvailable, setConstituentsOIAvailable] = useState(false)
   const [metrics, setMetrics] = useState<MetricIndicatorSpec[]>([])
   const [metricInput, setMetricInput] = useState('')
   const [superTable, setSuperTable] = useState<string | null>(null)
@@ -1033,8 +1104,11 @@ export default function ChartType () {
   const [shareThresholdPct, setShareThresholdPct] = useState(DEFAULT_SHARE_THRESHOLD * 100)
   const [shareThresholdText, setShareThresholdText] = useState(String(DEFAULT_SHARE_THRESHOLD * 100))
   const chart = useRef<Chart | null>(null)
-  const futoiTickerRef = useRef<string | null>(null)
-  const futoiAssetRef = useRef<string | null>(null)
+  // Источники ОИ для текущего инструмента: собственные фьючерсы инструмента
+  // (futoiOwnSourcesRef) и взвешенные бумаги, входящие в индекс
+  // (futoiConstSourcesRef). Пустой массив — соответствующего ОИ нет.
+  const futoiOwnSourcesRef = useRef<FutOISource[]>([])
+  const futoiConstSourcesRef = useRef<FutOISource[]>([])
   // Значения, читаемые из колбэков чарта, которые не пересоздаются при смене
   // состояния (включена ли подсветка, порог доли рынка 0..1).
   const highlightVolumeRef = useRef(highlightVolume)
@@ -1124,15 +1198,15 @@ export default function ChartType () {
     let cancelled = false
 
     setOIAvailable(false)
+    setConstituentsOIAvailable(false)
     setDataError(null)
     setSuperTable(null)
     setStockSharesAvailable(false)
     clearMetricValues()
-    fizOIMap = new Map()
-    fizOIDaily = []
-    fizOIDailyMode = false
-    futoiTickerRef.current = null
-    futoiAssetRef.current = null
+    fizOIOwn = { map: new Map(), daily: [], dailyMode: false }
+    fizOIConst = { map: new Map(), daily: [], dailyMode: false }
+    futoiOwnSourcesRef.current = []
+    futoiConstSourcesRef.current = []
     marketShares = new Map()
     highlightTimes = new Set()
     volumeBaseline = new Map()
@@ -1226,37 +1300,60 @@ export default function ChartType () {
     }
     chart.current?.subscribeAction('onCrosshairChange', onCrosshairChange)
 
-    // Загружаем OI физлиц для диапазона и резолвим тикер FUTOI (для init-загрузки).
+    // Загружаем OI физлиц для диапазона и резолвим источники FUTOI (для init-загрузки).
+    // Две независимые группы: собственный ОИ инструмента и ОИ бумаг индекса.
     async function loadOI(till: Date, candles: SuperCandle[]) {
       const futures = candles.some(c => c.oi_close !== undefined)
       const resolution = await resolveFutoiTicker(ticker, futures)
       if (cancelled) return
-      futoiTickerRef.current = resolution.futoiTicker
-      futoiAssetRef.current = resolution.asset
-      if (resolution.futoiTicker) {
-        const oiResult = await fetchFizOI(resolution.futoiTicker, resolution.asset, till, interval)
+      futoiOwnSourcesRef.current = resolution.own
+      futoiConstSourcesRef.current = resolution.constituents
+      if (resolution.own.length > 0) {
+        const oiResult = await fetchFizOI(resolution.own, till, interval)
         if (cancelled) return
         const available = oiResult.data.length > 0
         setOIAvailable(available)
         if (available) {
-          applyFizOIResult(oiResult, true)
+          applyFizOIResult(fizOIOwn, oiResult, true)
         }
       } else {
         setOIAvailable(false)
       }
+      if (resolution.constituents.length > 0) {
+        const oiResult = await fetchFizOI(resolution.constituents, till, interval)
+        if (cancelled) return
+        const available = oiResult.data.length > 0
+        setConstituentsOIAvailable(available)
+        if (available) {
+          applyFizOIResult(fizOIConst, oiResult, true)
+        }
+      } else {
+        setConstituentsOIAvailable(false)
+      }
     }
 
     // Докрутка OI вперёд при подгрузке истории (bars ограничивает окно при
-    // периодическом обновлении).
+    // периодическом обновлении). Оба ряда — в отдельных try/catch.
     async function loadOIForward(till: Date, bars?: number) {
-      if (!futoiTickerRef.current) return
-      try {
-        const oiResult = await fetchFizOI(futoiTickerRef.current, futoiAssetRef.current, till, interval, bars)
-        if (!cancelled) {
-          applyFizOIResult(oiResult, false)
+      if (futoiOwnSourcesRef.current.length > 0) {
+        try {
+          const oiResult = await fetchFizOI(futoiOwnSourcesRef.current, till, interval, bars)
+          if (!cancelled) {
+            applyFizOIResult(fizOIOwn, oiResult, false)
+          }
+        } catch (error) {
+          console.error('Ошибка загрузки OI:', error)
         }
-      } catch (error) {
-        console.error('Ошибка загрузки OI:', error)
+      }
+      if (futoiConstSourcesRef.current.length > 0) {
+        try {
+          const oiResult = await fetchFizOI(futoiConstSourcesRef.current, till, interval, bars)
+          if (!cancelled) {
+            applyFizOIResult(fizOIConst, oiResult, false)
+          }
+        } catch (error) {
+          console.error('Ошибка загрузки OI акций индекса:', error)
+        }
       }
     }
 
@@ -1516,7 +1613,7 @@ export default function ChartType () {
     if (!c) return
     for (const ind of VOLUME_INDICATORS) {
       const hidden = ind.hiddenOn?.includes(interval) ?? false
-      const shouldShow = enabled[ind.id] && (!ind.requiresOI || oiAvailable) && !hidden
+      const shouldShow = enabled[ind.id] && isIndicatorOIReady(ind, oiAvailable, constituentsOIAvailable) && !hidden
       const isShown = c.getIndicators({ paneId: ind.paneId }).length > 0
       if (shouldShow && !isShown) {
         c.createIndicator({ name: ind.indicatorName, paneId: ind.paneId })
@@ -1531,12 +1628,12 @@ export default function ChartType () {
         c.createIndicator({ name: f.indicatorName, paneId: f.paneId })
       }
     }
-  }, [enabled, oiAvailable, ticker, interval, metrics])
+  }, [enabled, oiAvailable, constituentsOIAvailable, ticker, interval, metrics])
 
   // Высота контейнера растёт вместе с числом включённых индикаторов,
   // чтобы основной график не сжимался.
   const visibleIndicatorCount = VOLUME_INDICATORS.filter(
-    ind => enabled[ind.id] && (!ind.requiresOI || oiAvailable) && !(ind.hiddenOn?.includes(interval) ?? false)
+    ind => enabled[ind.id] && isIndicatorOIReady(ind, oiAvailable, constituentsOIAvailable) && !(ind.hiddenOn?.includes(interval) ?? false)
   ).length
   const containerHeight = 480 + visibleIndicatorCount * 100 + metrics.length * 100
 
@@ -1599,7 +1696,7 @@ export default function ChartType () {
 
         <span style={{ paddingLeft: 12, paddingRight: 6 }}>Индикаторы:</span>
         {VOLUME_INDICATORS.map(ind => {
-          const oiDisabled = ind.requiresOI && !oiAvailable
+          const oiDisabled = ind.requiresOI && !isIndicatorOIReady(ind, oiAvailable, constituentsOIAvailable)
           const hidden = ind.hiddenOn?.includes(interval) ?? false
           const disabled = oiDisabled || hidden
           return (
@@ -1614,10 +1711,8 @@ export default function ChartType () {
               }}
               title={
                 oiDisabled
-                  ? "Нет данных по открытому интересу"
-                  : hidden
-                    ? "Индикатор недоступен на этом интервале"
-                    : ind.label
+                  ? (ind.oiKind === 'constituents' ? "Нет данных по ОИ акций индекса" : "Нет данных по открытому интересу")
+                  : (hidden ? "Индикатор недоступен на этом интервале" : ind.label)
               }
             >
               <input

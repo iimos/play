@@ -4,6 +4,11 @@ import Layout from '../Layout'
 import TickerSelector from './TickerSelector'
 import { fetchCandles, fetchLatestTime, fetchMetric, fetchMarketShares, IntervalType, SuperCandle, fetchFizOI, resolveFutoiTicker, resolveSecGroup, SEC_GROUP_TO_TABLE, FutOIData, FutOISource, FizOIResult, MetricPoint, isGapBar, mapRealBars, realBars, intervalMs } from '../data/index'
 import { makeMetricIndicator, MetricIndicatorSpec, setMetricValues, appendMetricValues, clearMetricValues, removeMetricValues } from './metricIndicator'
+import {
+  volumeProfileConfig, isVolumeProfileInterval, hitTestVolumeProfile, VpBarHit,
+  VOLUME_PROFILE_INDICATOR_NAME, VOLUME_PROFILE_PANE_ID, VpAlign, VpRowSize,
+  resetVolumeProfileCache,
+} from './volumeProfile'
 
 // Легенды тултипа свечи по умолчанию (как во встроенном шаблоне). Нужны, чтобы
 // для баров-разрывов (неторговых дней) отдавать пустой список вместо NaN-полей.
@@ -253,6 +258,23 @@ function fmtRubles(n: number): string {
   if (a >= 1e6) return sign + (a / 1e6).toFixed(1) + ' млн ₽'
   if (a >= 1e3) return sign + (a / 1e3).toFixed(1) + ' тыс ₽'
   return sign + Math.round(a) + ' ₽'
+}
+
+// Текст тултипа профиля объёма: цена, объём, % от дневного объёма, дельта
+// покупок/продаж и служебные пометки.
+function formatVpHit(hit: VpBarHit, chart: Chart): string[] {
+  const pricePrecision = chart.getSymbol()?.pricePrecision ?? 2
+  const lines: string[] = []
+  lines.push(`Цена: ${hit.price.toFixed(pricePrecision)}`)
+  lines.push(`Объём: ${Math.round(hit.total).toLocaleString('ru-RU')} (${(hit.pct * 100).toFixed(1)}%)`)
+  if (hit.hasBuySell) {
+    const delta = Math.round(hit.buy - hit.sell)
+    lines.push(`Buy: ${Math.round(hit.buy).toLocaleString('ru-RU')}, Sell: ${Math.round(hit.sell).toLocaleString('ru-RU')}`)
+    lines.push(`Дельта: ${delta >= 0 ? '+' : ''}${delta.toLocaleString('ru-RU')}`)
+  }
+  if (hit.isPoc) lines.push('POC')
+  if (hit.inValueArea) lines.push('в зоне стоимости')
+  return lines
 }
 
 function toFizOIPoint(d: FutOIData): FizOIPoint {
@@ -1103,6 +1125,17 @@ export default function ChartType () {
   // чтобы можно было стереть значение и набрать новое).
   const [shareThresholdPct, setShareThresholdPct] = useState(DEFAULT_SHARE_THRESHOLD * 100)
   const [shareThresholdText, setShareThresholdText] = useState(String(DEFAULT_SHARE_THRESHOLD * 100))
+  // Daily Volume Profile: показ профиля и его настройки.
+  const [showVolumeProfile, setShowVolumeProfile] = useState(false)
+  const [vpRowSize, setVpRowSize] = useState<VpRowSize>('auto')
+  const [vpValueAreaPct, setVpValueAreaPct] = useState(volumeProfileConfig.valueAreaPct)
+  const [vpValueAreaText, setVpValueAreaText] = useState(String(volumeProfileConfig.valueAreaPct))
+  const [vpOnlyPoc, setVpOnlyPoc] = useState(volumeProfileConfig.showOnlyPoc)
+  const [vpValueAreaLines, setVpValueAreaLines] = useState(volumeProfileConfig.showValueAreaLines)
+  const [vpSplitBuySell, setVpSplitBuySell] = useState(volumeProfileConfig.splitBuySell)
+  const [vpAlign, setVpAlign] = useState<VpAlign>(volumeProfileConfig.align)
+  // Профиль доступен только на внутридневных интервалах.
+  const vpAvailable = isVolumeProfileInterval(interval)
   const chart = useRef<Chart | null>(null)
   // Источники ОИ для текущего инструмента: собственные фьючерсы инструмента
   // (futoiOwnSourcesRef) и взвешенные бумаги, входящие в индекс
@@ -1113,6 +1146,9 @@ export default function ChartType () {
   // состояния (включена ли подсветка, порог доли рынка 0..1).
   const highlightVolumeRef = useRef(highlightVolume)
   const shareThresholdRef = useRef(shareThresholdPct / 100)
+  // Показ профиля объёма и его доступность на текущем интервале.
+  const showVolumeProfileRef = useRef(showVolumeProfile)
+  const vpAvailableRef = useRef(vpAvailable)
   // Единственные оверлеи подсветки/заливки; пересоздаются вместе с чартом.
   const volumeHighlightStateRef = useRef<PointsOverlayState>({ overlayId: null })
   const weekendHighlightStateRef = useRef<PointsOverlayState>({ overlayId: null })
@@ -1172,6 +1208,44 @@ export default function ChartType () {
     }
   }, [volumeTip])
 
+  // Всплывашка Volume Profile — та же механика, отдельные state/refs.
+  const [vpTip, setVpTip] = useState<{ title: string; lines: string[] } | null>(null)
+  const vpTipKeyRef = useRef<string | null>(null)
+  const vpTipElRef = useRef<HTMLDivElement | null>(null)
+  const vpTipCoordRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  const vpTipSizeRef = useRef({ parentWidth: 0, tipWidth: 0 })
+  const placeVpTipRef = useRef<() => void>(() => {})
+  placeVpTipRef.current = () => {
+    const el = vpTipElRef.current
+    if (el == null) return
+    const { x, y } = vpTipCoordRef.current
+    const { parentWidth, tipWidth } = vpTipSizeRef.current
+    const offset = 12
+    const maxLeft = parentWidth - tipWidth - 4
+    const left = Math.min(Math.max(4, x + offset), Math.max(4, maxLeft))
+    el.style.transform = `translate(${Math.round(left)}px, ${Math.round(y + offset)}px)`
+  }
+
+  const hideVpTipRef = useRef<() => void>(() => {})
+  hideVpTipRef.current = () => {
+    if (vpTipKeyRef.current !== null) {
+      vpTipKeyRef.current = null
+      setVpTip(null)
+    }
+  }
+
+  useLayoutEffect(() => {
+    if (vpTip == null) return
+    const el = vpTipElRef.current
+    if (el != null) {
+      vpTipSizeRef.current = {
+        tipWidth: el.offsetWidth,
+        parentWidth: el.parentElement?.clientWidth ?? 0,
+      }
+      placeVpTipRef.current()
+    }
+  }, [vpTip])
+
   const toggleIndicator = (id: VolumeIndicatorId) => {
     setEnabled(prev => ({ ...prev, [id]: !prev[id] }))
   }
@@ -1210,6 +1284,8 @@ export default function ChartType () {
     marketShares = new Map()
     highlightTimes = new Set()
     volumeBaseline = new Map()
+    // Профиль объёма кэшируется по данным — сбрасываем при смене инструмента.
+    resetVolumeProfileCache()
     currentInterval = interval
 
     // Резолвим группу инструмента: по ней определяется таблица суперсвечей (для
@@ -1265,21 +1341,58 @@ export default function ChartType () {
     }
     chart.current?.subscribeAction('onVisibleRangeChange', resyncVisibleHighlights)
 
-    // Всплывашка при наведении: если под курсором подсвеченная свеча — показываем
-    // долю рынка и превышение среднего объёма.
+    // Всплывашки при наведении: профиль объёма (если показан) и подсветка
+    // «тяжёлой» свечи. Оба обрабатываются независимо, чтобы одно не глушило
+    // другое.
     volumeTipKeyRef.current = null
     setVolumeTip(null)
+    vpTipKeyRef.current = null
+    setVpTip(null)
     const onCrosshairChange = (data?: unknown) => {
       if (cancelled) return
       const c = chart.current
       const cr = data as { x?: number; y?: number; paneId?: string } | undefined
-      // Показываем только для панели свечей; на индикаторных панелях те же бары,
-      // но другой Y (подсказка уезжает вверх).
-      if (!c || !highlightVolumeRef.current || cr?.paneId !== 'candle_pane' || typeof cr.x !== 'number' || typeof cr.y !== 'number') {
+      // Обе подсказки показываем только для панели свечей; на индикаторных
+      // панелях те же бары, но другой Y.
+      if (!c || cr?.paneId !== 'candle_pane' || typeof cr.x !== 'number' || typeof cr.y !== 'number') {
+        hideVolumeTipRef.current()
+        hideVpTipRef.current()
+        return
+      }
+      const x = cr.x
+      const y = cr.y
+
+      // --- Volume Profile ---
+      if (showVolumeProfileRef.current && vpAvailableRef.current) {
+        const hit = hitTestVolumeProfile(c, x, y)
+        if (hit != null) {
+          vpTipCoordRef.current = { x, y }
+          if (vpTipKeyRef.current !== hit.key) {
+            vpTipKeyRef.current = hit.key
+            setVpTip({ title: 'Volume Profile', lines: formatVpHit(hit, c) })
+          } else {
+            placeVpTipRef.current()
+          }
+        } else {
+          hideVpTipRef.current()
+        }
+      } else {
+        hideVpTipRef.current()
+      }
+
+      // Обе подсказки рисуются в одной точке, поэтому профиль имеет приоритет:
+      // пока он показан, подсказку подсветки объёма не выводим.
+      if (vpTipKeyRef.current !== null) {
         hideVolumeTipRef.current()
         return
       }
-      const point = (c.convertFromPixel([{ x: cr.x }], { paneId: 'candle_pane' }) as Array<Partial<Point>>)[0]
+
+      // --- Подсветка «тяжёлой» свечи ---
+      if (!highlightVolumeRef.current) {
+        hideVolumeTipRef.current()
+        return
+      }
+      const point = (c.convertFromPixel([{ x }], { paneId: 'candle_pane' }) as Array<Partial<Point>>)[0]
       const dataIndex = point?.dataIndex
       if (dataIndex == null || dataIndex < 0) {
         hideVolumeTipRef.current()
@@ -1290,7 +1403,7 @@ export default function ChartType () {
         hideVolumeTipRef.current()
         return
       }
-      volumeTipCoordRef.current = { x: cr.x, y: cr.y }
+      volumeTipCoordRef.current = { x, y }
       if (volumeTipKeyRef.current !== candle.timestamp) {
         volumeTipKeyRef.current = candle.timestamp
         setVolumeTip(describeVolumeHighlight(candle.timestamp, candleTurnover(candle), shareThresholdRef.current))
@@ -1621,6 +1734,14 @@ export default function ChartType () {
         c.removeIndicator({ paneId: ind.paneId })
       }
     }
+    // Daily Volume Profile — индикатор поверх свечей (на панели candle_pane).
+    const vpShouldShow = showVolumeProfile && isVolumeProfileInterval(interval)
+    const vpShown = c.getIndicators({ paneId: VOLUME_PROFILE_PANE_ID, name: VOLUME_PROFILE_INDICATOR_NAME }).length > 0
+    if (vpShouldShow && !vpShown) {
+      c.createIndicator({ name: VOLUME_PROFILE_INDICATOR_NAME, paneId: VOLUME_PROFILE_PANE_ID })
+    } else if (!vpShouldShow && vpShown) {
+      c.removeIndicator({ paneId: VOLUME_PROFILE_PANE_ID, name: VOLUME_PROFILE_INDICATOR_NAME })
+    }
     // Индикаторы по SQL-метрике — одна панель на метрику.
     for (const f of metrics) {
       const isShown = c.getIndicators({ paneId: f.paneId }).length > 0
@@ -1628,7 +1749,24 @@ export default function ChartType () {
         c.createIndicator({ name: f.indicatorName, paneId: f.paneId })
       }
     }
-  }, [enabled, oiAvailable, constituentsOIAvailable, ticker, interval, metrics])
+  }, [enabled, oiAvailable, constituentsOIAvailable, ticker, interval, metrics, showVolumeProfile])
+
+  // Синхронизация настроек профиля объёма и принудительная перерисовка чарта
+  // (draw-колбэк читает модульную конфигурацию).
+  useEffect(() => {
+    showVolumeProfileRef.current = showVolumeProfile
+    vpAvailableRef.current = vpAvailable
+    volumeProfileConfig.rowSize = vpRowSize
+    volumeProfileConfig.valueAreaPct = vpValueAreaPct
+    volumeProfileConfig.showOnlyPoc = vpOnlyPoc
+    volumeProfileConfig.showValueAreaLines = vpValueAreaLines
+    volumeProfileConfig.splitBuySell = vpSplitBuySell
+    volumeProfileConfig.align = vpAlign
+    // Настройки изменились — сбрасываем открытую подсказку, чтобы она не висела
+    // со старыми данными до следующего движения мыши.
+    hideVpTipRef.current()
+    chart.current?.resize()
+  }, [showVolumeProfile, vpAvailable, vpRowSize, vpValueAreaPct, vpOnlyPoc, vpValueAreaLines, vpSplitBuySell, vpAlign, ticker, interval])
 
   // Высота контейнера растёт вместе с числом включённых индикаторов,
   // чтобы основной график не сжимался.
@@ -1726,6 +1864,96 @@ export default function ChartType () {
           )
         })}
       </div>
+      <div className="k-line-chart-menu-container" style={{ flexWrap: 'wrap', gap: 4 }}>
+        <label
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            cursor: vpAvailable ? 'pointer' : 'not-allowed',
+            opacity: vpAvailable ? 1 : 0.5,
+            marginRight: 8,
+          }}
+          title={vpAvailable ? "Профиль объёма за день (POC / Value Area) поверх свечей" : "Профиль объёма доступен только на внутридневных интервалах (1m/5m/hour)"}
+        >
+          <input
+            type="checkbox"
+            checked={showVolumeProfile}
+            disabled={!vpAvailable}
+            onChange={_ => setShowVolumeProfile(v => !v)}
+          />
+          <span style={{ paddingLeft: 4 }}>Профиль объёма</span>
+        </label>
+        {vpAvailable && showVolumeProfile && (
+          <>
+            <select
+              value={String(vpRowSize)}
+              onChange={e => setVpRowSize(e.target.value === 'auto' ? 'auto' : Number(e.target.value) as 1 | 2 | 5 | 10)}
+              title="Шаг цены (Row Size): 'АВТО' подбирает шаг под масштаб, число — множитель тика"
+              style={{ height: 24, marginRight: 8 }}
+            >
+              <option value="auto">Row: авто</option>
+              <option value="1">Row: 1 tick</option>
+              <option value="2">Row: 2 ticks</option>
+              <option value="5">Row: 5 ticks</option>
+              <option value="10">Row: 10 ticks</option>
+            </select>
+            <label style={{ display: 'inline-flex', alignItems: 'center', marginRight: 8, cursor: 'pointer' }} title="Доля дневного объёма, попадающая в зону стоимости (Value Area)">
+              <input
+                type="checkbox"
+                checked={vpOnlyPoc}
+                onChange={_ => setVpOnlyPoc(v => !v)}
+              />
+              <span style={{ paddingLeft: 4 }}>только POC</span>
+            </label>
+            <label style={{ display: 'inline-flex', alignItems: 'center', marginRight: 8, cursor: 'pointer' }} title="Показывать границы зоны стоимости VAH/VAL">
+              <input
+                type="checkbox"
+                checked={vpValueAreaLines}
+                onChange={_ => setVpValueAreaLines(v => !v)}
+              />
+              <span style={{ paddingLeft: 4 }}>VA-линии</span>
+            </label>
+            <label style={{ display: 'inline-flex', alignItems: 'center', marginRight: 8, cursor: 'pointer' }} title="Разделять объём в баре на покупки (зелёный) и продажи (красный)">
+              <input
+                type="checkbox"
+                checked={vpSplitBuySell}
+                onChange={_ => setVpSplitBuySell(v => !v)}
+              />
+              <span style={{ paddingLeft: 4 }}>Buy/Sell</span>
+            </label>
+            <select
+              value={vpAlign}
+              onChange={e => setVpAlign(e.target.value as VpAlign)}
+              title="Выравнивание профиля: по левому или правому краю дневной сессии"
+              style={{ height: 24, marginRight: 8 }}
+            >
+              <option value="left">Слева</option>
+              <option value="right">Справа</option>
+            </select>
+            <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }} title="VA %">
+              <span style={{ paddingRight: 4 }}>VA</span>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                step={1}
+                value={vpValueAreaText}
+                onChange={e => {
+                  const text = e.target.value
+                  setVpValueAreaText(text)
+                  if (text.trim() === '') return
+                  const n = Number(text)
+                  if (!Number.isFinite(n)) return
+                  setVpValueAreaPct(Math.min(100, Math.max(1, Math.round(n))))
+                }}
+                onBlur={() => setVpValueAreaText(String(vpValueAreaPct))}
+                style={{ width: 52, height: 24 }}
+              />
+              <span style={{ paddingLeft: 4 }}>%</span>
+            </label>
+          </>
+        )}
+      </div>
       <div className="k-line-chart-menu-container">
         <span style={{ paddingRight: 6 }}>SQL-метрика:</span>
         <input
@@ -1762,14 +1990,18 @@ export default function ChartType () {
       )}
       <div
         className="k-line-chart-wrapper"
-        onMouseLeave={() => hideVolumeTipRef.current()}
+        onMouseLeave={() => {
+          hideVolumeTipRef.current()
+          hideVpTipRef.current()
+        }}
         onMouseMove={e => {
           // На осях/разделителях klinecharts сбрасывает кроссхейр без колбэка,
           // поэтому прячем подсказку, как только курсор ушёл с области свечей.
-          if (volumeTipKeyRef.current === null) return
+          if (volumeTipKeyRef.current === null && vpTipKeyRef.current === null) return
           const mainDom = chart.current?.getDom('candle_pane', 'main')
           if (mainDom == null || !mainDom.contains(e.target as Node)) {
             hideVolumeTipRef.current()
+            hideVpTipRef.current()
           }
         }}
       >
@@ -1780,6 +2012,12 @@ export default function ChartType () {
             {volumeTip.length === 0
               ? <div>—</div>
               : volumeTip.map((line, i) => <div key={i}>{line}</div>)}
+          </div>
+        )}
+        {vpTip != null && (
+          <div ref={vpTipElRef} className="volume-highlight-tip">
+            <div className="volume-highlight-tip-title">{vpTip.title}</div>
+            {vpTip.lines.map((line, i) => <div key={i}>{line}</div>)}
           </div>
         )}
       </div>

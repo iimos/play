@@ -197,10 +197,11 @@ func main() {
 		if builder != nil {
 			gr.Go(func() error { return builder.Run(grctx) })
 		}
-		if opts.Watch {
-			// Держим снимки открытой пятиминутки в актуальном состоянии.
-			gr.Go(func() error { return supercandles.LoadLatestAll(grctx, superOpts) })
-		}
+		// Временно отключено: снимки открытой пятиминутки в watch-режиме.
+		// if opts.Watch {
+		// 	// Держим снимки открытой пятиминутки в актуальном состоянии.
+		// 	gr.Go(func() error { return supercandles.LoadLatestAll(grctx, superOpts) })
+		// }
 		gr.Go(func() error { return supercandles.LoadAll(grctx, superOpts) })
 		gr.Go(func() error { return futoi.Load(grctx, opts) })
 		gr.Go(func() error { return openpositions.Load(grctx, opts) })

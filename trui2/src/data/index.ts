@@ -772,22 +772,37 @@ export async function resolveFutoiTicker(secid: string, isFutures: boolean): Pro
 // за пункт индекса, а не за контракт (напр. вечный IMOEXF: val/vol ≈ pr_close×10,
 // фьючерс RTS — с учётом курса). На пустых по объёму слотах тянем последнее
 // известное значение (иначе рублёвая оценка «проваливалась» бы в таких слотах).
-// Контракт выбирается самый ликвидный (max oi_close): FUTOI агрегирует позиции
-// по всем сериям, поэтому это аппроксимация, а не точная оценка стоимости.
+// Контракт выбирается самый ликвидный по окну (максимальный oi_close за всё
+// окно): FUTOI агрегирует позиции по всем сериям, поэтому это аппроксимация, а
+// не точная оценка стоимости. Важно: контракт фиксируется на всё окно (sec_oi),
+// а не пересчитывается на каждом таймслоте — иначе на слопах с нулевым объёмом
+// (где oi_close=0 у всех серий) argMax перескакивал бы на другую серию и цена
+// скакала бы между контрактами. Оговорка: argMax игнорирует строки с NULL,
+// поэтому в самом начале окна, пока ликвидный контракт ещё не торговался (нет
+// цены), цена может взяться у другой серии — приемлемый fallback вместо null.
+//
+// Фильтр pr_close > 0 намеренно НЕ применяется: он выбрасывал бы строки с
+// нулевым объёмом (supercandle без сделок) до оконного last_value, из-за чего
+// ignore nulls не мог протянуть последнюю цену — таймслот пропадал целиком, а
+// рублёвая оценка ОИ на нём становилась null и линия рвалась. Нулевой объём и
+// так даёт price = val/vol = null, который протягивается forward-fill'ом.
 function fizOIPriceSubquery(futoiTicker: string, from: Date, till: Date, interval: string): string {
   return `
-      select timeslot, argMax(price, oi) as price
+      select timeslot, argMax(price, sec_oi) as price
       from (
-        select toStartOfInterval(time, interval '${interval2sql(interval)}') timeslot, secid,
-               argMax(oi_close, time) as oi,
-               last_value(sum(val) / nullIf(sum(vol), 0))
-                 ignore nulls over (partition by secid order by timeslot) as price
-        from tr.super_fo
-        where match(secid, '^${futoiTicker}([FGHJKMNQUVXZ][0-9])?$')
-          and pr_close > 0
-          and time >= ${sqlWindowStart(from, interval)}
-          and time < parseDateTimeBestEffort('${till.toISOString()}')
-        group by timeslot, secid
+        select timeslot, secid, oi, price,
+               max(oi) over (partition by secid) as sec_oi
+        from (
+          select toStartOfInterval(time, interval '${interval2sql(interval)}') timeslot, secid,
+                 argMax(oi_close, time) as oi,
+                 last_value(sum(val) / nullIf(sum(vol), 0))
+                   ignore nulls over (partition by secid order by timeslot) as price
+          from tr.super_fo
+          where match(secid, '^${futoiTicker}([FGHJKMNQUVXZ][0-9])?$')
+            and time >= ${sqlWindowStart(from, interval)}
+            and time < parseDateTimeBestEffort('${till.toISOString()}')
+          group by timeslot, secid
+        )
       )
       group by timeslot`
 }
@@ -823,6 +838,24 @@ interface FutOIRawPoint {
   total_short: number
 }
 
+// tr.futoi хранит tradetime как есть из MOEX, и часть снимков приходит со
+// смещением секунд: напр. 11:04:54 вместо 11:05:00 (бывает и наоборот —
+// 15:05:10 вместо 15:05:00). toStartOfInterval округляет такие метки ВНИЗ,
+// поэтому снимок уезжает в предыдущий слот, а «настоящий» остаётся пустым — линия ОИ рвётся.
+//
+// Дрейф — свойство 5-минутной сетки источника, поэтому гасим его на ней: сначала
+// округляем к ближайшей 5-минутной границе (+полшага), затем бьём по интервалу
+// графика. Сдвигать сразу на полшага графика нельзя: для hour это 30 минут, и
+// вся вторая половина часа уехала бы в следующий часовой бакет. Для дня и
+// крупнее дрейф секунд границу не смещает — оставляем обычный floor (сдвиг на
+// полшага дня мог бы перенести вечерний снимок в следующий день).
+function futoiTimeslotExpr(interval: string): string {
+  if (intervalMs(interval) >= 24 * 60 * 60 * 1000) {
+    return `toStartOfInterval(time, interval '${interval2sql(interval)}')`
+  }
+  return `toStartOfInterval(toStartOfInterval(time + toIntervalSecond(150), interval '5 minute'), interval '${interval2sql(interval)}')`
+}
+
 // Батч-загрузка открытых позиций FUTOI сразу по всем источникам (один запрос
 // вместо запроса на каждый источник). Ключ — тикер FUTOI, значение — точки по
 // возрастанию времени. tr.futoi отсортирована по (ticker, clgroup, time),
@@ -843,7 +876,7 @@ async function fetchFutoiBatch(sources: FutOISource[], from: Date, till: Date, i
              sum(abs(pos_short)) as total_short
       from (
         select ticker,
-               toStartOfInterval(time, interval '${interval2sql(interval)}') timeslot,
+               ${futoiTimeslotExpr(interval)} timeslot,
                clgroup,
                argMax(pos_long, time) as pos_long,
                argMax(pos_short, time) as pos_short
@@ -883,26 +916,29 @@ async function fetchFutoiBatch(sources: FutOISource[], from: Date, till: Date, i
 // (ASSETCODE, равен FutOISource.asset), значение — цена по таймслоту. В отличие
 // от match(secid, regex) фильтр по asset_code не перечитывает всю super_fo на
 // каждый источник и находит вечные контракты (SBERF, IMOEXF) по их коду актива.
+// Контракт фиксируется на окно (sec_oi), фильтр pr_close>0 не применяется — см. пояснение в fizOIPriceSubquery.
 async function fetchPriceBatch(assets: string[], from: Date, till: Date, interval: string): Promise<Map<string, Map<number, number>>> {
   if (assets.length === 0) {
     return new Map()
   }
   const res = await clickhouse.query({
     query: `
-    select asset_code, timeslot, argMax(price, oi) as price
+    select asset_code, timeslot, argMax(price, sec_oi) as price
     from (
-      select asset_code,
-             toStartOfInterval(time, interval '${interval2sql(interval)}') timeslot,
-             secid,
-             argMax(oi_close, time) as oi,
-             last_value(sum(val) / nullIf(sum(vol), 0))
-               ignore nulls over (partition by secid order by timeslot) as price
-      from tr.super_fo
-      where asset_code in (${assets.map(a => `'${a.replace(/'/g, "''")}'`).join(', ')})
-        and pr_close > 0
-        and time >= ${sqlWindowStart(from, interval)}
-        and time < parseDateTimeBestEffort('${till.toISOString()}')
-      group by asset_code, timeslot, secid
+      select asset_code, timeslot, secid, oi, price, max(oi) over (partition by secid) as sec_oi
+      from (
+        select asset_code,
+               toStartOfInterval(time, interval '${interval2sql(interval)}') timeslot,
+               secid,
+               argMax(oi_close, time) as oi,
+               last_value(sum(val) / nullIf(sum(vol), 0))
+                 ignore nulls over (partition by secid order by timeslot) as price
+        from tr.super_fo
+        where asset_code in (${assets.map(a => `'${a.replace(/'/g, "''")}'`).join(', ')})
+          and time >= ${sqlWindowStart(from, interval)}
+          and time < parseDateTimeBestEffort('${till.toISOString()}')
+        group by asset_code, timeslot, secid
+      )
     )
     group by asset_code, timeslot`,
     format: "JSONEachRow",

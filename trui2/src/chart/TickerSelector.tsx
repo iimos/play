@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import Select from 'react-select'
 import { Security, fetchSecurities } from '../data/index'
+import { searchVariants } from '../searchLayout'
 
 interface Props {
   onSelect: (ticker: string) => void
@@ -90,16 +91,19 @@ export default function TickerSelector({ onSelect }: Props) {
       placeholder="Поиск по тикеру или названию…"
       noOptionsMessage={() => 'Ничего не найдено'}
       filterOption={(option, input) => {
-        const q = input.trim().toLowerCase()
-        if (!q) return true
+        const variants = searchVariants(input)
+        if (variants.length === 0) return true
         const d = option.data
-        return (
-          d.secid.toLowerCase().includes(q) ||
-          d.shortname.toLowerCase().includes(q) ||
-          d.name.toLowerCase().includes(q) ||
-          d.contract_name.toLowerCase().includes(q) ||
-          d.emitent_title.toLowerCase().includes(q)
-        )
+        const haystack = [
+          d.secid,
+          d.shortname,
+          d.name,
+          d.contract_name,
+          d.emitent_title,
+        ]
+          .join('\n')
+          .toLowerCase()
+        return variants.some(q => haystack.includes(q))
       }}
       formatOptionLabel={option => (
         <span>

@@ -89,28 +89,32 @@ func LoadStocks(ctx context.Context, opts LoadOptions) error {
 				continue
 			}
 		} else {
-			// Delete existing data for this date before reloading
-			fmt.Printf(": FORCE RELOAD")
+			fmt.Printf(": RELOAD")
 			if !lastTableDate.IsZero() && d.Format(time.DateOnly) == lastTableDate.Format(time.DateOnly) {
 				fmt.Printf(" (last date in table)")
 			}
-			err := storage.DeleteSuperEqPartition(ctx, d)
-			if err != nil {
-				fmt.Printf(" (FAILED to delete partition: %v)\n", err)
-				return fmt.Errorf("failed to delete partition for date %s: %w", d.Format(time.DateOnly), err)
-			} else {
-				fmt.Printf(" (partition deleted)")
-			}
 		}
 
+		// Сначала качаем данные и только потом удаляем партицию: иначе сбой сети
+		// или пустой ответ стирает уже загруженный день. Пустой ответ оставляет
+		// партицию нетронутой — день перезальётся при следующем запуске.
 		data, err := fetchEqStats(ctx, moexSess, d)
 		if err != nil {
 			return err
 		}
+		if len(data) == 0 {
+			fmt.Printf(": NO DATA; partition kept\n")
+			continue
+		}
+		if shouldReload {
+			if err := storage.DeleteSuperEqPartition(ctx, d); err != nil {
+				fmt.Printf(": FAILED to delete partition: %v\n", err)
+				return fmt.Errorf("failed to delete partition for date %s: %w", d.Format(time.DateOnly), err)
+			}
+		}
 		fmt.Printf(": FETCHED %d supercandles\n", len(data))
 
-		err = storage.StoreSuperEq(context.Background(), data)
-		if err != nil {
+		if err := storage.StoreSuperEq(context.Background(), data); err != nil {
 			return err
 		}
 

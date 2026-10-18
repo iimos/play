@@ -89,20 +89,28 @@ func Load(ctx context.Context, opts LoadOptions) error {
 				continue
 			}
 		} else {
-			fmt.Printf(": FORCE RELOAD")
+			fmt.Printf(": RELOAD")
 			if !lastTableDate.IsZero() && d.Format(time.DateOnly) == lastTableDate.Format(time.DateOnly) {
 				fmt.Printf(" (last date in table)")
 			}
-			if err := storage.DeleteOpenPositionsPartition(ctx, d); err != nil {
-				fmt.Printf(" (FAILED to delete partition: %v)\n", err)
-				return fmt.Errorf("failed to delete partition for date %s: %w", d.Format(time.DateOnly), err)
-			}
-			fmt.Printf(" (partition deleted)")
 		}
 
+		// Сначала качаем данные и только потом удаляем партицию: иначе сбой сети
+		// или пустой ответ стирает уже загруженный день. Пустой ответ оставляет
+		// партицию нетронутой — день перезальётся при следующем запуске.
 		data, err := fetchOpenPositions(ctx, moexSess, d, assets)
 		if err != nil {
 			return err
+		}
+		if len(data) == 0 {
+			fmt.Printf(": NO DATA; partition kept\n")
+			continue
+		}
+		if shouldReload {
+			if err := storage.DeleteOpenPositionsPartition(ctx, d); err != nil {
+				fmt.Printf(": FAILED to delete partition: %v\n", err)
+				return fmt.Errorf("failed to delete partition for date %s: %w", d.Format(time.DateOnly), err)
+			}
 		}
 		fmt.Printf(": FETCHED %d rows\n", len(data))
 

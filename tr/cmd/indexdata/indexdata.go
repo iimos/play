@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/iimos/play/tr/cmd/watch"
@@ -31,9 +31,11 @@ const (
 
 	// intradayInterval — интрадей-интервал свечей индекса (минут).
 	intradayInterval = 10
-	// intradayDays — за сколько последних дней грузить интрадей-свечи.
-	// ISS отдаёт 10-минутные свечи только за последние ~60 дней, глубже
-	// интрадей недоступен и при релоаде удаляется безвозвратно.
+	// intradayDays — за сколько последних дней запрашивать интрадей-свечи.
+	// Глубже ISS отдаёт 10-минутные неполно (примерно основная сессия: ~56
+	// баров в день против ~102 у свежего дня), поэтому история интрадея
+	// ограничена. Уже лежащие в таблице строки глубже intradayDays при
+	// перезагрузке дня не теряются: их переносит gapsFor.
 	intradayDays = 60
 )
 
@@ -172,33 +174,32 @@ func loadDay(
 		return 0, 0, nil
 	}
 
-	var (
-		mu      sync.Mutex
-		candles []store.IndexCandle
-		weights []store.IndexWeight
-	)
+	results := make([]dayRows, len(active))
 	gr, gctx := errgroup.WithContext(ctx)
 	gr.SetLimit(indexWorkers)
-	for _, info := range active {
-		info := info
+	for i, info := range active {
+		i, info := i, info
 		gr.Go(func() error {
-			var localCandles []store.IndexCandle
+			var (
+				localCandles []store.IndexCandle
+				emptyIv      []uint16
+			)
 			for _, iv := range intervals {
-				rows, err := fetchCandles(gctx, client, info.ID, d, iv)
+				page, err := fetchCandles(gctx, client, info.ID, d, iv)
 				if err != nil {
 					return fmt.Errorf("fetch %s candles interval=%d for %s: %w",
 						info.ID, iv, d.Format(time.DateOnly), err)
 				}
-				localCandles = append(localCandles, rows...)
+				if len(page) == 0 {
+					emptyIv = append(emptyIv, iv)
+				}
+				localCandles = append(localCandles, page...)
 			}
-			rows, err := fetchWeights(gctx, client, info.ID, d)
+			localWeights, err := fetchWeights(gctx, client, info.ID, d)
 			if err != nil {
 				return fmt.Errorf("fetch %s weights for %s: %w", info.ID, d.Format(time.DateOnly), err)
 			}
-			mu.Lock()
-			candles = append(candles, localCandles...)
-			weights = append(weights, rows...)
-			mu.Unlock()
+			results[i] = dayRows{candles: localCandles, weights: localWeights, emptyIv: emptyIv}
 			return nil
 		})
 	}
@@ -206,59 +207,210 @@ func loadDay(
 		return 0, 0, err
 	}
 
+	var (
+		candles []store.IndexCandle
+		weights []store.IndexWeight
+	)
+	for i := range active {
+		candles = append(candles, results[i].candles...)
+		weights = append(weights, results[i].weights...)
+	}
+	candleGaps, weightGaps := gapsFor(active, results, withIntraday)
+	// Счётчики для лога — только скачанное: перенесённые из старой партиции
+	// строки не должны выглядеть как успешная загрузка дня.
+	downloadedCandles, downloadedWeights := len(candles), len(weights)
+
 	downloaded := make(map[string]struct{}, len(active))
 	for _, info := range active {
 		downloaded[info.ID] = struct{}{}
 	}
-	if err := warnMissingIndices(ctx, storage, d, downloaded); err != nil {
+	// Предупреждаем только про те таблицы, чью партицию сейчас действительно
+	// перезапишут: иначе сообщение об удалении строк было бы ложью.
+	if err := warnMissingIndices(ctx, storage, d, downloaded,
+		downloadedCandles > 0, downloadedWeights > 0); err != nil {
 		return 0, 0, err
 	}
 
-	// DROP PARTITION сносит весь день, включая interval=10. Для дней старше
-	// intradayDays он уже не перекачивается (ISS его не отдаёт), так что лежавший
-	// там интрадей теряется безвозвратно. Это сознательно: interval=10 нужен лишь
-	// для окна сессии при build-index-super, а старые дни либо не пересобираются,
-	// либо обходятся фолбэком 09:00–19:00.
-	if len(candles) > 0 {
-		if err := storage.DropIndexCandlesPartition(ctx, d); err != nil {
+	// Пустой массив в ответе ISS неотличим от «данных нет», а DROP PARTITION
+	// снёс бы прежние строки: день остался бы неполным, а счётчик партиции
+	// (candleCount > 0) больше не перезалил бы его. Поэтому строки, которых
+	// источник сегодня не отдал, переносим из старой партиции.
+	if downloadedCandles > 0 && len(candleGaps) > 0 {
+		kept, err := rescueEmpty(ctx, "свечи", d, storage.IndexCandlesForPartition,
+			func(r store.IndexCandle) bool {
+				_, ok := candleGaps[candleGap{indexID: r.IndexID, interval: r.Interval}]
+				return ok
+			},
+			func(r store.IndexCandle) string {
+				return fmt.Sprintf("%s(%d)", r.IndexID, r.Interval)
+			},
+		)
+		if err != nil {
+			return 0, 0, err
+		}
+		candles = append(candles, kept...)
+	}
+
+	if downloadedWeights > 0 && len(weightGaps) > 0 {
+		kept, err := rescueEmpty(ctx, "веса", d, storage.IndexWeightsForPartition,
+			func(r store.IndexWeight) bool {
+				_, ok := weightGaps[r.IndexID]
+				return ok
+			},
+			func(r store.IndexWeight) string { return r.IndexID },
+		)
+		if err != nil {
+			return 0, 0, err
+		}
+		weights = append(weights, kept...)
+	}
+
+	// DROP PARTITION сносит весь день, а выше мы перенесли в новый набор всё,
+	// что не будет записано заново: строки интервалов, по которым ответ пуст,
+	// и (для дней старше intradayDays) 10-минутные свечи, которые в этом
+	// прогоне не запрашивались. Остальные строки партиции заменяются свежими.
+	//
+	// Перезапись идёт только по скачанному: если ISS не отдал ничего, партицию
+	// не трогаем — иначе та же партиция перезаписывалась бы без выигрыша и с
+	// риском потерять всё при сбое вставки.
+	// Отмену контекста уважаем при скачивании, но не между DROP и INSERT.
+	wctx := context.WithoutCancel(ctx)
+	if downloadedCandles > 0 {
+		if err := storage.DropIndexCandlesPartition(wctx, d); err != nil {
 			return 0, 0, fmt.Errorf("drop candles partition %s: %w", d.Format(time.DateOnly), err)
 		}
-		if err := storage.StoreIndexCandles(ctx, candles); err != nil {
+		if err := storage.StoreIndexCandles(wctx, candles); err != nil {
 			return 0, 0, fmt.Errorf("store candles for %s: %w", d.Format(time.DateOnly), err)
 		}
 	}
-	if len(weights) > 0 {
-		if err := storage.DropIndexWeightsPartition(ctx, d); err != nil {
+	if downloadedWeights > 0 {
+		if err := storage.DropIndexWeightsPartition(wctx, d); err != nil {
 			return 0, 0, fmt.Errorf("drop weights partition %s: %w", d.Format(time.DateOnly), err)
 		}
-		if err := storage.StoreIndexWeights(ctx, weights); err != nil {
+		if err := storage.StoreIndexWeights(wctx, weights); err != nil {
 			return 0, 0, fmt.Errorf("store weights for %s: %w", d.Format(time.DateOnly), err)
 		}
 	}
-	return len(candles), len(weights), nil
+	return downloadedCandles, downloadedWeights, nil
+}
+
+// candleGap — индекс и интервал, по которым ISS вернул пустой массив: прежние
+// строки этого интервала нельзя терять при перезаписи партиции.
+type candleGap struct {
+	indexID  string
+	interval uint16
+}
+
+// gapsFor решает, какие строки старой партиции не будут перезаписаны новым
+// набором и потому должны быть перенесены:
+//   - интервалы, по которым ISS вернул пустой массив (часто только interval=10);
+//   - interval=10, если день старше intradayDays и интрадей в этом прогоне не
+//     запрашивался вовсе, а в таблице он может быть с тех времён, когда день
+//     был свежим;
+//   - веса индексов, ответивших пусто.
+func gapsFor(active []moexindex.Info, results []dayRows, withIntraday bool) (map[candleGap]struct{}, map[string]struct{}) {
+	candleGaps := make(map[candleGap]struct{}, len(active))
+	weightGaps := make(map[string]struct{}, len(active))
+	for i, info := range active {
+		for _, iv := range results[i].emptyIv {
+			candleGaps[candleGap{indexID: info.ID, interval: iv}] = struct{}{}
+		}
+		if !withIntraday {
+			candleGaps[candleGap{indexID: info.ID, interval: intradayInterval}] = struct{}{}
+		}
+		if len(results[i].weights) == 0 {
+			weightGaps[info.ID] = struct{}{}
+		}
+	}
+	return candleGaps, weightGaps
+}
+
+// dayRows — то, что скачано по одному индексу за день.
+type dayRows struct {
+	candles []store.IndexCandle
+	weights []store.IndexWeight
+	// emptyIv — интервалы, по которым ISS вернул пустой массив.
+	emptyIv []uint16
+}
+
+// rescueEmpty возвращает строки старой партиции, которые в новом наборе не
+// появятся: missing решает, относится ли строка к пустому ответу ISS. Вызывать
+// нужно до DROP PARTITION. Строки индексов, которых в missing нет, отбрасываются
+// — они уже скачаны заново. Если прежних строк не было (например веса в
+// выходные, когда ISS их не публикует), результата нет и предупреждения тоже.
+func rescueEmpty[T any](
+	ctx context.Context,
+	what string,
+	d time.Time,
+	read func(context.Context, time.Time) ([]T, error),
+	missing func(T) bool,
+	// label подписывает строку для лога: id индекса, а для свечей — с интервалом.
+	label func(T) string,
+) ([]T, error) {
+	if missing == nil {
+		return nil, nil
+	}
+	old, err := read(ctx, d)
+	if err != nil {
+		return nil, fmt.Errorf("read stored %s for %s: %w", what, d.Format(time.DateOnly), err)
+	}
+	var kept []T
+	seen := map[string]struct{}{}
+	for _, r := range old {
+		if !missing(r) {
+			continue
+		}
+		kept = append(kept, r)
+		seen[label(r)] = struct{}{}
+	}
+	if len(kept) > 0 {
+		ids := make([]string, 0, len(seen))
+		for id := range seen {
+			ids = append(ids, id)
+		}
+		sort.Strings(ids)
+		fmt.Printf("> %s: warning: пустой ответ ISS, %s не перезаписаны, оставлены прежние строки: %v\n",
+			d.Format(time.DateOnly), what, ids)
+	}
+	return kept, nil
 }
 
 // warnMissingIndices предупреждает об индексах, у которых есть строки за день,
 // но которых нет в скачанном наборе: DROP PARTITION удалит и их строки.
-func warnMissingIndices(ctx context.Context, storage *store.Store, d time.Time, downloaded map[string]struct{}) error {
-	candleIDs, err := storage.PartitionIndexCandleIndexIDs(ctx, d)
-	if err != nil {
-		return err
-	}
-	weightIDs, err := storage.PartitionIndexWeightIndexIDs(ctx, d)
-	if err != nil {
-		return err
-	}
-	var missing []string
-	for _, id := range append(candleIDs, weightIDs...) {
-		if _, ok := downloaded[id]; ok {
-			continue
+// checkCandles/checkWeights говорят, будет ли перезаписана соответствующая
+// таблица: если нет, предупреждать не о чем.
+func warnMissingIndices(ctx context.Context, storage *store.Store, d time.Time, downloaded map[string]struct{}, checkCandles, checkWeights bool) error {
+	missing := map[string]struct{}{}
+	if checkCandles {
+		ids, err := storage.PartitionIndexCandleIndexIDs(ctx, d)
+		if err != nil {
+			return err
 		}
-		missing = append(missing, id)
+		for _, id := range ids {
+			if _, ok := downloaded[id]; !ok {
+				missing[id] = struct{}{}
+			}
+		}
+	}
+	if checkWeights {
+		ids, err := storage.PartitionIndexWeightIndexIDs(ctx, d)
+		if err != nil {
+			return err
+		}
+		for _, id := range ids {
+			if _, ok := downloaded[id]; !ok {
+				missing[id] = struct{}{}
+			}
+		}
 	}
 	if len(missing) > 0 {
+		ids := make([]string, 0, len(missing))
+		for id := range missing {
+			ids = append(ids, id)
+		}
+		sort.Strings(ids)
 		fmt.Printf("> %s: warning: индексы вне загружаемого набора, их строки дня будут удалены: %v\n",
-			d.Format(time.DateOnly), missing)
+			d.Format(time.DateOnly), ids)
 	}
 	return nil
 }

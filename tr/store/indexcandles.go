@@ -2,7 +2,10 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"time"
+
+	"github.com/iimos/play/tr/tz"
 )
 
 // IndexCandle — свеча индекса MOEX (сам индекс, а не фьючерс).
@@ -105,4 +108,39 @@ func (s *Store) PartitionIndexCandleIndexIDs(ctx context.Context, date time.Time
 // DropIndexCandlesPartition удаляет партицию дня свечей индексов.
 func (s *Store) DropIndexCandlesPartition(ctx context.Context, date time.Time) error {
 	return s.conn.Exec(ctx, "ALTER TABLE index_candles DROP PARTITION ?", date.Format(time.DateOnly))
+}
+
+// IndexCandlesForPartition возвращает все свечи индексов за день. Нужен, чтобы
+// перенести строки индексов с пустым ответом ISS в пересобранную партицию.
+func (s *Store) IndexCandlesForPartition(ctx context.Context, date time.Time) ([]IndexCandle, error) {
+	rows, err := s.conn.Query(ctx, `
+		SELECT indexid, interval, toString(time), toString(end),
+		       open, close, high, low, value, volume
+		FROM index_candles
+		WHERE Date(time) = ?
+	`, date.Format(time.DateOnly))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var res []IndexCandle
+	for rows.Next() {
+		var (
+			r           IndexCandle
+			begin, stop string
+		)
+		if err := rows.Scan(&r.IndexID, &r.Interval, &begin, &stop,
+			&r.Open, &r.Close, &r.High, &r.Low, &r.Value, &r.Volume); err != nil {
+			return nil, err
+		}
+		if r.Time, err = time.ParseInLocation(time.DateTime, begin, tz.MSK); err != nil {
+			return nil, fmt.Errorf("parse candle time %q: %w", begin, err)
+		}
+		if r.End, err = time.ParseInLocation(time.DateTime, stop, tz.MSK); err != nil {
+			return nil, fmt.Errorf("parse candle end %q: %w", stop, err)
+		}
+		res = append(res, r)
+	}
+	return res, rows.Err()
 }

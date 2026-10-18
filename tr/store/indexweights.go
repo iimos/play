@@ -2,7 +2,10 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"time"
+
+	"github.com/iimos/play/tr/tz"
 )
 
 // IndexWeight — вес бумаги в индексе MOEX на конкретную торговую дату.
@@ -100,4 +103,39 @@ func (s *Store) PartitionIndexWeightIndexIDs(ctx context.Context, date time.Time
 // DropIndexWeightsPartition удаляет партицию дня весов индексов.
 func (s *Store) DropIndexWeightsPartition(ctx context.Context, date time.Time) error {
 	return s.conn.Exec(ctx, "ALTER TABLE index_weights DROP PARTITION ?", date.Format(time.DateOnly))
+}
+
+// IndexWeightsForPartition возвращает все веса за день. Нужен, чтобы перенести
+// строки индексов с пустым ответом ISS в пересобранную партицию.
+func (s *Store) IndexWeightsForPartition(ctx context.Context, date time.Time) ([]IndexWeight, error) {
+	rows, err := s.conn.Query(ctx, `
+		SELECT indexid, toString(tradedate), ticker, shortname, secid, weight,
+		       tradingsession, toString(trade_session_date)
+		FROM index_weights
+		WHERE tradedate = ?
+	`, date.Format(time.DateOnly))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var res []IndexWeight
+	for rows.Next() {
+		var (
+			r                   IndexWeight
+			tradeDate, sessDate string
+		)
+		if err := rows.Scan(&r.IndexID, &tradeDate, &r.Ticker, &r.ShortName, &r.SecID,
+			&r.Weight, &r.TradingSession, &sessDate); err != nil {
+			return nil, err
+		}
+		if r.TradeDate, err = time.ParseInLocation(time.DateOnly, tradeDate, tz.MSK); err != nil {
+			return nil, fmt.Errorf("parse tradedate %q: %w", tradeDate, err)
+		}
+		if r.TradeSessionDate, err = time.ParseInLocation(time.DateOnly, sessDate, tz.MSK); err != nil {
+			return nil, fmt.Errorf("parse trade_session_date %q: %w", sessDate, err)
+		}
+		res = append(res, r)
+	}
+	return res, rows.Err()
 }

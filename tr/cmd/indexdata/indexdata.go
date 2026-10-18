@@ -109,7 +109,13 @@ func Load(ctx context.Context, opts LoadOptions) error {
 
 	intradayFrom := end.AddDate(0, 0, -intradayDays)
 
-	for d := end; !d.Before(start); d = d.AddDate(0, 0, -1) {
+	// Автостарт выведен из таблицы (minLastDate), а не из --start: идём от
+	// старых дней к новым. Тогда обрыв загрузки оставляет максимумы по индексам
+	// перед дырой, и повторный запуск без флагов снова дотягивается до неё,
+	// а не считает диапазон загруженным (см. watch.DateRange).
+	asc := opts.StartDate.IsZero()
+
+	for _, d := range watch.DateRange(start, end, asc) {
 		reload := opts.ForceReload
 		if !reload {
 			candleCount, err := storage.CountIndexCandlesPartition(ctx, d)

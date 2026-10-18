@@ -94,7 +94,12 @@ func Build(ctx context.Context, opts LoadOptions) error {
 	fmt.Printf("Building super_index (%v) from %s to %s\n",
 		indices, start.Format(time.DateOnly), end.Format(time.DateOnly))
 
-	for d := end; !d.Before(start); d = d.AddDate(0, 0, -1) {
+	// Автостарт выведен из minLastDate по super_index, а не из --start: идём от
+	// старых дней к новым, чтобы обрыв сборки не сдвигал точку возобновления за
+	// дыру (см. watch.DateRange).
+	asc := opts.StartDate.IsZero()
+
+	for _, d := range watch.DateRange(start, end, asc) {
 		if err := buildDayRows(ctx, storage, indices, d, opts.ForceReload, lastByIndex, currencies); err != nil {
 			return fmt.Errorf("build super_index for %s: %w", d.Format(time.DateOnly), err)
 		}

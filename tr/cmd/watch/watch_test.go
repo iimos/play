@@ -2,6 +2,7 @@ package watch
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -84,6 +85,80 @@ func TestTrackerDays(t *testing.T) {
 	// Простой несколько суток: все пропущенные дни.
 	tr.Commit(day(2026, 9, 18, 0, 0, 6))
 	eq(dates(tr.Days(day(2026, 9, 21, 10, 0, 6))), "2026-09-18", "2026-09-19", "2026-09-20", "2026-09-21")
+}
+
+// datesOf форматирует дни для сравнения в тестах.
+func datesOf(days []time.Time) []string {
+	out := make([]string, len(days))
+	for i, d := range days {
+		out[i] = d.Format(time.DateOnly)
+	}
+	return out
+}
+
+// eqDates сравнивает набор дней с ожидаемым списком.
+func eqDates(t *testing.T, got []string, want ...string) {
+	t.Helper()
+	if !slices.Equal(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestDateRange(t *testing.T) {
+	start := time.Date(2026, 10, 15, 0, 0, 0, 0, tz.MSK)
+	end := time.Date(2026, 10, 18, 0, 0, 0, 0, tz.MSK)
+
+	eqDates(t, datesOf(DateRange(start, end, true)),
+		"2026-10-15", "2026-10-16", "2026-10-17", "2026-10-18")
+	eqDates(t, datesOf(DateRange(start, end, false)),
+		"2026-10-18", "2026-10-17", "2026-10-16", "2026-10-15")
+
+	// Один день.
+	eqDates(t, datesOf(DateRange(start, start, true)), "2026-10-15")
+	eqDates(t, datesOf(DateRange(start, start, false)), "2026-10-15")
+
+	// start > end — пусто в любом порядке.
+	eqDates(t, datesOf(DateRange(end, start, true)))
+	eqDates(t, datesOf(DateRange(end, start, false)))
+
+	// Разные локации и неполночь: --start парсится в UTC, end приходит из
+	// time.Now().In(MSK), max(date) — в локации сервера. Набор дней должен
+	// совпадать в обоих порядках и включать обе границы.
+	utcStart := time.Date(2026, 10, 15, 0, 0, 0, 0, time.UTC)
+	nowEnd := time.Date(2026, 10, 18, 14, 37, 0, 0, tz.MSK)
+	eqDates(t, datesOf(DateRange(utcStart, nowEnd, true)),
+		"2026-10-15", "2026-10-16", "2026-10-17", "2026-10-18")
+	eqDates(t, datesOf(DateRange(utcStart, nowEnd, false)),
+		"2026-10-18", "2026-10-17", "2026-10-16", "2026-10-15")
+
+	// Тот же день по MSK, но границы в UTC: полночь UTC — это 03:00 MSK,
+	// календарный день не должен «съезжать» на предыдущий.
+	eqDates(t, datesOf(DateRange(utcStart, utcStart, true)), "2026-10-15")
+
+	// Переход через границу суток: 21:30 UTC — это уже 16-е в MSK. Если бы
+	// нормализация шла по локации аргумента, день остался бы 15-м.
+	utcLate := time.Date(2026, 10, 15, 21, 30, 0, 0, time.UTC)
+	eqDates(t, datesOf(DateRange(utcLate, end, true)), "2026-10-16", "2026-10-17", "2026-10-18")
+	eqDates(t, datesOf(DateRange(utcLate, end, false)), "2026-10-18", "2026-10-17", "2026-10-16")
+
+	// reverse(asc) == desc для любого диапазона и любых локаций.
+	rev := datesOf(DateRange(utcStart, nowEnd, false))
+	slices.Reverse(rev)
+	if want := datesOf(DateRange(utcStart, nowEnd, true)); !slices.Equal(rev, want) {
+		t.Fatalf("reverse(desc) = %v, want asc %v", rev, want)
+	}
+
+	// Все элементы — календарные дни MSK: лоадеры передают их в запросы
+	// и в имена партиций без дополнительной нормализации.
+	for _, d := range DateRange(utcStart, nowEnd, true) {
+		if d.Location() != tz.MSK || d.Hour() != 0 || d.Minute() != 0 || d.Second() != 0 {
+			t.Fatalf("day %v is not MSK midnight (%v)", d, d.Location())
+		}
+	}
+
+	// Нулевое время — пусто, а не диапазон от 1 года.
+	eqDates(t, datesOf(DateRange(time.Time{}, end, true)))
+	eqDates(t, datesOf(DateRange(start, time.Time{}, false)))
 }
 
 func TestReloadDaySkipsEmpty(t *testing.T) {

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/iimos/play/tr/cmd/watch"
 	"github.com/iimos/play/tr/moexalgo"
 	"github.com/iimos/play/tr/store"
 	"github.com/iimos/play/tr/tz"
@@ -64,7 +65,12 @@ func LoadStocks(ctx context.Context, opts LoadOptions) error {
 
 	fmt.Printf("Loading data from %s to %s\n", start.Format(time.DateOnly), end.Format(time.DateOnly))
 
-	for d := end; d.Compare(start) >= 0; d = d.AddDate(0, 0, -1) {
+	// Автостарт взят из таблицы, а не из --start: идём от старых дней к новым.
+	// Тогда обрыв загрузки оставляет последнюю дату таблицы перед дырой, и
+	// повторный запуск без флагов продолжает с неё (см. watch.DateRange).
+	asc := opts.StartDate.IsZero()
+
+	for _, d := range watch.DateRange(start, end, asc) {
 		// printMemUsage()
 		fmt.Printf("> %s", d.Format(time.DateOnly))
 

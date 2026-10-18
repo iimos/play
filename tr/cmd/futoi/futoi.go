@@ -66,7 +66,12 @@ func Load(ctx context.Context, opts LoadOptions) error {
 
 	fmt.Printf("Loading futoi data from %s to %s\n", start.Format(time.DateOnly), end.Format(time.DateOnly))
 
-	for d := end; d.Compare(start) >= 0; d = d.AddDate(0, 0, -1) {
+	// Автостарт взят из таблицы, а не из --start: идём от старых дней к новым.
+	// Тогда обрыв загрузки оставляет последнюю дату таблицы перед дырой, и
+	// повторный запуск без флагов продолжает с неё (см. watch.DateRange).
+	asc := opts.StartDate.IsZero()
+
+	for _, d := range watch.DateRange(start, end, asc) {
 		dateStr := d.Format(time.DateOnly)
 		fmt.Printf("> %s", dateStr)
 

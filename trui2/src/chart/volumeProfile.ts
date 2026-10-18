@@ -615,10 +615,21 @@ export interface VpBarHit {
   sell: number
   hasBuySell: boolean
   isPoc: boolean
+  isVah: boolean
+  isVal: boolean
   inValueArea: boolean
+  // Значения ключевых линий дня — чтобы зафиксировать уровень ровно по
+  // POC/VAH/VAL, а не по середине строки.
+  pocPrice: number
+  vah: number
+  val: number
+  // День-источник: дата (YYYY-MM-DD, МСК) и границы его времени.
+  dayKey: string
+  dayStartTimestamp: number
+  dayEndTimestamp: number
 }
 
-function buildHit(profile: DayProfile, bucket: VpBucket, key: string): VpBarHit {
+function buildHit(profile: DayProfile, bucket: VpBucket, key: string, day: DayEntry, dataList: KLineData[]): VpBarHit {
   return {
     key,
     price: (bucket.priceStart + bucket.priceEnd) / 2,
@@ -628,7 +639,15 @@ function buildHit(profile: DayProfile, bucket: VpBucket, key: string): VpBarHit 
     sell: bucket.sell,
     hasBuySell: profile.hasBuySell,
     isPoc: bucket.index === profile.pocIndex,
+    isVah: bucket.index === profile.vahIndex,
+    isVal: bucket.index === profile.valIndex,
     inValueArea: bucket.index >= profile.valIndex && bucket.index <= profile.vahIndex,
+    pocPrice: profile.pocPrice,
+    vah: profile.vah,
+    val: profile.val,
+    dayKey: day.dayKey,
+    dayStartTimestamp: dataList[day.startIndex].timestamp,
+    dayEndTimestamp: dataList[day.endIndex].timestamp,
   }
 }
 
@@ -669,7 +688,7 @@ export function hitTestVolumeProfile(chart: Chart, x: number, y: number): VpBarH
       const lo = Math.min(anchorX, anchorX + (volumeProfileConfig.align === 'left' ? width : -width))
       const hi = Math.max(anchorX, anchorX + (volumeProfileConfig.align === 'left' ? width : -width))
       if (width >= MIN_BAR_WIDTH_PX && x >= lo && x <= hi) {
-        return buildHit(profile, bucket, `${day.dayKey}|${bucket.index}`)
+        return buildHit(profile, bucket, `${day.dayKey}|${bucket.index}`, day, dataList)
       }
     }
   }
@@ -679,7 +698,22 @@ export function hitTestVolumeProfile(chart: Chart, x: number, y: number): VpBarH
   if (pocBucket != null) {
     const pocY = yOfValue(chart, profile.pocPrice)
     if (Math.abs(y - pocY) <= 4) {
-      return buildHit(profile, pocBucket, `${day.dayKey}|poc`)
+      return buildHit(profile, pocBucket, `${day.dayKey}|poc`, day, dataList)
+    }
+  }
+
+  // Курсор рядом с границами зоны стоимости VAH/VAL. Линии реально нарисованы
+  // только при showValueAreaLines и не в режиме «только POC», поэтому вне этих
+  // условий хит не возвращаем (иначе можно зафиксировать невидимую линию).
+  if (volumeProfileConfig.showValueAreaLines && !volumeProfileConfig.showOnlyPoc) {
+    for (const lineIndex of [profile.vahIndex, profile.valIndex]) {
+      const lineBucket = profile.byIndex.get(lineIndex)
+      if (lineBucket == null) continue
+      const lineValue = lineIndex === profile.vahIndex ? profile.vah : profile.val
+      const lineY = yOfValue(chart, lineValue)
+      if (Math.abs(y - lineY) <= 4) {
+        return buildHit(profile, lineBucket, `${day.dayKey}|${lineIndex}`, day, dataList)
+      }
     }
   }
   return null

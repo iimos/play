@@ -3,6 +3,7 @@ package moexalgo
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -16,6 +17,8 @@ const (
 	DefaultAPIURL    = "https://apim.moex.com/iss/"
 	DefaultPageLimit = 1000 // it's maximum available page size
 	DefaultTimeout   = 30 * time.Second
+	// maxAttempts — сколько всего раз пробуем один GET при транзиентных сбоях.
+	maxAttempts = 3
 )
 
 // Debug enables logging
@@ -46,50 +49,107 @@ func Get[T any, PT interface {
 	FillerFrom
 	*T // T must be such that *T is a FillerFrom
 }](ctx context.Context, s *Session, url string, fn func(*T)) error {
-	fullURL := DefaultAPIURL + url
-	log("GET " + fullURL)
-	req, err := http.NewRequest(http.MethodGet, fullURL, nil)
+	body, err := s.fetch(ctx, url)
 	if err != nil {
 		return err
-	}
-	req = req.WithContext(ctx)
-
-	req.Header.Set("Authorization", "Bearer "+s.token)
-
-	resp, err := s.http.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("moexalgo.Get: %d %s", resp.StatusCode, string(body))
 	}
 
 	var r apiResponse
 	if err = json.Unmarshal(body, &r); err != nil {
-		return fmt.Errorf("moexalgo.Get: %w; body: %s", err, string(body))
+		return fmt.Errorf("moexalgo.Get: %s: %w; body: %s", url, err, body)
 	}
 
 	dataSection, ok := r.getData()
 	if !ok {
-		return fmt.Errorf("moexalgo.Get: failed to find data in the API response: %s; url=%s", string(body), url)
+		return fmt.Errorf("moexalgo.Get: failed to find data in the API response: %s; url=%s", body, url)
 	}
 
 	data, err := transform[T, PT](dataSection)
 	if err != nil {
-		return fmt.Errorf("moexalgo.Get: %w", err)
+		return fmt.Errorf("moexalgo.Get: %s: %w", url, err)
 	}
 
 	for i := range data {
 		fn(&data[i])
 	}
 	return nil
+}
+
+// fetch выполняет GET и повторяет транзиентные ошибки (таймауты, сетевые сбои,
+// 5xx, 429, 408) с нарастающей паузой. Остальные ответы возвращаются как есть.
+func (s *Session) fetch(ctx context.Context, url string) ([]byte, error) {
+	fullURL := DefaultAPIURL + url
+
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		if attempt > 1 {
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(time.Duration(attempt-1) * time.Second):
+			}
+			log("retry", "url", fullURL, "attempt", attempt, "err", lastErr)
+		}
+
+		body, err := s.do(ctx, fullURL)
+		if err == nil {
+			return body, nil
+		}
+		lastErr = err
+
+		// Отмену или дедлайн внешнего контекста не ретраим.
+		if ctx.Err() != nil {
+			return nil, err
+		}
+		var se *statusError
+		if errors.As(err, &se) && !retriableStatus(se.code) {
+			return nil, err
+		}
+	}
+	return nil, fmt.Errorf("%w (attempts: %d)", lastErr, maxAttempts)
+}
+
+// do выполняет один GET-запрос к API.
+func (s *Session) do(ctx context.Context, fullURL string) ([]byte, error) {
+	log("GET " + fullURL)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+s.token)
+
+	resp, err := s.http.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("moexalgo.Get: %s: %w", fullURL, err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("moexalgo.Get: %s: %w", fullURL, err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, &statusError{url: fullURL, code: resp.StatusCode, body: string(body)}
+	}
+	return body, nil
+}
+
+// statusError — ответ API с не-200 статусом.
+type statusError struct {
+	url  string
+	code int
+	body string
+}
+
+func (e *statusError) Error() string {
+	return fmt.Sprintf("moexalgo.Get: %s: %d %s", e.url, e.code, e.body)
+}
+
+// retriableStatus возвращает true для транзиентных HTTP-статусов.
+func retriableStatus(code int) bool {
+	return code >= 500 || code == http.StatusTooManyRequests || code == http.StatusRequestTimeout
 }
 
 func GetAll[T any, PT interface {

@@ -67,9 +67,11 @@ func Load(ctx context.Context, opts LoadOptions) error {
 	fmt.Printf("Loading futoi data from %s to %s\n", start.Format(time.DateOnly), end.Format(time.DateOnly))
 
 	for d := end; d.Compare(start) >= 0; d = d.AddDate(0, 0, -1) {
-		fmt.Printf("> %s", d.Format(time.DateOnly))
+		dateStr := d.Format(time.DateOnly)
+		fmt.Printf("> %s", dateStr)
 
-		shouldReload := opts.ForceReload || (!lastTableDate.IsZero() && d.Format(time.DateOnly) == lastTableDate.Format(time.DateOnly))
+		isLastTableDate := !lastTableDate.IsZero() && dateStr == lastTableDate.Format(time.DateOnly)
+		shouldReload := opts.ForceReload || isLastTableDate
 
 		if !shouldReload {
 			count, err := storage.CountFutoiForDate(ctx, d)
@@ -81,25 +83,38 @@ func Load(ctx context.Context, opts LoadOptions) error {
 				continue
 			}
 		} else {
-			fmt.Printf(": FORCE RELOAD")
-			if !lastTableDate.IsZero() && d.Format(time.DateOnly) == lastTableDate.Format(time.DateOnly) {
+			fmt.Printf(": RELOAD")
+			if isLastTableDate {
 				fmt.Printf(" (last date in table)")
 			}
-			if err := storage.DeleteFutoiPartition(ctx, d); err != nil {
-				fmt.Printf(" (FAILED to delete partition: %v)\n", err)
-				return fmt.Errorf("failed to delete partition for date %s: %w", d.Format(time.DateOnly), err)
+			if opts.ForceReload && !isLastTableDate {
+				fmt.Printf(" (--force)")
 			}
-			fmt.Printf(" (partition deleted)")
 		}
 
+		// Сначала качаем данные и только потом удаляем партицию: иначе сбой сети
+		// (таймаут, 5xx) оставляет дырку в уже загруженном дне.
 		data, err := fetchFutoi(ctx, moexSess, d)
 		if err != nil {
-			return err
+			fmt.Printf(": FAILED to fetch: %v\n", err)
+			return fmt.Errorf("fetch futoi for date %s: %w", dateStr, err)
+		}
+		if len(data) == 0 {
+			fmt.Printf(": NO DATA; partition kept\n")
+			continue
+		}
+
+		if shouldReload {
+			if err := storage.DeleteFutoiPartition(ctx, d); err != nil {
+				fmt.Printf(": FAILED to delete partition: %v\n", err)
+				return fmt.Errorf("failed to delete partition for date %s: %w", dateStr, err)
+			}
 		}
 		fmt.Printf(": FETCHED %d rows\n", len(data))
 
 		if err := storage.StoreFutoi(ctx, data); err != nil {
-			return err
+			fmt.Printf(": FAILED to store: %v\n", err)
+			return fmt.Errorf("store futoi for date %s: %w", dateStr, err)
 		}
 
 		runtime.GC()
@@ -193,7 +208,7 @@ func fetchFutoi(ctx context.Context, sess *moexalgo.Session, date time.Time) ([]
 				}
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("ticker %s: %w", t, err)
 			}
 			return nil
 		})

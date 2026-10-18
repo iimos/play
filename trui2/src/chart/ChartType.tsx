@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useState, useRef } from 'react'
-import { Chart, init, dispose, registerIndicator, registerOverlay, CandleTooltipLegendsCustomCallback, Period, TooltipLegend, Point } from 'klinecharts'
+import { Chart, init, dispose, registerIndicator, registerOverlay, CandleTooltipLegendsCustomCallback, Period, TooltipLegend, Point, OverlayEvent } from 'klinecharts'
 import Layout from '../Layout'
 import TickerSelector from './TickerSelector'
 import { fetchCandles, fetchLatestTime, fetchMetric, fetchMarketShares, IntervalType, SuperCandle, fetchFizOI, resolveFutoiTicker, resolveSecGroup, SEC_GROUP_TO_TABLE, FutOIData, FutOISource, FizOIResult, MetricPoint, isGapBar, mapRealBars, realBars, intervalMs } from '../data/index'
@@ -9,6 +9,13 @@ import {
   VOLUME_PROFILE_INDICATOR_NAME, VOLUME_PROFILE_PANE_ID, VpAlign, VpRowSize,
   resetVolumeProfileCache,
 } from './volumeProfile'
+import {
+  FixedLevel, LevelType, LevelsConfig, LevelStatus, LevelExtendData,
+  loadFixedLevels, saveFixedLevels, loadLevelsConfig, saveLevelsConfig,
+  newLevelId, syncFixedLevels, setLevelEventHandlers, clearSelectedLevel, normalizeLevelsConfig,
+  LEVEL_PALETTE,
+} from './levels'
+import LevelsManager, { nextPaletteColor } from './LevelsManager'
 
 // Легенды тултипа свечи по умолчанию (как во встроенном шаблоне). Нужны, чтобы
 // для баров-разрывов (неторговых дней) отдавать пустой список вместо NaN-полей.
@@ -1107,6 +1114,22 @@ function readQuery() {
   }
 }
 
+// Радиус попадания курсора в линию уровня по вертикали (px) — для ПКМ-удаления
+// и защиты от дублей при ручном рисовании.
+const LEVEL_HIT_TOLERANCE_PX = 6
+
+// Сравнение карт статусов, чтобы не перерисовывать панель уровней на каждый
+// рефреш данных (статус обычно не меняется).
+function sameStatusRecord(a: Record<string, LevelStatus>, b: Record<string, LevelStatus>): boolean {
+  const ak = Object.keys(a)
+  const bk = Object.keys(b)
+  if (ak.length !== bk.length) return false
+  for (const key of bk) {
+    if (a[key] !== b[key]) return false
+  }
+  return true
+}
+
 export default function ChartType () {
   const [initial] = useState(readQuery)
   const [ticker, setTicker] = useState(initial.ticker)
@@ -1134,9 +1157,24 @@ export default function ChartType () {
   const [vpValueAreaLines, setVpValueAreaLines] = useState(volumeProfileConfig.showValueAreaLines)
   const [vpSplitBuySell, setVpSplitBuySell] = useState(volumeProfileConfig.splitBuySell)
   const [vpAlign, setVpAlign] = useState<VpAlign>(volumeProfileConfig.align)
+  // Зафиксированные уровни PbD (POC/VAH/VAL/ручные) для текущего тикера,
+  // настройки менеджера и вычисленные статусы для панели.
+  const [levels, setLevels] = useState<FixedLevel[]>(() => loadFixedLevels(initial.ticker))
+  const [levelsConfig, setLevelsConfigState] = useState<LevelsConfig>(() => loadLevelsConfig())
+  const [levelStatuses, setLevelStatuses] = useState<Record<string, LevelStatus>>({})
+  const [levelsOpen, setLevelsOpen] = useState(true)
+  // Мини-меню уровня (цвет / удалить) и режим ручного рисования.
+  const [levelMenu, setLevelMenu] = useState<{ id: string; x: number; y: number } | null>(null)
+  const [levelDrawMode, setLevelDrawMode] = useState(false)
   // Профиль доступен только на внутридневных интервалах.
   const vpAvailable = isVolumeProfileInterval(interval)
   const chart = useRef<Chart | null>(null)
+  const levelsRef = useRef(levels)
+  const levelsConfigRef = useRef(levelsConfig)
+  // Перерисовка уровней (назначается в основном эффекте, когда чарт создан).
+  const refreshLevelsRef = useRef<() => void>(() => {})
+  // Контейнер графика — нужен для координат мини-меню и рисования.
+  const wrapperRef = useRef<HTMLDivElement | null>(null)
   // Источники ОИ для текущего инструмента: собственные фьючерсы инструмента
   // (futoiOwnSourcesRef) и взвешенные бумаги, входящие в индекс
   // (futoiConstSourcesRef). Пустой массив — соответствующего ОИ нет.
@@ -1246,6 +1284,219 @@ export default function ChartType () {
     }
   }, [vpTip])
 
+  // --- Зафиксированные уровни PbD -----------------------------------------
+
+  // Записать новый список уровней: обновить state/ref, сохранить в localStorage
+  // и перерисовать оверлеи (если чарт уже создан).
+  const updateLevels = (next: FixedLevel[]) => {
+    levelsRef.current = next
+    setLevels(next)
+    saveFixedLevels(ticker, next)
+    refreshLevelsRef.current()
+  }
+
+  const updateLevelsConfig = (patch: Partial<LevelsConfig>) => {
+    const next = normalizeLevelsConfig({ ...levelsConfigRef.current, ...patch })
+    levelsConfigRef.current = next
+    setLevelsConfigState(next)
+    saveLevelsConfig(next)
+    refreshLevelsRef.current()
+  }
+
+  const removeLevel = (id: string) => {
+    setLevelMenu(menu => (menu != null && menu.id === id ? null : menu))
+    updateLevels(levelsRef.current.filter(l => l.id !== id))
+  }
+  const toggleLevelVisible = (id: string) => {
+    updateLevels(levelsRef.current.map(l => l.id === id ? { ...l, visible: !l.visible } : l))
+  }
+  const changeLevelColor = (id: string, color: string) => {
+    updateLevels(levelsRef.current.map(l => l.id === id ? { ...l, color } : l))
+  }
+  const cycleLevelColor = (id: string) => {
+    updateLevels(levelsRef.current.map(l => l.id === id ? { ...l, color: nextPaletteColor(l) } : l))
+  }
+  const clearLevels = () => {
+    setLevelMenu(null)
+    updateLevels([])
+  }
+
+  // Материализует уровень по строке профиля объёма: тип определяется по
+  // POC/VAH/VAL, а если строка внутри зоны — берётся ближайшая ключевая линия.
+  const createLevelFromHit = (hit: VpBarHit) => {
+    const candidates: Array<{ type: LevelType; price: number }> = [
+      { type: 'POC', price: hit.pocPrice },
+      { type: 'VAH', price: hit.vah },
+      { type: 'VAL', price: hit.val },
+    ]
+    let type: LevelType = 'POC'
+    let price = hit.pocPrice
+    if (hit.isPoc) {
+      type = 'POC'
+      price = hit.pocPrice
+    } else if (hit.isVah) {
+      type = 'VAH'
+      price = hit.vah
+    } else if (hit.isVal) {
+      type = 'VAL'
+      price = hit.val
+    } else {
+      let best = Infinity
+      for (const candidate of candidates) {
+        const distance = Math.abs(hit.price - candidate.price)
+        if (distance < best) {
+          best = distance
+          type = candidate.type
+          price = candidate.price
+        }
+      }
+    }
+    const level: FixedLevel = {
+      id: newLevelId(),
+      ticker,
+      type,
+      price,
+      startTimestamp: hit.dayStartTimestamp,
+      endTimestamp: hit.dayEndTimestamp,
+      sourceDay: hit.dayKey,
+      visible: true,
+      createdAt: Date.now(),
+    }
+    const duplicate = levelsRef.current.find(l =>
+      l.sourceDay === level.sourceDay && l.type === level.type && Math.abs(l.price - level.price) < 1e-6)
+    if (duplicate == null) {
+      updateLevels([...levelsRef.current, level])
+    }
+  }
+
+  // Колбэки оверлеев уровней хранятся в refs, чтобы регистрировать их один раз,
+  // но всегда читать актуальное состояние.
+  const onLevelClickRef = useRef<(event: OverlayEvent<LevelExtendData>) => void>(() => {})
+  const onLevelPressedMoveEndRef = useRef<(event: OverlayEvent<LevelExtendData>) => void>(() => {})
+  const onLevelDeleteRef = useRef<(id: string) => void>(() => {})
+
+  // Клик по линии — быстрое меню (цвет/удалить) у курсора.
+  onLevelClickRef.current = event => {
+    const c = chart.current
+    const wrap = wrapperRef.current
+    const mainDom = c?.getDom('candle_pane', 'main')
+    if (c == null || wrap == null || mainDom == null) return
+    const mainRect = mainDom.getBoundingClientRect()
+    const wrapRect = wrap.getBoundingClientRect()
+    // Держим мини-меню внутри области графика (примерная ширина меню ~180px).
+    const maxX = Math.max(4, wrap.clientWidth - 180)
+    const maxY = Math.max(4, wrap.clientHeight - 24)
+    const x = mainRect.left - wrapRect.left + (event.x ?? 0)
+    const y = mainRect.top - wrapRect.top + (event.y ?? 0)
+    setLevelMenu({
+      id: event.overlay.id,
+      x: Math.min(Math.max(4, x), maxX),
+      y: Math.min(Math.max(12, y), maxY),
+    })
+  }
+  // Перетаскивание уровня меняет только цену; время старта остаётся прежним —
+  // после синхронизации точка возвращается на исходный X.
+  onLevelPressedMoveEndRef.current = event => {
+    const value = event.overlay.points[0]?.value
+    if (typeof value !== 'number' || !Number.isFinite(value)) return
+    updateLevels(levelsRef.current.map(l => l.id === event.overlay.id ? { ...l, price: value } : l))
+  }
+  onLevelDeleteRef.current = id => {
+    removeLevel(id)
+  }
+
+  useEffect(() => {
+    setLevelEventHandlers({
+      onClick: event => onLevelClickRef.current(event),
+      onPressedMoveEnd: event => onLevelPressedMoveEndRef.current(event),
+      onDelete: id => onLevelDeleteRef.current(id),
+    })
+  }, [])
+
+  // Уровень, чья линия лежит ближе всего к пикселю Y (для ПКМ-удаления и чтобы
+  // ручное рисование не плодило дубль поверх существующей линии).
+  const findLevelAtPixelY = (c: Chart, y: number): FixedLevel | null => {
+    let best: FixedLevel | null = null
+    let bestDist = Infinity
+    for (const level of levelsRef.current) {
+      if (!level.visible) continue
+      const coord = (c.convertToPixel([{ value: level.price }], { paneId: 'candle_pane' }) as Array<{ y?: number }>)[0]
+      const levelY = coord?.y
+      if (typeof levelY !== 'number') continue
+      const dist = Math.abs(levelY - y)
+      if (dist <= LEVEL_HIT_TOLERANCE_PX && dist < bestDist) {
+        bestDist = dist
+        best = level
+      }
+    }
+    return best
+  }
+
+  // ПКМ: по существующему уровню — удалить; по бару/линии профиля объёма —
+  // зафиксировать новый уровень POC/VAH/VAL.
+  const handleWrapperContextMenu = (event: React.MouseEvent) => {
+    const c = chart.current
+    if (c == null) return
+    event.preventDefault()
+    const mainDom = c.getDom('candle_pane', 'main')
+    if (mainDom == null) return
+    const rect = mainDom.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    if (x < 0 || y < 0 || x > rect.width || y > rect.height) return
+    const existing = findLevelAtPixelY(c, y)
+    if (existing != null) {
+      removeLevel(existing.id)
+      return
+    }
+    // Профиль (и его POC/VAH/VAL) должен быть показан на внутридневном интервале.
+    if (!showVolumeProfileRef.current || !vpAvailableRef.current) return
+    const hit = hitTestVolumeProfile(c, x, y)
+    if (hit == null) return
+    createLevelFromHit(hit)
+  }
+
+  // Режим ручного рисования: клик по графику задаёт цену и дату старта.
+  const handleWrapperClick = (event: React.MouseEvent) => {
+    if (!levelDrawMode) return
+    // Клики по всплывающему мини-меню не должны ставить уровень.
+    if (event.target instanceof Element && event.target.closest('.level-quick-menu') != null) return
+    const c = chart.current
+    if (c == null) return
+    const mainDom = c.getDom('candle_pane', 'main')
+    if (mainDom == null) return
+    const rect = mainDom.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    if (x < 0 || y < 0 || x > rect.width || y > rect.height) return
+    // Клик по существующей линии — не создаём дубль.
+    if (findLevelAtPixelY(c, y) != null) return
+    const point = (c.convertFromPixel([{ x, y }], { paneId: 'candle_pane' }) as Array<Partial<Point>>)[0]
+    const ts = point?.timestamp
+    const value = point?.value
+    if (typeof ts !== 'number' || typeof value !== 'number' || !Number.isFinite(value)) return
+    const level: FixedLevel = {
+      id: newLevelId(),
+      ticker,
+      type: 'MANUAL',
+      price: value,
+      startTimestamp: ts,
+      endTimestamp: null,
+      visible: true,
+      createdAt: Date.now(),
+    }
+    updateLevels([...levelsRef.current, level])
+    setLevelDrawMode(false)
+  }
+
+  // Закрытие мини-меню кликом вне него.
+  useEffect(() => {
+    if (levelMenu == null) return
+    const close = () => setLevelMenu(null)
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [levelMenu])
+
   const toggleIndicator = (id: VolumeIndicatorId) => {
     setEnabled(prev => ({ ...prev, [id]: !prev[id] }))
   }
@@ -1267,10 +1518,25 @@ export default function ChartType () {
     setMetrics(prev => prev.filter(f => f.id !== id))
   }
 
+  // Уровни хранятся по тикеру: при его смене синхронно подменяем список, чтобы
+  // основной эффект инициализации чарта сразу отрисовал нужные уровни.
+  useEffect(() => {
+    const loaded = loadFixedLevels(ticker)
+    levelsRef.current = loaded
+    setLevels(loaded)
+    setLevelStatuses({})
+    setLevelMenu(null)
+    setLevelDrawMode(false)
+    clearSelectedLevel()
+  }, [ticker])
+
   // Основной эффект: инициализация чарта и загрузка данных
   useEffect(() => {
     let cancelled = false
 
+    // Чарт пересоздаётся — старые оверлеи/выделение/меню больше не актуальны.
+    clearSelectedLevel()
+    setLevelMenu(null)
     setOIAvailable(false)
     setConstituentsOIAvailable(false)
     setDataError(null)
@@ -1330,6 +1596,21 @@ export default function ChartType () {
       }
     }
     refreshVolumeHighlightsRef.current = refreshVolumeHighlights
+
+    // Отрисовка зафиксированных уровней и обновление их статусов по свечам.
+    const refreshLevels = () => {
+      if (cancelled || !chart.current) return
+      const statuses = syncFixedLevels(
+        chart.current,
+        levelsRef.current,
+        levelsConfigRef.current,
+        chart.current.getDataList(),
+      )
+      const record: Record<string, LevelStatus> = {}
+      statuses.forEach((status, id) => { record[id] = status })
+      setLevelStatuses(prev => (sameStatusRecord(prev, record) ? prev : record))
+    }
+    refreshLevelsRef.current = refreshLevels
 
     // При скролле/зуме множество подсветок не меняется — только перерисовываем
     // видимую часть одним оверлеем.
@@ -1555,6 +1836,7 @@ export default function ChartType () {
                   syncWeekendHighlights(chart.current, weekendHighlightStateRef.current)
                 }
                 refreshVolumeHighlights()
+                refreshLevels()
               } catch (error) {
                 console.error('Ошибка отрисовки:', error)
               }
@@ -1583,6 +1865,7 @@ export default function ChartType () {
                   syncWeekendHighlights(chart.current, weekendHighlightStateRef.current)
                 }
                 refreshVolumeHighlights()
+                refreshLevels()
               } catch (error) {
                 console.error('Ошибка отрисовки:', error)
               }
@@ -1676,6 +1959,7 @@ export default function ChartType () {
               syncWeekendHighlights(c, weekendHighlightStateRef.current)
             }
             refreshVolumeHighlights()
+            refreshLevels()
           } catch (error) {
             console.error('Ошибка обновления данных:', error)
           } finally {
@@ -1696,6 +1980,7 @@ export default function ChartType () {
     return () => {
       cancelled = true
       stopPolling()
+      refreshLevelsRef.current = () => {}
       if (chart.current) {
         chart.current.unsubscribeAction('onVisibleRangeChange', resyncVisibleHighlights)
         chart.current.unsubscribeAction('onCrosshairChange', onCrosshairChange)
@@ -1955,6 +2240,33 @@ export default function ChartType () {
         )}
       </div>
       <div className="k-line-chart-menu-container">
+        <button
+          onClick={_ => setLevelDrawMode(v => !v)}
+          style={{ backgroundColor: levelDrawMode ? '#FFB300' : '' }}
+          title="Нарисовать горизонтальный уровень: клик по графику задаёт цену и дату старта"
+        >
+          ＋ Уровень
+        </button>
+        <span style={{ paddingLeft: 6 }}>
+          {levelDrawMode
+            ? 'Кликните по графику, чтобы поставить уровень в этой точке'
+            : 'ПКМ по бару профиля объёма — зафиксировать POC/VAH/VAL'}
+        </span>
+      </div>
+      <LevelsManager
+        levels={levels}
+        statuses={levelStatuses}
+        config={levelsConfig}
+        precision={2}
+        open={levelsOpen}
+        onToggleOpen={() => setLevelsOpen(v => !v)}
+        onToggleVisible={toggleLevelVisible}
+        onDelete={removeLevel}
+        onCycleColor={cycleLevelColor}
+        onConfigChange={updateLevelsConfig}
+        onClear={clearLevels}
+      />
+      <div className="k-line-chart-menu-container">
         <span style={{ paddingRight: 6 }}>SQL-метрика:</span>
         <input
           type="text"
@@ -1989,7 +2301,10 @@ export default function ChartType () {
         </div>
       )}
       <div
+        ref={wrapperRef}
         className="k-line-chart-wrapper"
+        onContextMenu={handleWrapperContextMenu}
+        onClick={handleWrapperClick}
         onMouseLeave={() => {
           hideVolumeTipRef.current()
           hideVpTipRef.current()
@@ -2018,6 +2333,34 @@ export default function ChartType () {
           <div ref={vpTipElRef} className="volume-highlight-tip">
             <div className="volume-highlight-tip-title">{vpTip.title}</div>
             {vpTip.lines.map((line, i) => <div key={i}>{line}</div>)}
+          </div>
+        )}
+        {levelMenu != null && (
+          <div
+            className="level-quick-menu"
+            style={{ left: levelMenu.x, top: levelMenu.y }}
+            onMouseDown={e => e.stopPropagation()}
+          >
+            {LEVEL_PALETTE.map(color => (
+              <button
+                key={color}
+                className="level-quick-color"
+                style={{ backgroundColor: color }}
+                title="Сменить цвет уровня"
+                onClick={() => {
+                  const id = levelMenu.id
+                  setLevelMenu(null)
+                  changeLevelColor(id, color)
+                }}
+              />
+            ))}
+            <button
+              className="level-quick-delete"
+              title="Удалить уровень"
+              onClick={() => removeLevel(levelMenu.id)}
+            >
+              🗑
+            </button>
           </div>
         )}
       </div>

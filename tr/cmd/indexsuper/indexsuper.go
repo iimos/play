@@ -148,21 +148,25 @@ func buildDayRows(
 	if err != nil {
 		return err
 	}
+	dateStr := d.Format(time.DateOnly)
 	if len(rows) == 0 {
-		fmt.Printf("> %s super_index: NO DATA\n", d.Format(time.DateOnly))
+		watch.Logf("super_index: > %s: NO DATA\n", dateStr)
 		return nil
 	}
 
-	// Точечно заменяем данные только тех индексов, что пересобраны.
+	// Точечно заменяем данные только тех индексов, что пересобраны. Отмену
+	// (Ctrl-C) уважаем на сборке, но не между DELETE и INSERT: прерывание в
+	// этом окне оставило бы пересобранные индексы без строк.
+	wctx := context.WithoutCancel(ctx)
 	for _, indexID := range built {
-		if err := storage.DeleteSuperIndexFor(ctx, indexID, d); err != nil {
-			return fmt.Errorf("delete super_index %s %s: %w", indexID, d.Format(time.DateOnly), err)
+		if err := storage.DeleteSuperIndexFor(wctx, indexID, d); err != nil {
+			return fmt.Errorf("delete super_index %s %s: %w", indexID, dateStr, err)
 		}
 	}
-	if err := storage.StoreSuperIndex(ctx, rows); err != nil {
-		return fmt.Errorf("store super_index for %s: %w", d.Format(time.DateOnly), err)
+	if err := storage.StoreSuperIndex(wctx, rows); err != nil {
+		return fmt.Errorf("store super_index for %s: %w", dateStr, err)
 	}
-	fmt.Printf("> %s super_index: BUILT %d rows (%v)\n", d.Format(time.DateOnly), len(rows), built)
+	watch.Logf("super_index: > %s: BUILT %d rows (%v)\n", dateStr, len(rows), built)
 	return nil
 }
 

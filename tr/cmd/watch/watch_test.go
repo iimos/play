@@ -2,6 +2,7 @@ package watch
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"testing"
 	"time"
@@ -45,48 +46,6 @@ func TestNextRunHourly(t *testing.T) {
 	}
 }
 
-func TestTrackerDays(t *testing.T) {
-	var tr Tracker
-	day := func(y int, m time.Month, d, h, min, s int) time.Time {
-		return time.Date(y, m, d, h, min, s, 0, tz.MSK)
-	}
-	dates := func(days []time.Time) []string {
-		out := make([]string, len(days))
-		for i, d := range days {
-			out[i] = d.Format(time.DateOnly)
-		}
-		return out
-	}
-	eq := func(got []string, want ...string) {
-		t.Helper()
-		if len(got) != len(want) {
-			t.Fatalf("got %v, want %v", got, want)
-		}
-		for i := range want {
-			if got[i] != want[i] {
-				t.Fatalf("got %v, want %v", got, want)
-			}
-		}
-	}
-
-	// Первый тик: вчера + сегодня, состояние не меняется до Commit.
-	now := day(2026, 9, 17, 21, 30, 0)
-	eq(dates(tr.Days(now)), "2026-09-16", "2026-09-17")
-	eq(dates(tr.Days(now)), "2026-09-16", "2026-09-17")
-	tr.Commit(now)
-
-	// Тот же день.
-	eq(dates(tr.Days(day(2026, 9, 17, 21, 35, 0))), "2026-09-17")
-
-	// Смена суток: вчера + сегодня.
-	tr.Commit(day(2026, 9, 17, 21, 35, 0))
-	eq(dates(tr.Days(day(2026, 9, 18, 0, 0, 6))), "2026-09-17", "2026-09-18")
-
-	// Простой несколько суток: все пропущенные дни.
-	tr.Commit(day(2026, 9, 18, 0, 0, 6))
-	eq(dates(tr.Days(day(2026, 9, 21, 10, 0, 6))), "2026-09-18", "2026-09-19", "2026-09-20", "2026-09-21")
-}
-
 // datesOf форматирует дни для сравнения в тестах.
 func datesOf(days []time.Time) []string {
 	out := make([]string, len(days))
@@ -104,47 +63,72 @@ func eqDates(t *testing.T, got []string, want ...string) {
 	}
 }
 
+func TestTrackerDays(t *testing.T) {
+	var tr Tracker
+	day := func(y int, m time.Month, d, h, min, s int) time.Time {
+		return time.Date(y, m, d, h, min, s, 0, tz.MSK)
+	}
+	eq := func(got []string, want ...string) { eqDates(t, got, want...) }
+
+	// Первый тик: вчера + сегодня, состояние не меняется до Commit.
+	now := day(2026, 9, 17, 21, 30, 0)
+	eq(datesOf(tr.Days(now)), "2026-09-16", "2026-09-17")
+	eq(datesOf(tr.Days(now)), "2026-09-16", "2026-09-17")
+	tr.Commit(now)
+
+	// Тот же день.
+	eq(datesOf(tr.Days(day(2026, 9, 17, 21, 35, 0))), "2026-09-17")
+
+	// Смена суток: вчера + сегодня.
+	tr.Commit(day(2026, 9, 17, 21, 35, 0))
+	eq(datesOf(tr.Days(day(2026, 9, 18, 0, 0, 6))), "2026-09-17", "2026-09-18")
+
+	// Простой несколько суток: все пропущенные дни.
+	tr.Commit(day(2026, 9, 18, 0, 0, 6))
+	eq(datesOf(tr.Days(day(2026, 9, 21, 10, 0, 6))), "2026-09-18", "2026-09-19", "2026-09-20", "2026-09-21")
+}
+
 func TestDateRange(t *testing.T) {
+	days := datesOf
+	eq := func(got []string, want ...string) { eqDates(t, got, want...) }
 	start := time.Date(2026, 10, 15, 0, 0, 0, 0, tz.MSK)
 	end := time.Date(2026, 10, 18, 0, 0, 0, 0, tz.MSK)
 
-	eqDates(t, datesOf(DateRange(start, end, true)),
-		"2026-10-15", "2026-10-16", "2026-10-17", "2026-10-18")
-	eqDates(t, datesOf(DateRange(start, end, false)),
-		"2026-10-18", "2026-10-17", "2026-10-16", "2026-10-15")
+	eq(days(DateRange(start, end, true)), "2026-10-15", "2026-10-16", "2026-10-17", "2026-10-18")
+	eq(days(DateRange(start, end, false)), "2026-10-18", "2026-10-17", "2026-10-16", "2026-10-15")
 
 	// Один день.
-	eqDates(t, datesOf(DateRange(start, start, true)), "2026-10-15")
-	eqDates(t, datesOf(DateRange(start, start, false)), "2026-10-15")
+	eq(days(DateRange(start, start, true)), "2026-10-15")
+	eq(days(DateRange(start, start, false)), "2026-10-15")
 
 	// start > end — пусто в любом порядке.
-	eqDates(t, datesOf(DateRange(end, start, true)))
-	eqDates(t, datesOf(DateRange(end, start, false)))
+	eq(days(DateRange(end, start, true)))
+	eq(days(DateRange(end, start, false)))
 
 	// Разные локации и неполночь: --start парсится в UTC, end приходит из
 	// time.Now().In(MSK), max(date) — в локации сервера. Набор дней должен
 	// совпадать в обоих порядках и включать обе границы.
 	utcStart := time.Date(2026, 10, 15, 0, 0, 0, 0, time.UTC)
 	nowEnd := time.Date(2026, 10, 18, 14, 37, 0, 0, tz.MSK)
-	eqDates(t, datesOf(DateRange(utcStart, nowEnd, true)),
+	eq(days(DateRange(utcStart, nowEnd, true)),
 		"2026-10-15", "2026-10-16", "2026-10-17", "2026-10-18")
-	eqDates(t, datesOf(DateRange(utcStart, nowEnd, false)),
+	eq(days(DateRange(utcStart, nowEnd, false)),
 		"2026-10-18", "2026-10-17", "2026-10-16", "2026-10-15")
 
 	// Тот же день по MSK, но границы в UTC: полночь UTC — это 03:00 MSK,
 	// календарный день не должен «съезжать» на предыдущий.
-	eqDates(t, datesOf(DateRange(utcStart, utcStart, true)), "2026-10-15")
+	eq(days(DateRange(utcStart, utcStart, true)), "2026-10-15")
 
 	// Переход через границу суток: 21:30 UTC — это уже 16-е в MSK. Если бы
 	// нормализация шла по локации аргумента, день остался бы 15-м.
 	utcLate := time.Date(2026, 10, 15, 21, 30, 0, 0, time.UTC)
-	eqDates(t, datesOf(DateRange(utcLate, end, true)), "2026-10-16", "2026-10-17", "2026-10-18")
-	eqDates(t, datesOf(DateRange(utcLate, end, false)), "2026-10-18", "2026-10-17", "2026-10-16")
+	eq(days(DateRange(utcLate, end, true)), "2026-10-16", "2026-10-17", "2026-10-18")
+	eq(days(DateRange(utcLate, end, false)), "2026-10-18", "2026-10-17", "2026-10-16")
 
 	// reverse(asc) == desc для любого диапазона и любых локаций.
-	rev := datesOf(DateRange(utcStart, nowEnd, false))
+	rev := days(DateRange(utcStart, nowEnd, false))
 	slices.Reverse(rev)
-	if want := datesOf(DateRange(utcStart, nowEnd, true)); !slices.Equal(rev, want) {
+	if want := days(DateRange(utcStart, nowEnd, true)); !slices.Equal(rev, want) {
 		t.Fatalf("reverse(desc) = %v, want asc %v", rev, want)
 	}
 
@@ -157,8 +141,116 @@ func TestDateRange(t *testing.T) {
 	}
 
 	// Нулевое время — пусто, а не диапазон от 1 года.
-	eqDates(t, datesOf(DateRange(time.Time{}, end, true)))
-	eqDates(t, datesOf(DateRange(start, time.Time{}, false)))
+	eq(days(DateRange(time.Time{}, end, true)))
+	eq(days(DateRange(start, time.Time{}, false)))
+}
+
+func TestEmptyDaysReport(t *testing.T) {
+	// Пусто — ничего не печатаем (проверяем, что не паникует).
+	var none EmptyDays
+	none.Report("x")
+
+	mon := func(d int) time.Time { return time.Date(2026, 10, d, 0, 0, 0, 0, tz.MSK) }
+
+	// Пустые дни в хвосте диапазона (типичные выходные) — не дыры: max(date)
+	// на них не сдвигается, они перезапрашиваются при каждом запуске.
+	var tail EmptyDays
+	tail.Present(mon(16))
+	tail.Add(mon(17))
+	tail.Add(mon(18))
+	tail.Report("tail") // ничего печатать не должен
+	if got := tail.gaps(); len(got) != 0 {
+		t.Fatalf("tail gaps = %v, want none", got)
+	}
+
+	// Пустой день, после которого есть день с данными, становится невидимым для
+	// автостарта — о нём предупреждаем.
+	var hole EmptyDays
+	hole.Present(mon(15))
+	hole.Add(mon(16))
+	hole.Present(mon(17))
+	hole.Add(mon(16)) // дубль
+	got := hole.gaps()
+	if len(got) != 1 || !got[0].Equal(mon(16)) {
+		t.Fatalf("gaps = %v, want [2026-10-16]", got)
+	}
+	hole.Report("hole")
+
+	// День, пропущенный по EXISTS, — тоже «день с данными»: пустой день перед
+	// ним не должен потеряться.
+	var skipped EmptyDays
+	skipped.Add(mon(16))
+	skipped.Present(mon(17)) // EXISTS, не запись
+	if got := skipped.gaps(); len(got) != 1 || !got[0].Equal(mon(16)) {
+		t.Fatalf("gaps after EXISTS = %v, want [2026-10-16]", got)
+	}
+
+	// Для источников без выходных пустые сб/вс не считаются пропуском, но
+	// запоминаются отдельно — торговые субботы у MOEX бывают.
+	var weekends EmptyDays
+	weekends.SkipWeekends()
+	weekends.Present(mon(16)) // пятница
+	weekends.Add(mon(17))     // суббота
+	weekends.Add(mon(18))     // воскресенье
+	weekends.Present(mon(19))
+	if got := weekends.gaps(); len(got) != 0 {
+		t.Fatalf("weekend gaps = %v, want none", got)
+	}
+	if len(weekends.skipped) != 2 {
+		t.Fatalf("weekend days must be remembered for the info line, got %v", weekends.skipped)
+	}
+
+	// День в UTC не должен «съезжать» на предыдущий: Add нормализует к MSK.
+	var utcDay EmptyDays
+	utcDay.Present(mon(16))
+	utcDay.Add(time.Date(2026, 10, 15, 21, 30, 0, 0, time.UTC)) // = 16.10 00:30 MSK
+	if got := utcDay.gaps(); len(got) != 0 {
+		t.Fatalf("UTC day must normalize to MSK (16-е уже есть): %v", got)
+	}
+}
+
+func TestCheckCoverage(t *testing.T) {
+	day := func(d int) time.Time { return time.Date(2026, 10, d, 0, 0, 0, 0, tz.MSK) }
+	to := day(18) // воскресенье
+
+	// 12–16 — будние; 13 и 14 отсутствуют, остальное окно заполнено.
+	var present []time.Time
+	for d := mskDay(to).AddDate(0, 0, -CoverageDays+1); d.Before(to); d = d.AddDate(0, 0, 1) {
+		if d.Day() == 13 || d.Day() == 14 {
+			continue
+		}
+		present = append(present, d)
+	}
+	present = append(present, day(17), day(18))
+	got := missingWeekdays(present, to)
+	if len(got) != 2 || !got[0].Equal(day(13)) || !got[1].Equal(day(14)) {
+		t.Fatalf("missing = %v, want 13 и 14", got)
+	}
+
+	// Всё на месте — пропусков нет; выходные не требуются.
+	var all []time.Time
+	for d := mskDay(to).AddDate(0, 0, -CoverageDays+1); !d.After(to); d = d.AddDate(0, 0, 1) {
+		all = append(all, d)
+	}
+	if got := missingWeekdays(all, to); len(got) != 0 {
+		t.Fatalf("missing = %v, want none", got)
+	}
+
+	// Глубже окна CoverageDays не смотрим.
+	if got := missingWeekdays(nil, to); len(got) == 0 {
+		t.Fatal("expected missing weekdays in empty table")
+	} else if got[0].Before(mskDay(to).AddDate(0, 0, -CoverageDays)) {
+		t.Fatalf("window starts too early: %v", got[0])
+	}
+
+	// Ошибка чтения из БД пробрасывается.
+	wantErr := errors.New("db down")
+	err := CheckCoverage(context.Background(),
+		func(context.Context, time.Time, time.Time) ([]time.Time, error) { return nil, wantErr },
+		"test", to)
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("err = %v, want %v", err, wantErr)
+	}
 }
 
 func TestReloadDaySkipsEmpty(t *testing.T) {

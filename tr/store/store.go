@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -76,4 +77,41 @@ func (s *Store) lastDate(ctx context.Context, query string, args ...any) (time.T
 		return time.Time{}, nil
 	}
 	return d, nil
+}
+
+// tableDate — выражение даты для таблиц, которые умеют отдавать список дней с
+// данными (см. DatesWithData). Белый список: имя таблицы подставляется в SQL.
+var tableDate = map[string]string{
+	"super_eq":          "Date(time)",
+	"super_fo":          "Date(time)",
+	"super_fx":          "Date(time)",
+	"futoi":             "Date(time)",
+	"iss_openpositions": "Date(time)",
+	"bond_daily":        "Date(time)",
+	"index_candles":     "Date(time)",
+}
+
+// DatesWithData возвращает дни из диапазона [from, to], за которые в таблице
+// есть строки. name — имя таблицы из белого списка tableDate.
+func (s *Store) DatesWithData(ctx context.Context, name string, from, to time.Time) ([]time.Time, error) {
+	expr, ok := tableDate[name]
+	if !ok {
+		return nil, fmt.Errorf("unknown table %q", name)
+	}
+	q := fmt.Sprintf("SELECT DISTINCT %s FROM %s WHERE %s BETWEEN ? AND ? ORDER BY 1", expr, name, expr)
+	rows, err := s.conn.Query(ctx, q, from.Format(time.DateOnly), to.Format(time.DateOnly))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var res []time.Time
+	for rows.Next() {
+		var d time.Time
+		if err := rows.Scan(&d); err != nil {
+			return nil, err
+		}
+		res = append(res, d)
+	}
+	return res, rows.Err()
 }

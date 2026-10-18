@@ -70,62 +70,82 @@ func LoadCurrencies(ctx context.Context, opts LoadOptions) error {
 	// повторный запуск без флагов продолжает с неё (см. watch.DateRange).
 	asc := opts.StartDate.IsZero()
 
-	for _, d := range watch.DateRange(start, end, asc) {
-		//printMemUsage()
-		fmt.Printf("> %s", d.Format(time.DateOnly))
+	// Отмену контекста (Ctrl-C) уважаем при скачивании, но не между DROP
+	// PARTITION и INSERT: иначе прерывание оставит день пустым.
+	wctx := context.WithoutCancel(ctx)
 
-		// Check if we need to reload this date
-		// Always reload if it's the last date in the table (might be incomplete)
-		shouldReload := opts.ForceReload || (!lastTableDate.IsZero() && d.Format(time.DateOnly) == lastTableDate.Format(time.DateOnly))
+	var emptyDays watch.EmptyDays
+	emptyDays.SkipWeekends() // по сб/вс источник обычно пуст; торговые субботы печатаются отдельно
+	defer emptyDays.Report("super_fx")
 
-		if !shouldReload {
-			count, err := storage.CountSuperFxCandlesForDate(ctx, d)
+	for _, d := range watch.DayRange(start, end, asc, opts.StartDate.IsZero()) {
+		dateStr := d.Format(time.DateOnly)
+		msg, err := func() (string, error) {
+			var parts []string
+
+			isLastTableDate := !lastTableDate.IsZero() && dateStr == lastTableDate.Format(time.DateOnly)
+			shouldReload := opts.ForceReload || isLastTableDate
+
+			if !shouldReload {
+				count, err := storage.CountSuperFxCandlesForDate(ctx, d)
+				if err != nil {
+					return "", fmt.Errorf("count super_fx for date %s: %w", dateStr, err)
+				}
+				if count > 0 {
+					emptyDays.Present(d)
+					return fmt.Sprintf("EXISTS; %d supercandles", count), nil
+				}
+				parts = append(parts, "EMPTY")
+			} else {
+				note := "RELOAD"
+				if isLastTableDate {
+					note += " (last date in table)"
+				}
+				if opts.ForceReload && !isLastTableDate {
+					note += " (--force)"
+				}
+				parts = append(parts, note)
+			}
+
+			// Сначала качаем данные и только потом удаляем партицию: иначе сбой
+			// сети или пустой ответ стирает уже загруженный день.
+			data, err := fetchFxStats(ctx, moexSess, d)
 			if err != nil {
-				return err
+				return "", fmt.Errorf("fetch super_fx for date %s: %w", dateStr, err)
+			}
+			if len(data) == 0 {
+				if asc {
+					emptyDays.Add(d)
+				}
+				parts = append(parts, "NO DATA; partition untouched")
+				return strings.Join(parts, "; "), nil
+			}
+			if shouldReload {
+				if err := storage.DeleteSuperFxPartition(wctx, d); err != nil {
+					return "", fmt.Errorf("delete super_fx partition for date %s: %w", dateStr, err)
+				}
+			}
+			if err := storage.StoreSuperFx(wctx, data); err != nil {
+				return "", fmt.Errorf("store super_fx for date %s: %w", dateStr, err)
 			}
 
-			if count > 0 {
-				fmt.Printf(": EXISTS; %d supercandles\n", count)
-				continue
-			}
-		} else {
-			fmt.Printf(": RELOAD")
-			if !lastTableDate.IsZero() && d.Format(time.DateOnly) == lastTableDate.Format(time.DateOnly) {
-				fmt.Printf(" (last date in table)")
-			}
+			emptyDays.Present(d)
+			runtime.GC()
+			parts = append(parts, fmt.Sprintf("STORED %d supercandles", len(data)))
+			return strings.Join(parts, "; "), nil
+		}()
+		if msg != "" {
+			watch.Logf("super_fx: > %s: %s\n", dateStr, msg)
 		}
-
-		// Сначала качаем данные и только потом удаляем партицию: иначе сбой сети
-		// или пустой ответ стирает уже загруженный день. Пустой ответ оставляет
-		// партицию нетронутой — день перезальётся при следующем запуске.
-		data, err := fetchFxStats(ctx, moexSess, d)
 		if err != nil {
 			return err
 		}
-		if len(data) == 0 {
-			fmt.Printf(": NO DATA; partition kept\n")
-			continue
-		}
-		if shouldReload {
-			if err := storage.DeleteSuperFxPartition(ctx, d); err != nil {
-				fmt.Printf(": FAILED to delete partition: %v\n", err)
-				return fmt.Errorf("failed to delete partition for date %s: %w", d.Format(time.DateOnly), err)
-			}
-		}
-		fmt.Printf(": FETCHED %d supercandles\n", len(data))
+	}
 
-		//fmt.Printf("len(data) = %d\n", len(data))
-		//fmt.Printf("Time: %+v\n", data[0].Time.Format(time.DateTime))
-		//fmt.Printf("SecID: %+v\n", data[0].SecID)
-		//fmt.Printf("data[0].FOTradeStat: %+v\n", data[0].EqTradeStat)
-		//fmt.Printf("data[0].FOObStat: %+v\n", data[0].FOObStat)
-		//fmt.Printf("data[0].OrderStat: %+v\n", data[0].OrderStat)
-
-		err = storage.StoreSuperFx(ctx, data)
-		if err != nil {
-			return err
-		}
-		runtime.GC()
+	if err := watch.CheckCoverage(ctx, func(ctx context.Context, from, to time.Time) ([]time.Time, error) {
+		return storage.DatesWithData(ctx, "super_fx", from, to)
+	}, "super_fx", end); err != nil {
+		return fmt.Errorf("check super_fx coverage: %w", err)
 	}
 
 	if opts.Watch {

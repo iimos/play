@@ -71,64 +71,103 @@ func Load(ctx context.Context, opts LoadOptions) error {
 	// повторный запуск без флагов продолжает с неё (см. watch.DateRange).
 	asc := opts.StartDate.IsZero()
 
-	for _, d := range watch.DateRange(start, end, asc) {
+	// Отмену контекста (Ctrl-C) уважаем при скачивании, но не между DROP
+	// PARTITION и INSERT: иначе прерывание оставит день пустым.
+	wctx := context.WithoutCancel(ctx)
+
+	var emptyDays watch.EmptyDays
+	defer emptyDays.Report("futoi")
+
+	for _, d := range watch.DayRange(start, end, asc, opts.StartDate.IsZero()) {
 		dateStr := d.Format(time.DateOnly)
-		fmt.Printf("> %s", dateStr)
-
-		isLastTableDate := !lastTableDate.IsZero() && dateStr == lastTableDate.Format(time.DateOnly)
-		shouldReload := opts.ForceReload || isLastTableDate
-
-		if !shouldReload {
-			count, err := storage.CountFutoiForDate(ctx, d)
-			if err != nil {
-				return err
-			}
-			if count > 0 {
-				fmt.Printf(": EXISTS; %d rows\n", count)
-				continue
-			}
-		} else {
-			fmt.Printf(": RELOAD")
-			if isLastTableDate {
-				fmt.Printf(" (last date in table)")
-			}
-			if opts.ForceReload && !isLastTableDate {
-				fmt.Printf(" (--force)")
-			}
+		msg, err := loadFutoiDay(ctx, wctx, storage, moexSess, opts, d, lastTableDate, &emptyDays, asc)
+		if msg != "" {
+			watch.Logf("futoi: > %s: %s\n", dateStr, msg)
 		}
-
-		// Сначала качаем данные и только потом удаляем партицию: иначе сбой сети
-		// (таймаут, 5xx) оставляет дырку в уже загруженном дне.
-		data, err := fetchFutoi(ctx, moexSess, d)
 		if err != nil {
-			fmt.Printf(": FAILED to fetch: %v\n", err)
-			return fmt.Errorf("fetch futoi for date %s: %w", dateStr, err)
+			return err
 		}
-		if len(data) == 0 {
-			fmt.Printf(": NO DATA; partition kept\n")
-			continue
-		}
+	}
 
-		if shouldReload {
-			if err := storage.DeleteFutoiPartition(ctx, d); err != nil {
-				fmt.Printf(": FAILED to delete partition: %v\n", err)
-				return fmt.Errorf("failed to delete partition for date %s: %w", dateStr, err)
-			}
-		}
-		fmt.Printf(": FETCHED %d rows\n", len(data))
-
-		if err := storage.StoreFutoi(ctx, data); err != nil {
-			fmt.Printf(": FAILED to store: %v\n", err)
-			return fmt.Errorf("store futoi for date %s: %w", dateStr, err)
-		}
-
-		runtime.GC()
+	if err := watch.CheckCoverage(ctx, func(ctx context.Context, from, to time.Time) ([]time.Time, error) {
+		return storage.DatesWithData(ctx, "futoi", from, to)
+	}, "futoi", end); err != nil {
+		return fmt.Errorf("check futoi coverage: %w", err)
 	}
 
 	if opts.Watch {
 		return watchFutoi(ctx, storage, moexSess)
 	}
 	return nil
+}
+
+// loadFutoiDay перезагружает один день. Возвращает текст статуса для лога и
+// ошибку; строку лога печатает вызывающий — так она не перемешивается с
+// выводом параллельных лоадеров в команде `load`.
+func loadFutoiDay(
+	ctx, wctx context.Context,
+	storage *store.Store,
+	sess *moexalgo.Session,
+	opts LoadOptions,
+	d time.Time,
+	lastTableDate time.Time,
+	emptyDays *watch.EmptyDays,
+	asc bool,
+) (string, error) {
+	dateStr := d.Format(time.DateOnly)
+	var parts []string
+
+	isLastTableDate := !lastTableDate.IsZero() && dateStr == lastTableDate.Format(time.DateOnly)
+	shouldReload := opts.ForceReload || isLastTableDate
+
+	if !shouldReload {
+		count, err := storage.CountFutoiForDate(ctx, d)
+		if err != nil {
+			return "", fmt.Errorf("count futoi for date %s: %w", dateStr, err)
+		}
+		if count > 0 {
+			emptyDays.Present(d)
+			return fmt.Sprintf("EXISTS; %d rows", count), nil
+		}
+		parts = append(parts, "EMPTY")
+	} else {
+		note := "RELOAD"
+		if isLastTableDate {
+			note += " (last date in table)"
+		}
+		if opts.ForceReload && !isLastTableDate {
+			note += " (--force)"
+		}
+		parts = append(parts, note)
+	}
+
+	// Сначала качаем данные и только потом удаляем партицию: иначе сбой сети
+	// (таймаут, 5xx) оставляет дырку в уже загруженном дне.
+	data, err := fetchFutoi(ctx, sess, d)
+	if err != nil {
+		return "", fmt.Errorf("fetch futoi for date %s: %w", dateStr, err)
+	}
+	if len(data) == 0 {
+		if asc {
+			emptyDays.Add(d)
+		}
+		parts = append(parts, "NO DATA; partition untouched")
+		return strings.Join(parts, "; "), nil
+	}
+
+	if shouldReload {
+		if err := storage.DeleteFutoiPartition(wctx, d); err != nil {
+			return "", fmt.Errorf("delete futoi partition for date %s: %w", dateStr, err)
+		}
+	}
+	if err := storage.StoreFutoi(wctx, data); err != nil {
+		return "", fmt.Errorf("store futoi for date %s: %w", dateStr, err)
+	}
+
+	emptyDays.Present(d)
+	runtime.GC()
+	parts = append(parts, fmt.Sprintf("STORED %d rows", len(data)))
+	return strings.Join(parts, "; "), nil
 }
 
 // watchFutoi каждые 5 минут целиком перезаливает текущий день открытых позиций.

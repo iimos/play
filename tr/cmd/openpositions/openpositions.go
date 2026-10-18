@@ -74,51 +74,82 @@ func Load(ctx context.Context, opts LoadOptions) error {
 	// повторный запуск без флагов продолжает с неё (см. watch.DateRange).
 	asc := opts.StartDate.IsZero()
 
-	for _, d := range watch.DateRange(start, end, asc) {
-		fmt.Printf("> %s", d.Format(time.DateOnly))
+	// Отмену контекста (Ctrl-C) уважаем при скачивании, но не между DROP
+	// PARTITION и INSERT: иначе прерывание оставит день пустым.
+	wctx := context.WithoutCancel(ctx)
 
-		shouldReload := opts.ForceReload || (!lastTableDate.IsZero() && d.Format(time.DateOnly) == lastTableDate.Format(time.DateOnly))
+	var emptyDays watch.EmptyDays
+	emptyDays.SkipWeekends() // по сб/вс источник обычно пуст; торговые субботы печатаются отдельно
+	defer emptyDays.Report("iss_openpositions")
 
-		if !shouldReload {
-			count, err := storage.CountOpenPositionsForDate(ctx, d)
+	for _, d := range watch.DayRange(start, end, asc, opts.StartDate.IsZero()) {
+		dateStr := d.Format(time.DateOnly)
+		msg, err := func() (string, error) {
+			var parts []string
+
+			isLastTableDate := !lastTableDate.IsZero() && dateStr == lastTableDate.Format(time.DateOnly)
+			shouldReload := opts.ForceReload || isLastTableDate
+
+			if !shouldReload {
+				count, err := storage.CountOpenPositionsForDate(ctx, d)
+				if err != nil {
+					return "", fmt.Errorf("count open positions for date %s: %w", dateStr, err)
+				}
+				if count > 0 {
+					emptyDays.Present(d)
+					return fmt.Sprintf("EXISTS; %d rows", count), nil
+				}
+				parts = append(parts, "EMPTY")
+			} else {
+				note := "RELOAD"
+				if isLastTableDate {
+					note += " (last date in table)"
+				}
+				if opts.ForceReload && !isLastTableDate {
+					note += " (--force)"
+				}
+				parts = append(parts, note)
+			}
+
+			// Сначала качаем данные и только потом удаляем партицию: иначе сбой
+			// сети или пустой ответ стирает уже загруженный день.
+			data, err := fetchOpenPositions(ctx, moexSess, d, assets)
 			if err != nil {
-				return err
+				return "", fmt.Errorf("fetch open positions for date %s: %w", dateStr, err)
 			}
-			if count > 0 {
-				fmt.Printf(": EXISTS; %d rows\n", count)
-				continue
+			if len(data) == 0 {
+				if asc {
+					emptyDays.Add(d)
+				}
+				parts = append(parts, "NO DATA; partition untouched")
+				return strings.Join(parts, "; "), nil
 			}
-		} else {
-			fmt.Printf(": RELOAD")
-			if !lastTableDate.IsZero() && d.Format(time.DateOnly) == lastTableDate.Format(time.DateOnly) {
-				fmt.Printf(" (last date in table)")
+			if shouldReload {
+				if err := storage.DeleteOpenPositionsPartition(wctx, d); err != nil {
+					return "", fmt.Errorf("delete open positions partition for date %s: %w", dateStr, err)
+				}
 			}
-		}
+			if err := storage.StoreOpenPositions(wctx, data); err != nil {
+				return "", fmt.Errorf("store open positions for date %s: %w", dateStr, err)
+			}
 
-		// Сначала качаем данные и только потом удаляем партицию: иначе сбой сети
-		// или пустой ответ стирает уже загруженный день. Пустой ответ оставляет
-		// партицию нетронутой — день перезальётся при следующем запуске.
-		data, err := fetchOpenPositions(ctx, moexSess, d, assets)
+			emptyDays.Present(d)
+			runtime.GC()
+			parts = append(parts, fmt.Sprintf("STORED %d rows", len(data)))
+			return strings.Join(parts, "; "), nil
+		}()
+		if msg != "" {
+			watch.Logf("iss_openpositions: > %s: %s\n", dateStr, msg)
+		}
 		if err != nil {
 			return err
 		}
-		if len(data) == 0 {
-			fmt.Printf(": NO DATA; partition kept\n")
-			continue
-		}
-		if shouldReload {
-			if err := storage.DeleteOpenPositionsPartition(ctx, d); err != nil {
-				fmt.Printf(": FAILED to delete partition: %v\n", err)
-				return fmt.Errorf("failed to delete partition for date %s: %w", d.Format(time.DateOnly), err)
-			}
-		}
-		fmt.Printf(": FETCHED %d rows\n", len(data))
+	}
 
-		if err := storage.StoreOpenPositions(ctx, data); err != nil {
-			return err
-		}
-
-		runtime.GC()
+	if err := watch.CheckCoverage(ctx, func(ctx context.Context, from, to time.Time) ([]time.Time, error) {
+		return storage.DatesWithData(ctx, "iss_openpositions", from, to)
+	}, "iss_openpositions", end); err != nil {
+		return fmt.Errorf("check iss_openpositions coverage: %w", err)
 	}
 
 	if opts.Watch {

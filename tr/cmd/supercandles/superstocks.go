@@ -70,55 +70,81 @@ func LoadStocks(ctx context.Context, opts LoadOptions) error {
 	// повторный запуск без флагов продолжает с неё (см. watch.DateRange).
 	asc := opts.StartDate.IsZero()
 
-	for _, d := range watch.DateRange(start, end, asc) {
-		// printMemUsage()
-		fmt.Printf("> %s", d.Format(time.DateOnly))
+	// Отмену контекста (Ctrl-C) уважаем при скачивании, но не между DROP
+	// PARTITION и INSERT: иначе прерывание оставит день пустым.
+	wctx := context.WithoutCancel(ctx)
 
-		// Check if we need to reload this date
-		// Always reload if it's the last date in the table (might be incomplete)
-		shouldReload := opts.ForceReload || (!lastTableDate.IsZero() && d.Format(time.DateOnly) == lastTableDate.Format(time.DateOnly))
+	var emptyDays watch.EmptyDays
+	defer emptyDays.Report("super_eq")
 
-		if !shouldReload {
-			count, err := storage.CountSuperEqCandlesForDate(ctx, d)
+	for _, d := range watch.DayRange(start, end, asc, opts.StartDate.IsZero()) {
+		dateStr := d.Format(time.DateOnly)
+		msg, err := func() (string, error) {
+			var parts []string
+
+			isLastTableDate := !lastTableDate.IsZero() && dateStr == lastTableDate.Format(time.DateOnly)
+			shouldReload := opts.ForceReload || isLastTableDate
+
+			if !shouldReload {
+				count, err := storage.CountSuperEqCandlesForDate(ctx, d)
+				if err != nil {
+					return "", fmt.Errorf("count super_eq for date %s: %w", dateStr, err)
+				}
+				if count > 0 {
+					emptyDays.Present(d)
+					return fmt.Sprintf("EXISTS; %d supercandles", count), nil
+				}
+				parts = append(parts, "EMPTY")
+			} else {
+				note := "RELOAD"
+				if isLastTableDate {
+					note += " (last date in table)"
+				}
+				if opts.ForceReload && !isLastTableDate {
+					note += " (--force)"
+				}
+				parts = append(parts, note)
+			}
+
+			// Сначала качаем данные и только потом удаляем партицию: иначе сбой
+			// сети или пустой ответ стирает уже загруженный день.
+			data, err := fetchEqStats(ctx, moexSess, d)
 			if err != nil {
-				return err
+				return "", fmt.Errorf("fetch super_eq for date %s: %w", dateStr, err)
+			}
+			if len(data) == 0 {
+				if asc {
+					emptyDays.Add(d)
+				}
+				parts = append(parts, "NO DATA; partition untouched")
+				return strings.Join(parts, "; "), nil
+			}
+			if shouldReload {
+				if err := storage.DeleteSuperEqPartition(wctx, d); err != nil {
+					return "", fmt.Errorf("delete super_eq partition for date %s: %w", dateStr, err)
+				}
+			}
+			if err := storage.StoreSuperEq(wctx, data); err != nil {
+				return "", fmt.Errorf("store super_eq for date %s: %w", dateStr, err)
 			}
 
-			if count > 0 {
-				fmt.Printf(": EXISTS; %d supercandles\n", count)
-				continue
-			}
-		} else {
-			fmt.Printf(": RELOAD")
-			if !lastTableDate.IsZero() && d.Format(time.DateOnly) == lastTableDate.Format(time.DateOnly) {
-				fmt.Printf(" (last date in table)")
-			}
+			emptyDays.Present(d)
+			runtime.GC()
+			parts = append(parts, fmt.Sprintf("STORED %d supercandles", len(data)))
+			return strings.Join(parts, "; "), nil
+		}()
+		if msg != "" {
+			watch.Logf("super_eq: > %s: %s\n", dateStr, msg)
 		}
-
-		// Сначала качаем данные и только потом удаляем партицию: иначе сбой сети
-		// или пустой ответ стирает уже загруженный день. Пустой ответ оставляет
-		// партицию нетронутой — день перезальётся при следующем запуске.
-		data, err := fetchEqStats(ctx, moexSess, d)
 		if err != nil {
 			return err
 		}
-		if len(data) == 0 {
-			fmt.Printf(": NO DATA; partition kept\n")
-			continue
-		}
-		if shouldReload {
-			if err := storage.DeleteSuperEqPartition(ctx, d); err != nil {
-				fmt.Printf(": FAILED to delete partition: %v\n", err)
-				return fmt.Errorf("failed to delete partition for date %s: %w", d.Format(time.DateOnly), err)
-			}
-		}
-		fmt.Printf(": FETCHED %d supercandles\n", len(data))
+	}
 
-		if err := storage.StoreSuperEq(context.Background(), data); err != nil {
-			return err
-		}
-
-		runtime.GC()
+	if err := watch.CheckCoverage(ctx, func(ctx context.Context, from, to time.Time) ([]time.Time, error) {
+		return storage.DatesWithData(ctx, "super_eq", from, to)
+	}, "super_eq", end); err != nil {
+		return fmt.Errorf("check super_eq coverage: %w", err)
 	}
 
 	//fmt.Printf("len(data) = %d\n", len(data))
@@ -147,7 +173,7 @@ func fetchEqStats(ctx context.Context, sess *moexalgo.Session, date time.Time) (
 // latest=true запрашивается только открытая пятиминутка (latest=1).
 func fetchEqStatsWithLatest(ctx context.Context, sess *moexalgo.Session, date time.Time, latest bool) ([]*store.SuperCandleEq, error) {
 	mu := sync.Mutex{}
-	var epCount [3]int // строк по эндпоинтам tradestats, obstats, orderstats
+	var epCount [3]int // строк по tradestats/obstats/orderstats
 	stats := make(map[statKey]*store.SuperCandleEq, moexalgo.DefaultPageLimit)
 
 	get := func(t time.Time, secid string) *store.SuperCandleEq {

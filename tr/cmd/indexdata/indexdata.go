@@ -117,7 +117,11 @@ func Load(ctx context.Context, opts LoadOptions) error {
 	// а не считает диапазон загруженным (см. watch.DateRange).
 	asc := opts.StartDate.IsZero()
 
-	for _, d := range watch.DateRange(start, end, asc) {
+	var emptyDays watch.EmptyDays
+	defer emptyDays.Report("index data")
+
+	for _, d := range watch.DayRange(start, end, asc, opts.StartDate.IsZero()) {
+		dateStr := d.Format(time.DateOnly)
 		reload := opts.ForceReload
 		if !reload {
 			candleCount, err := storage.CountIndexCandlesPartition(ctx, d)
@@ -128,8 +132,12 @@ func Load(ctx context.Context, opts LoadOptions) error {
 			if err != nil {
 				return err
 			}
-			_, isLast := lastDates[d.In(tz.MSK).Format(time.DateOnly)]
+			_, isLast := lastDates[dateStr]
 			reload = candleCount == 0 || weightCount == 0 || isLast
+			// День с данными, до которого автостарт дотянется и без перезагрузки.
+			if candleCount > 0 || weightCount > 0 {
+				emptyDays.Present(d)
+			}
 		}
 		if !reload {
 			continue
@@ -141,7 +149,30 @@ func Load(ctx context.Context, opts LoadOptions) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("> %s: candles %d, weights %d\n", d.Format(time.DateOnly), candles, weights)
+		if candles == 0 && weights == 0 {
+			watch.Logf("index data: > %s: NO DATA; partition untouched\n", dateStr)
+			if asc {
+				emptyDays.Add(d)
+			}
+			continue
+		}
+		emptyDays.Present(d)
+		// Ноль в счётчике означает, что эта таблица за день не перезаписывалась:
+		// в ней остались прежние строки.
+		switch {
+		case candles == 0:
+			watch.Logf("index data: > %s: candles 0 (partition kept), weights %d\n", dateStr, weights)
+		case weights == 0:
+			watch.Logf("index data: > %s: candles %d, weights 0 (partition kept)\n", dateStr, candles)
+		default:
+			watch.Logf("index data: > %s: candles %d, weights %d\n", dateStr, candles, weights)
+		}
+	}
+
+	if err := watch.CheckCoverage(ctx, func(ctx context.Context, from, to time.Time) ([]time.Time, error) {
+		return storage.DatesWithData(ctx, "index_candles", from, to)
+	}, "index_candles", end); err != nil {
+		return fmt.Errorf("check index_candles coverage: %w", err)
 	}
 
 	if opts.Watch {

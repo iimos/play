@@ -141,6 +141,7 @@ func fetchFOStats(ctx context.Context, sess *moexalgo.Session, date time.Time) (
 // latest=true запрашивается только открытая пятиминутка (latest=1).
 func fetchFOStatsWithLatest(ctx context.Context, sess *moexalgo.Session, date time.Time, latest bool) ([]*store.SuperCandleFO, error) {
 	mu := sync.Mutex{}
+	var epCount [2]int // строк по эндпоинтам tradestats, obstats
 	stats := make(map[statKey]*store.SuperCandleFO, moexalgo.DefaultPageLimit)
 
 	get := func(t time.Time, secid string) *store.SuperCandleFO {
@@ -166,6 +167,7 @@ func fetchFOStatsWithLatest(ctx context.Context, sess *moexalgo.Session, date ti
 			if !d.IsEmpty() {
 				mu.Lock()
 				defer mu.Unlock()
+				epCount[0]++
 				get(d.Time, d.SecID).FOTradeStat = d
 			}
 		})
@@ -176,13 +178,16 @@ func fetchFOStatsWithLatest(ctx context.Context, sess *moexalgo.Session, date ti
 			if !d.IsEmpty() {
 				mu.Lock()
 				defer mu.Unlock()
+				epCount[1]++
 				get(d.Time, d.SecID).FOObStat = d
 			}
 		})
 		return err
 	})
-	err := gr.Wait()
-	if err != nil {
+	if err := gr.Wait(); err != nil {
+		return nil, err
+	}
+	if err := checkPartial(date, latest, epCount[:], "tradestats", "obstats"); err != nil {
 		return nil, err
 	}
 

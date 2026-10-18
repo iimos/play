@@ -147,6 +147,7 @@ func fetchEqStats(ctx context.Context, sess *moexalgo.Session, date time.Time) (
 // latest=true запрашивается только открытая пятиминутка (latest=1).
 func fetchEqStatsWithLatest(ctx context.Context, sess *moexalgo.Session, date time.Time, latest bool) ([]*store.SuperCandleEq, error) {
 	mu := sync.Mutex{}
+	var epCount [3]int // строк по эндпоинтам tradestats, obstats, orderstats
 	stats := make(map[statKey]*store.SuperCandleEq, moexalgo.DefaultPageLimit)
 
 	get := func(t time.Time, secid string) *store.SuperCandleEq {
@@ -172,6 +173,7 @@ func fetchEqStatsWithLatest(ctx context.Context, sess *moexalgo.Session, date ti
 			if !d.IsEmpty() {
 				mu.Lock()
 				defer mu.Unlock()
+				epCount[0]++
 				get(d.Time, d.SecID).EqTradeStat = d
 			}
 		})
@@ -182,6 +184,7 @@ func fetchEqStatsWithLatest(ctx context.Context, sess *moexalgo.Session, date ti
 			if !d.IsEmpty() {
 				mu.Lock()
 				defer mu.Unlock()
+				epCount[1]++
 				get(d.Time, d.SecID).EqObStat = d
 			}
 		})
@@ -192,13 +195,16 @@ func fetchEqStatsWithLatest(ctx context.Context, sess *moexalgo.Session, date ti
 			if !d.IsEmpty() {
 				mu.Lock()
 				defer mu.Unlock()
+				epCount[2]++
 				get(d.Time, d.SecID).OrderStat = d
 			}
 		})
 		return err
 	})
-	err := gr.Wait()
-	if err != nil {
+	if err := gr.Wait(); err != nil {
+		return nil, err
+	}
+	if err := checkPartial(date, latest, epCount[:], "tradestats", "obstats", "orderstats"); err != nil {
 		return nil, err
 	}
 

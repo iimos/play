@@ -99,8 +99,13 @@ func Build(ctx context.Context, opts LoadOptions) error {
 	// дыру (см. watch.DateRange).
 	asc := opts.StartDate.IsZero()
 
+	// Режим сессии индекса (вечерняя/только основная) переживает день сборки,
+	// поэтому кэш общий на прогон: иначе на историю глубже интрадея уходил бы
+	// запрос на каждый день.
+	modes := newSessionModes()
+
 	for _, d := range watch.DateRange(start, end, asc) {
-		if err := buildDayRows(ctx, storage, indices, d, opts.ForceReload, lastByIndex, currencies); err != nil {
+		if err := buildDayRows(ctx, storage, indices, d, opts.ForceReload, lastByIndex, currencies, modes); err != nil {
 			return fmt.Errorf("build super_index for %s: %w", d.Format(time.DateOnly), err)
 		}
 		runtime.GC()
@@ -111,7 +116,7 @@ func Build(ctx context.Context, opts LoadOptions) error {
 		return watch.RunHourly(ctx, func(ctx context.Context) error {
 			now := time.Now()
 			for _, d := range tracker.Days(now) {
-				if err := buildDayRows(ctx, storage, indices, d, true, nil, currencies); err != nil {
+				if err := buildDayRows(ctx, storage, indices, d, true, nil, currencies, modes); err != nil {
 					return err
 				}
 			}
@@ -143,8 +148,9 @@ func buildDayRows(
 	force bool,
 	lastByIndex map[string]time.Time,
 	currencies map[string]string,
+	modes *sessionModes,
 ) error {
-	rows, built, err := buildDay(ctx, storage, indices, d, force, lastByIndex, currencies)
+	rows, built, err := buildDay(ctx, storage, indices, d, force, lastByIndex, currencies, modes)
 	if err != nil {
 		return err
 	}
@@ -180,6 +186,7 @@ type Builder struct {
 	storage    *store.Store
 	indices    []string
 	currencies map[string]string
+	modes      *sessionModes
 
 	mu       sync.Mutex
 	pending  map[string]time.Time
@@ -206,6 +213,7 @@ func NewBuilder(ctx context.Context, indices []string) (*Builder, error) {
 		storage:    storage,
 		indices:    resolved,
 		currencies: loadCurrencies(ctx, client),
+		modes:      newSessionModes(),
 		pending:    map[string]time.Time{},
 		wake:       make(chan struct{}, 1),
 		attempts:   map[string]int{},
@@ -302,7 +310,7 @@ func (b *Builder) buildDays(ctx context.Context, days []time.Time, force bool) (
 	var failed []time.Time
 	for _, d := range days {
 		d = dayMSK(d)
-		if err := buildDayRows(ctx, b.storage, b.indices, d, force, lastByIndex, b.currencies); err != nil {
+		if err := buildDayRows(ctx, b.storage, b.indices, d, force, lastByIndex, b.currencies, b.modes); err != nil {
 			if ctx.Err() != nil {
 				return failed, ctx.Err()
 			}
@@ -359,6 +367,7 @@ func buildDay(
 	force bool,
 	lastByIndex map[string]time.Time,
 	currencies map[string]string,
+	modes *sessionModes,
 ) ([]store.SuperIndexRow, []string, error) {
 	// Определяем, какие индексы нужно строить.
 	var todo []string
@@ -409,7 +418,7 @@ func buildDay(
 	for _, indexID := range todo {
 		indexID := indexID
 		gr.Go(func() error {
-			rows, err := buildIndexDay(gctx, storage, indexID, d, barsBySec, closes, currencies)
+			rows, err := buildIndexDay(gctx, storage, indexID, d, barsBySec, closes, modes, currencies)
 			if err != nil {
 				mu.Lock()
 				errs = append(errs, fmt.Errorf("%s: %w", indexID, err))
@@ -440,10 +449,12 @@ func buildDay(
 	return out, built, nil
 }
 
-// closesCache кэширует последние цены бумаг по референсной дате, чтобы не
-// выполнять один и тот же запрос к super_eq для каждого индекса. При промахе
-// параллельные вызовы разделяют один запрос (single-flight), иначе все воркеры
-// одновременно били бы тяжёлым запросом по super_eq.
+// closesCache кэширует последние цены бумаг по паре (референсная дата, cutoff),
+// чтобы не выполнять один и тот же запрос к super_eq для каждого индекса. cutoff
+// входит в ключ: у индексов с вечерней сессией и без неё моменты опорных цен
+// разные (23:50 против 19:04). При промахе параллельные вызовы разделяют один
+// запрос (single-flight), иначе все воркеры одновременно били бы тяжёлым
+// запросом по super_eq.
 type closesCache struct {
 	mu sync.Mutex
 	m  map[string]map[string]float64
@@ -455,7 +466,7 @@ func newClosesCache() *closesCache {
 }
 
 func (c *closesCache) get(ctx context.Context, s *store.Store, date, cutoff time.Time) (map[string]float64, error) {
-	key := date.Format(time.DateOnly)
+	key := date.Format(time.DateOnly) + "|" + cutoff.Format(time.DateTime)
 	c.mu.Lock()
 	if v, ok := c.m[key]; ok {
 		c.mu.Unlock()
@@ -493,6 +504,7 @@ func buildIndexDay(
 	d time.Time,
 	barsBySec map[string][]store.StockBar,
 	closes *closesCache,
+	modes *sessionModes,
 	currencies map[string]string,
 ) ([]store.SuperIndexRow, error) {
 	now := time.Now()
@@ -540,14 +552,18 @@ func buildIndexDay(
 	}
 
 	// Референсные цены — последняя ненулевая цена до закрытия прошлого дня.
-	cutoff := atHour(prevDate, fallbackEndHour)
+	// Момент cutoff берётся по фактическому закрытию сессии индекса (см. refCutoff).
+	cutoff, prevEnd, err := refCutoff(ctx, storage, modes, indexID, prevDate, anchor)
+	if err != nil {
+		return nil, err
+	}
 	prevCloses, err := closes.get(ctx, storage, prevDate, cutoff)
 	if err != nil {
 		return nil, err
 	}
 
 	// Окно торгов индекса: из интрадей-свечей, иначе — основная сессия.
-	sessStart, sessEnd, ok, err := storage.IndexIntradaySession(ctx, indexID, d)
+	sessStart, sessEnd, _, ok, err := storage.IndexIntradaySession(ctx, indexID, d)
 	if err != nil {
 		return nil, err
 	}
@@ -568,9 +584,7 @@ func buildIndexDay(
 	windowEnd := sessEnd
 	if isToday {
 		var sessionClose time.Time
-		if _, prevEnd, ok, err := storage.IndexIntradaySession(ctx, indexID, prevDate); err != nil {
-			return nil, err
-		} else if ok {
+		if !prevEnd.IsZero() {
 			sessionClose = time.Date(d.Year(), d.Month(), d.Day(),
 				prevEnd.Hour(), prevEnd.Minute(), prevEnd.Second(), prevEnd.Nanosecond(), tz.MSK)
 		}
@@ -926,6 +940,108 @@ func todayWindowEnd(now, sessionClose time.Time) time.Time {
 
 func atHour(d time.Time, hour int) time.Time {
 	return time.Date(d.Year(), d.Month(), d.Day(), hour, 0, 0, 0, tz.MSK)
+}
+
+// eveningSessionHour — с какого часа свеча интрадея относится к вечерней сессии.
+// Основная сессия закрывается в 19:04, поэтому 19-й час ещё не признак вечера.
+const eveningSessionHour = 20
+
+// sessionLookbackDays — насколько назад смотреть режим сессии индекса, когда
+// интрадея за сам референсный день нет.
+const sessionLookbackDays = 60
+
+// refCutoff возвращает момент, на который берутся опорные цены бумаг, и время
+// закрытия предыдущей сессии индекса (zero, если интрадея за prevDate нет).
+// Момент должен совпадать с моментом дневного закрытия: IndexDailyClose отдаёт
+// закрытие дневной свечи, а её граница зависит от индекса — у IMOEX/RTSI дневная
+// свеча включает вечернюю сессию (до 23:59), а у MOEX10, MXSHAR и большинства
+// тематических индексов считается только в основной (19:04). Если взять неверный
+// момент, движение между ним и фактическим закрытием попадает в синтез дважды:
+// раньше здесь стояло 19:00, и вечернее движение предыдущего дня завышало IMOEX
+// (см. plans/super-index-ref-time.md).
+func refCutoff(
+	ctx context.Context,
+	storage *store.Store,
+	modes *sessionModes,
+	indexID string,
+	prevDate time.Time,
+	anchor float64,
+) (cutoff, prevEnd time.Time, err error) {
+	// Интрадей за сам референсный день — самый точный источник: его конец и есть
+	// момент дневного закрытия. Но если интрадей усечён (например, ISS отдал
+	// только основную сессию), его закрытие разойдётся с дневной свечой — тогда
+	// доверяем дневной свече и идём в фолбэк по режиму сессии.
+	if _, end, intradayClose, ok, err := storage.IndexIntradaySession(ctx, indexID, prevDate); err != nil {
+		return time.Time{}, time.Time{}, err
+	} else if ok {
+		if anchor <= 0 || math.Abs(intradayClose-anchor)/anchor <= validationThresholdPct/100 {
+			return end, end, nil
+		}
+		fmt.Printf(" [%s: интрадей за %s расходится с дневным закрытием, беру режим сессии]",
+			indexID, prevDate.Format(time.DateOnly))
+	}
+
+	// Интрадея за день нет: режим сессии определяем по свечам до конца этого дня.
+	// Окно ограничено prevDate, поэтому ответ не зависит от того, что загрузилось
+	// позже (частичный текущий день, выходные).
+	evening, err := modes.evening(ctx, storage, indexID, prevDate)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	return refCutoffFor(evening, prevDate), time.Time{}, nil
+}
+
+// refCutoffFor возвращает момент опорных цен для дня prevDate по известному
+// режиму сессии: вечерний индекс закрывает дневную свечу в конце суток, индекс
+// основной сессии — в 19:00.
+func refCutoffFor(evening bool, prevDate time.Time) time.Time {
+	if evening {
+		return dayMSK(prevDate).AddDate(0, 0, 1)
+	}
+	return atHour(prevDate, fallbackEndHour)
+}
+
+// sessionModes кэширует режим сессии индекса (вечерняя/только основная) на
+// прогон сборки. Ключ включает дату: режим определяется окном перед конкретным
+// днём, и вечерняя сессия появилась не сразу (с 28.09.2026), поэтому ответ для
+// разных дней одного месяца может различаться. Живёт весь прогон (Build или
+// Builder) — в watch-режиме одни и те же дни пересобираются многократно.
+type sessionModes struct {
+	mu sync.Mutex
+	m  map[string]bool
+	g  singleflight.Group
+}
+
+func newSessionModes() *sessionModes {
+	return &sessionModes{m: map[string]bool{}}
+}
+
+// evening сообщает, торговался ли индекс вечером в окне перед датой d.
+func (c *sessionModes) evening(ctx context.Context, s *store.Store, indexID string, d time.Time) (bool, error) {
+	key := indexID + "|" + d.Format(time.DateOnly)
+	c.mu.Lock()
+	if v, ok := c.m[key]; ok {
+		c.mu.Unlock()
+		return v, nil
+	}
+	c.mu.Unlock()
+
+	from := dayMSK(d).AddDate(0, 0, -sessionLookbackDays)
+	to := dayMSK(d).AddDate(0, 0, 1)
+	v, err, _ := c.g.Do(key, func() (any, error) {
+		evening, err := s.EveningSessionInWindow(ctx, indexID, from, to, eveningSessionHour)
+		if err != nil {
+			return nil, err
+		}
+		c.mu.Lock()
+		c.m[key] = evening
+		c.mu.Unlock()
+		return evening, nil
+	})
+	if err != nil {
+		return false, err
+	}
+	return v.(bool), nil
 }
 
 // fxSecIDFor возвращает код валюты в super_fx, в которой номинирован индекс,

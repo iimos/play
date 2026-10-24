@@ -48,6 +48,42 @@ func TestTodayWindowEnd(t *testing.T) {
 	}
 }
 
+func TestRefCutoffFor(t *testing.T) {
+	tests := []struct {
+		name    string
+		evening bool
+		prev    time.Time
+		want    time.Time
+	}{
+		{
+			name:    "вечерний индекс: опора в конце суток",
+			evening: true,
+			prev:    msk(2026, time.October, 9, 0, 0),
+			want:    msk(2026, time.October, 10, 0, 0),
+		},
+		{
+			name:    "индекс основной сессии: опора в 19:00",
+			evening: false,
+			prev:    msk(2026, time.October, 9, 0, 0),
+			want:    msk(2026, time.October, 9, 19, 0),
+		},
+		{
+			name:    "конец месяца переходит в следующий",
+			evening: true,
+			prev:    msk(2026, time.October, 30, 0, 0),
+			want:    msk(2026, time.October, 31, 0, 0),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := refCutoffFor(tt.evening, tt.prev); !got.Equal(tt.want) {
+				t.Fatalf("cutoff = %s, want %s", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestBuilderTriggerCoalesce(t *testing.T) {
 	b := &Builder{
 		pending: map[string]time.Time{},

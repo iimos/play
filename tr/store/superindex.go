@@ -256,24 +256,44 @@ func (s *Store) IndexDailyClose(ctx context.Context, indexID string, date time.T
 }
 
 // IndexIntradaySession возвращает окно торгов индекса по 10-минутным свечам:
-// начало первой и конец последней свечи. ok=false, если интрадей не загружен.
-// Дневные свечи для этого не годятся: у interval=24 time/end — это 00:00–23:59
-// календарного дня, а не границы сессии. Глубже окна загрузки интрадея его нет —
-// вызывающий использует фолбэк основной сессии (см. build-index-super).
-func (s *Store) IndexIntradaySession(ctx context.Context, indexID string, date time.Time) (time.Time, time.Time, bool, error) {
-	var first, last time.Time
-	err := s.conn.QueryRow(ctx, `
-		SELECT min(time), max(end)
+// начало первой и конец последней свечи (lastClose — закрытие последней).
+// ok=false, если интрадей не загружен. Дневные свечи для этого не годятся:
+// у interval=24 time/end — это 00:00–23:59 календарного дня, а не границы
+// сессии. Глубже окна загрузки интрадея его нет — вызывающий использует фолбэк
+// основной сессии (см. build-index-super).
+func (s *Store) IndexIntradaySession(ctx context.Context, indexID string, date time.Time) (first, last time.Time, lastClose float64, ok bool, err error) {
+	err = s.conn.QueryRow(ctx, `
+		SELECT min(time), max(end), argMax(close, end)
 		FROM index_candles
 		WHERE indexid = ? AND interval = 10 AND Date(time) = ?
-	`, indexID, date.Format(time.DateOnly)).Scan(&first, &last)
+	`, indexID, date.Format(time.DateOnly)).Scan(&first, &last, &lastClose)
 	if err != nil {
-		return time.Time{}, time.Time{}, false, err
+		return time.Time{}, time.Time{}, 0, false, err
 	}
 	if first.IsZero() || first.Year() < 2000 || last.Year() < 2000 {
-		return time.Time{}, time.Time{}, false, nil
+		return time.Time{}, time.Time{}, 0, false, nil
 	}
-	return first, last, true, nil
+	return first, last, lastClose, true, nil
+}
+
+// EveningSessionInWindow сообщает, были ли у индекса вечерние 10-минутные свечи
+// в окне [from, to). Нужен, когда интрадея за конкретный день уже нет: по этому
+// признаку видно, включает ли дневное закрытие индекса вечернюю сессию (23:59)
+// или он считается только в основной (19:04). Окно ограничено датой, поэтому
+// ответ не зависит от того, что успело загрузиться позже.
+// Опора на серверную таймзону та же, что и во всех остальных запросах пакета:
+// границы передаются строками в московском времени.
+func (s *Store) EveningSessionInWindow(ctx context.Context, indexID string, from, to time.Time, fromHour int) (bool, error) {
+	var n uint64
+	err := s.conn.QueryRow(ctx, `
+		SELECT count()
+		FROM index_candles
+		WHERE indexid = ? AND interval = 10 AND time >= ? AND time < ? AND toHour(time) >= ?
+	`, indexID, from.Format(time.DateTime), to.Format(time.DateTime), fromHour).Scan(&n)
+	if err != nil {
+		return false, err
+	}
+	return n > 0, nil
 }
 
 // IndexWeightsForDate возвращает веса бумаг индекса на дату.
